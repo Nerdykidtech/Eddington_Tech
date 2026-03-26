@@ -19,7 +19,7 @@ export const apps: AppItem[] = [
     href: "/autheris",
     subdomain: "autheris",
     icon: "🔐",
-    appStoreUrl: undefined, // add when live
+    appStoreUrl: "https://apps.apple.com/us/app/autheris/id6760686327",
   },
   // Add more apps here as you build them:
   // { id: "otherapp", name: "Other App", ... },
