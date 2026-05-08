@@ -22,12 +22,20 @@ const languages = [
 export default function SnippetsPage() {
   const [category, setCategory] = useState("all");
   const [language, setLanguage] = useState("all");
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   const filtered = snippets.filter(
     (s) => category === "all" || s.category === category
   ).filter(
     (s) => language === "all" || s.language === language
   );
+
+  const toggle = (id: string) => {
+    const next = new Set(openIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setOpenIds(next);
+  };
 
   return (
     <div className="px-6 py-16 sm:py-24">
@@ -46,7 +54,7 @@ export default function SnippetsPage() {
         </header>
 
         {/* Filters */}
-        <div className="mb-8 flex flex-wrap gap-4">
+        <div className="mb-8 flex flex-wrap gap-6">
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Category</span>
             <div className="flex gap-1.5">
@@ -85,74 +93,99 @@ export default function SnippetsPage() {
           </span>
         </div>
 
-        {/* Snippets */}
-        <div className="space-y-6">
-          {filtered.map((snippet) => (
-            <article
-              key={snippet.id}
-              className="rounded-xl border border-white/5 bg-white/5 overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6 pb-4">
-                <div>
-                  <h2 className="font-display text-lg font-semibold text-zinc-100">
-                    {snippet.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-zinc-400">{snippet.description}</p>
-                </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <span className={`rounded-full border px-2.5 py-0.5 text-xs font-mono font-medium ${
-                    snippet.category === "iam" ? "border-orange-500/20 bg-orange-500/10 text-orange-400" :
-                    snippet.category === "security" ? "border-red-500/20 bg-red-500/10 text-red-400" :
-                    snippet.category === "infrastructure" ? "border-blue-500/20 bg-blue-500/10 text-blue-400" :
-                    "border-green-500/20 bg-green-500/10 text-green-400"
-                  }`}>
-                    {snippet.language}
-                  </span>
-                  {snippet.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-zinc-500"
-                    >
-                      {tag}
+        {/* Snippet list */}
+        <div className="space-y-3">
+          {filtered.map((snippet) => {
+            const isOpen = openIds.has(snippet.id);
+            return (
+              <div
+                key={snippet.id}
+                className="rounded-xl border border-white/5 bg-white/5 overflow-hidden"
+              >
+                {/* Collapsed header / toggle */}
+                <button
+                  onClick={() => toggle(snippet.id)}
+                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.03] transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
+                    <span className="font-display text-base font-medium text-zinc-100 truncate">
+                      {snippet.title}
                     </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Code block */}
-              <div className="px-6 pb-4">
-                <div className="rounded-lg border border-black/20 bg-black/40 overflow-hidden">
-                  <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-                    <span className="text-xs font-mono text-zinc-500">{snippet.language}</span>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(snippet.code)}
-                      className="text-xs text-zinc-500 hover:text-brand-400 transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="p-4 text-sm font-mono text-zinc-300 overflow-x-auto whitespace-pre">
-                    {snippet.code}
-                  </pre>
-                </div>
-              </div>
-
-              {/* Output */}
-              {snippet.output && (
-                <div className="px-6 pb-6">
-                  <div className="rounded-lg border border-black/20 bg-black/40 overflow-hidden">
-                    <div className="flex items-center border-b border-white/5 px-4 py-2">
-                      <span className="text-xs font-mono text-zinc-500">output</span>
+                    <div className="flex flex-wrap gap-1.5 shrink-0">
+                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-mono ${
+                        snippet.category === "iam" ? "border-orange-500/20 bg-orange-500/10 text-orange-400" :
+                        snippet.category === "security" ? "border-red-500/20 bg-red-500/10 text-red-400" :
+                        snippet.category === "infrastructure" ? "border-blue-500/20 bg-blue-500/10 text-blue-400" :
+                        "border-green-500/20 bg-green-500/10 text-green-400"
+                      }`}>
+                        {snippet.language}
+                      </span>
+                      {snippet.tags.slice(0, 2).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-zinc-500"
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </div>
-                    <pre className="p-4 text-sm font-mono text-emerald-400/80 overflow-x-auto whitespace-pre">
-                      {snippet.output}
-                    </pre>
                   </div>
-                </div>
-              )}
-            </article>
-          ))}
+                  <span className="shrink-0 text-zinc-500">
+                    {isOpen ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="transition-transform">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="transition-transform">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
+                  </span>
+                </button>
+
+                {/* Expanded content */}
+                {isOpen && (
+                  <div className="border-t border-white/5">
+                    <p className="px-5 py-3 text-sm text-zinc-400 border-b border-white/5">
+                      {snippet.description}
+                    </p>
+
+                    {/* Code block */}
+                    <div className="px-5 py-4">
+                      <div className="rounded-lg border border-black/20 bg-black/40 overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
+                          <span className="text-xs font-mono text-zinc-500">{snippet.language}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(snippet.code); }}
+                            className="text-xs text-zinc-500 hover:text-brand-400 transition-colors"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <pre className="p-4 text-sm font-mono text-zinc-300 overflow-x-auto whitespace-pre">
+                          {snippet.code}
+                        </pre>
+                      </div>
+                    </div>
+
+                    {/* Output */}
+                    {snippet.output && (
+                      <div className="px-5 pb-4">
+                        <div className="rounded-lg border border-black/20 bg-black/40 overflow-hidden">
+                          <div className="flex items-center border-b border-white/5 px-4 py-2">
+                            <span className="text-xs font-mono text-zinc-500">output</span>
+                          </div>
+                          <pre className="p-4 text-sm font-mono text-emerald-400/80 overflow-x-auto whitespace-pre">
+                            {snippet.output}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {filtered.length === 0 && (
