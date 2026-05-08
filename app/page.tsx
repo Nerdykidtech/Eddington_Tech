@@ -30,14 +30,11 @@ export default function HomePage() {
           </div>
 
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-            System Engineer &{" "}IAM Engineer
-            <span className="relative">
-              <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
-                IAM Engineer
-              </span>
-              <span className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-60" />
-            </span>
+            Hunter Eddington
           </h1>
+          <p className="mt-3 text-base sm:text-lg text-zinc-400 font-medium">
+            System Engineer & IAM Engineer
+          </p>
           <p className="mt-6 text-base sm:text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto px-2">
             I design and harden infrastructure, identity systems, and access controls.
             And I build iOS apps that put security in your pocket.
