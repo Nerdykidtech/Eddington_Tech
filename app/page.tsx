@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { AppCard } from "@/components/AppCard";
-import { ToolCard } from "@/components/ToolCard";
 import { apps } from "@/lib/apps";
-import { tools } from "@/lib/tools";
 
 export default function HomePage() {
   return (
@@ -53,12 +51,6 @@ export default function HomePage() {
               className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
             >
               My apps
-            </a>
-            <a
-              href="#tools"
-              className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
-            >
-              Tools I use
             </a>
           </div>
         </div>
@@ -122,26 +114,6 @@ export default function HomePage() {
           <div className="mt-8 sm:mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {apps.map((app) => (
               <AppCard key={app.id} app={app} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Tools */}
-      <section id="tools" className="scroll-mt-20 border-t border-white/5 bg-surface-800/30 px-6 py-20 sm:py-32">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 sm:mb-10">
-            <p className="text-xs font-mono uppercase tracking-widest text-brand-500 mb-3">Recommended</p>
-            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-white">
-              Privacy-first tools
-            </h2>
-            <p className="mt-2 text-zinc-400 text-sm sm:text-base">
-              Tools I actually use and recommend for teams who care about data sovereignty, open-source, and staying off the big-tech radar.
-            </p>
-          </div>
-          <div className="mt-8 sm:mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
             ))}
           </div>
         </div>
