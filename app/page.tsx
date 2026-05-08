@@ -30,7 +30,7 @@ export default function HomePage() {
           </div>
 
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-            System Engineer &{" "}
+            System Engineer &{" "}IAM Engineer
             <span className="relative">
               <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
                 IAM Engineer

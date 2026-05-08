@@ -29,7 +29,7 @@ export function Header() {
             Privacy
           </Link>
           <a
-            href="https://github.com/huntereddington"
+            href="https://github.com/nerdykidtech"
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
@@ -82,7 +82,7 @@ export function Header() {
               Privacy
             </Link>
             <a
-              href="https://github.com/huntereddington"
+              href="https://github.com/nerdykidtech"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10 w-fit"
