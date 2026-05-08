@@ -17,26 +17,28 @@ export const snippets: Snippet[] = [
     description: "Export all Entra ID users with their group memberships, license status, and last sign-in to a CSV for audit.",
     category: "iam",
     language: "powershell",
-    code: `Connect-MgGraph -Scopes "User.Read.All", "Group.Read.All"
-
-$users = Get-MgUser -All -Property `
-  Id, DisplayName, UserPrincipalName, `
-  AccountEnabled, AssignedLicenses, SignInActivity `
-  -ExpandProperty "MemberOf"
-
-$report = $users | ForEach-Object {
-  [PSCustomObject]@{
-    Name                = $_.DisplayName
-    UPN                 = $_.UserPrincipalName
-    Enabled             = $_.AccountEnabled
-    Licenses            = ($_.AssignedLicenses | ForEach-Object { $_.SkuId }) -join "; "
-    LastSignIn          = $_.SignInActivity.LastSignInDateTime
-    Groups              = ($_.MemberOf | ForEach-Object { $_.DisplayName }) -join "; "
-  }
-}
-
-$report | Export-Csv -Path "./entra-user-audit.csv" -NoTypeInformation
-Write-Host "Exported $($report.Count) users to entra-user-audit.csv"`,
+    code: [
+      'Connect-MgGraph -Scopes "User.Read.All", "Group.Read.All"',
+      '',
+      '$users = Get-MgUser -All -Property \\',
+      '  Id, DisplayName, UserPrincipalName, \\',
+      '  AccountEnabled, AssignedLicenses, SignInActivity \\',
+      '  -ExpandProperty "MemberOf"',
+      '',
+      '$report = $users | ForEach-Object {',
+      '  [PSCustomObject]@{',
+      '    Name                = $_.DisplayName',
+      '    UPN                 = $_.UserPrincipalName',
+      '    Enabled             = $_.AccountEnabled',
+      '    Licenses            = ($_.AssignedLicenses | ForEach-Object { $_.SkuId }) -join "; "',
+      '    LastSignIn          = $_.SignInActivity.LastSignInDateTime',
+      '    Groups              = ($_.MemberOf | ForEach-Object { $_.DisplayName }) -join "; "',
+      '  }',
+      '}',
+      '',
+      '$report | Export-Csv -Path "./entra-user-audit.csv" -NoTypeInformation',
+      'Write-Host "Exported $($report.Count) users to entra-user-audit.csv"',
+    ].join('\n'),
     output: `Name         UPN                      Enabled Licenses              LastSignIn           Groups
 ----         ---                      ------- ---------              -----------           ------
 Hunter E.   hunter@eddington.tech    True    a123b456-...           5/8/2026 10:42:11 AM  Global Admins; IAM Readers
@@ -51,30 +53,32 @@ Exported 248 users to entra-user-audit.csv`,
     description: "Check if an OAuth access token is still valid against your IdP's introspection endpoint.",
     category: "iam",
     language: "powershell",
-    code: `# Validate an OAuth token against the introspection endpoint
-$Token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
-$IntrospectionUrl = "https://login.eddington.tech/oauth2/v2/introspect"
-$ClientId = "your-client-id"
-$ClientSecret = "your-client-secret"
-
-$body = @{
-  token = $Token
-  token_type_hint = "access_token"
-}
-
-$headers = @{
-  "Content-Type" = "application/x-www-form-urlencoded"
-}
-
-$response = Invoke-RestMethod `
-  -Uri $IntrospectionUrl `
-  -Method Post `
-  -Body $body `
-  -Headers $headers `
-  -Authentication Basic `
-  -Credential (New-Object PSCredential($ClientId, (ConvertTo-SecureString $ClientSecret -AsPlainText -Force)))
-
-$response | ConvertTo-Json`,
+    code: [
+      '# Validate an OAuth token against the introspection endpoint',
+      '$Token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."',
+      '$IntrospectionUrl = "https://login.eddington.tech/oauth2/v2/introspect"',
+      '$ClientId = "your-client-id"',
+      '$ClientSecret = "your-client-secret"',
+      '',
+      '$body = @{',
+      '  token = $Token',
+      '  token_type_hint = "access_token"',
+      '}',
+      '',
+      '$headers = @{',
+      '  "Content-Type" = "application/x-www-form-urlencoded"',
+      '}',
+      '',
+      '$response = Invoke-RestMethod \\',
+      '  -Uri $IntrospectionUrl \\',
+      '  -Method Post \\',
+      '  -Body $body \\',
+      '  -Headers $headers \\',
+      '  -Authentication Basic \\',
+      '  -Credential (New-Object PSCredential($ClientId, (ConvertTo-SecureString $ClientSecret -AsPlainText -Force)))',
+      '',
+      '$response | ConvertTo-Json',
+    ].join('\n'),
     output: `{
   "active": true,
   "scope": "openid profile email groups",
@@ -95,41 +99,43 @@ $response | ConvertTo-Json`,
     description: "Find and delete certificates that have been expired for more than 30 days across all Key Vaults in a subscription.",
     category: "security",
     language: "powershell",
-    code: `Connect-AzAccount
-$SubscriptionId = "your-subscription-id"
-$Subscription = Select-AzSubscription -SubscriptionId $SubscriptionId
-
-$ExpiryThreshold = (Get-Date).AddDays(-30)
-$DeletedCount = 0
-
-$Vaults = Get-AzKeyVault
-
-foreach ($vault in $Vaults) {
-  Write-Host "Scanning $($vault.VaultName)..." -Foreground Cyan
-
-  $certs = Get-AzKeyVaultCertificate -VaultName $vault.VaultName
-
-  foreach ($cert in $certs) {
-    if ($cert.Attributes.Expires -and $cert.Attributes.Expires -lt $ExpiryThreshold) {
-      $daysExpired = ((Get-Date) - $cert.Attributes.Expires).Days
-      Write-Host "  [EXPIRED] $($cert.Name) — ${daysExpired}d expired" -Foreground Yellow
-
-      Remove-AzKeyVaultCertificate `
-        -VaultName $vault.VaultName `
-        -Name $cert.Name `
-        -Confirm:$false
-
-      $DeletedCount++
-    }
-  }
-}
-
-Write-Host "Deleted $DeletedCount expired certificates." -Foreground Green`,
+    code: [
+      'Connect-AzAccount',
+      '$SubscriptionId = "your-subscription-id"',
+      '$Subscription = Select-AzSubscription -SubscriptionId $SubscriptionId',
+      '',
+      '$ExpiryThreshold = (Get-Date).AddDays(-30)',
+      '$DeletedCount = 0',
+      '',
+      '$Vaults = Get-AzKeyVault',
+      '',
+      'foreach ($vault in $Vaults) {',
+      '  Write-Host "Scanning $($vault.VaultName)..." -Foreground Cyan',
+      '',
+      '  $certs = Get-AzKeyVaultCertificate -VaultName $vault.VaultName',
+      '',
+      '  foreach ($cert in $certs) {',
+      '    if ($cert.Attributes.Expires -and $cert.Attributes.Expires -lt $ExpiryThreshold) {',
+      '      $daysExpired = ((Get-Date) - $cert.Attributes.Expires).Days',
+      '      Write-Host "  [EXPIRED] $($cert.Name) - ${daysExpired}d expired" -Foreground Yellow',
+      '',
+      '      Remove-AzKeyVaultCertificate \\',
+      '        -VaultName $vault.VaultName \\',
+      '        -Name $cert.Name \\',
+      '        -Confirm:$false',
+      '',
+      '      $DeletedCount++',
+      '    }',
+      '  }',
+      '}',
+      '',
+      'Write-Host "Deleted $DeletedCount expired certificates." -Foreground Green',
+    ].join('\n'),
     output: `Scanning kv-prod-edt...
-  [EXPIRED] wildcard-eddington-tech — 45d expired
-  [EXPIRED] letsencrypt-prod — 12d expired
+  [EXPIRED] wildcard-eddington-tech - 45d expired
+  [EXPIRED] letsencrypt-prod - 12d expired
 Scanning kv-staging-edt...
-  [EXPIRED] cert-staging-2024 — 90d expired
+  [EXPIRED] cert-staging-2024 - 90d expired
 Deleted 3 expired certificates.`,
     tags: ["Azure", "Key Vault", "Certificates", "Automation"],
     date: "2026-05-06",
@@ -140,39 +146,41 @@ Deleted 3 expired certificates.`,
     description: "Resolve all members of a protected AD group including nested group membership, with no external modules.",
     category: "iam",
     language: "powershell",
-    code: `function Get-NestedGroupMembers {
-  param(
-    [string]$GroupName,
-    [int]$Depth = 0
-  )
-
-  $members = Get-ADGroupMember -Identity $GroupName -Recursive
-
-  foreach ($member in $members) {
-    $indent = "  " * $Depth
-    if ($member.objectClass -eq "user") {
-      $user = Get-ADUser -Identity $member.SamAccountName -Properties DisplayName, LastLogonDate, Enabled
-      [PSCustomObject]@{
-        Name       = "$indent$($user.DisplayName)"
-        Type       = "User"
-        SamAccount = $member.SamAccountName
-        Enabled    = $user.Enabled
-        LastLogon  = $user.LastLogonDate
-      }
-    } else {
-      [PSCustomObject]@{
-        Name       = "$indent$($member.Name) [GROUP]"
-        Type       = "Group"
-        SamAccount = $member.SamAccountName
-        Enabled    = "N/A"
-        LastLogon  = "N/A"
-      }
-    }
-  }
-}
-
-Get-NestedGroupMembers -GroupName "Domain Admins" |
-  Export-Csv -Path "./domain-admins-report.csv" -NoTypeInformation`,
+    code: [
+      'function Get-NestedGroupMembers {',
+      '  param(',
+      '    [string]$GroupName,',
+      '    [int]$Depth = 0',
+      '  )',
+      '',
+      '  $members = Get-ADGroupMember -Identity $GroupName -Recursive',
+      '',
+      '  foreach ($member in $members) {',
+      '    $indent = "  " * $Depth',
+      '    if ($member.objectClass -eq "user") {',
+      '      $user = Get-ADUser -Identity $member.SamAccountName -Properties DisplayName, LastLogonDate, Enabled',
+      '      [PSCustomObject]@{',
+      '        Name       = "$indent$($user.DisplayName)"',
+      '        Type       = "User"',
+      '        SamAccount = $member.SamAccountName',
+      '        Enabled    = $user.Enabled',
+      '        LastLogon  = $user.LastLogonDate',
+      '      }',
+      '    } else {',
+      '      [PSCustomObject]@{',
+      '        Name       = "$indent$($member.Name) [GROUP]"',
+      '        Type       = "Group"',
+      '        SamAccount = $member.SamAccountName',
+      '        Enabled    = "N/A"',
+      '        LastLogon  = "N/A"',
+      '      }',
+      '    }',
+      '  }',
+      '}',
+      '',
+      'Get-NestedGroupMembers -GroupName "Domain Admins" | \\',
+      '  Export-Csv -Path "./domain-admins-report.csv" -NoTypeInformation',
+    ].join('\n'),
     output: `Name                           Type   SamAccount        Enabled LastLogon
 ----                           ----   -------------       ------- ---------
 John Doe [GROUP]               Group  jdoe                N/A     N/A
@@ -189,42 +197,44 @@ Builtin\\Administrators [GROUP] Group  Administrators      N/A     N/A
     description: "Pull all risky sign-ins from the last 30 days, cross-reference with user risk level, and flag accounts needing immediate action.",
     category: "security",
     language: "powershell",
-    code: `Connect-MgGraph -Scopes "AuditLog.Read.All"
-
-$startDate = (Get-Date).AddDays(-30)
-$endDate = Get-Date
-
-$params = @{
-  startDateTime = $startDate
-  endDateTime   = $endDate
-}
-
-$signIns = Get-MgBetaAuditSignInLog @params
-
-$riskySignIns = $signIns | Where-Object {
-  $_.RiskLevelDuringSignIn -ne "none" -or
-  $_.RiskState -eq "atRisk" -or
-  $_.RiskState -eq "confirmedCompromised"
-}
-
-$report = $riskySignIns | ForEach-Object {
-  [PSCustomObject]@{
-    User          = $_.UserPrincipalName
-    App           = $_.AppDisplayName
-    IP            = $_.IPAddress
-    RiskDuring    = $_.RiskLevelDuringSignIn
-    RiskState     = $_.RiskState
-    Timestamp     = $_.CreatedDateTime
-    Location      = $_.Location
-    DeviceDetail  = $_.DeviceDetail.OS
-  }
-}
-
-$report | Sort-Object Timestamp -Descending |
-  Export-Csv -Path "./risky-signins-audit.csv" -NoTypeInformation
-
-Write-Host "Flagged $($report.Count) risky sign-ins" -Foreground $(`
-  if ($report.Count -gt 0) { "Yellow" } else { "Green" })`,
+    code: [
+      'Connect-MgGraph -Scopes "AuditLog.Read.All"',
+      '',
+      '$startDate = (Get-Date).AddDays(-30)',
+      '$endDate = Get-Date',
+      '',
+      '$params = @{',
+      '  startDateTime = $startDate',
+      '  endDateTime   = $endDate',
+      '}',
+      '',
+      '$signIns = Get-MgBetaAuditSignInLog @params',
+      '',
+      '$riskySignIns = $signIns | Where-Object {',
+      '  $_.RiskLevelDuringSignIn -ne "none" -or',
+      '  $_.RiskState -eq "atRisk" -or',
+      '  $_.RiskState -eq "confirmedCompromised"',
+      '}',
+      '',
+      '$report = $riskySignIns | ForEach-Object {',
+      '  [PSCustomObject]@{',
+      '    User          = $_.UserPrincipalName',
+      '    App           = $_.AppDisplayName',
+      '    IP            = $_.IPAddress',
+      '    RiskDuring    = $_.RiskLevelDuringSignIn',
+      '    RiskState     = $_.RiskState',
+      '    Timestamp     = $_.CreatedDateTime',
+      '    Location      = $_.Location',
+      '    DeviceDetail  = $_.DeviceDetail.OS',
+      '  }',
+      '}',
+      '',
+      '$report | Sort-Object Timestamp -Descending | \\',
+      '  Export-Csv -Path "./risky-signins-audit.csv" -NoTypeInformation',
+      '',
+      'Write-Host "Flagged $($report.Count) risky sign-ins" -Foreground $(',
+      '  if ($report.Count -gt 0) { "Yellow" } else { "Green" })',
+    ].join('\n'),
     output: `User                       App                IP             RiskDuring  RiskState    Timestamp
 ----                       ---                --             ------------  ----------- ---------
 admin@eddington.tech       Azure Portal       185.220.x.x     high          atRisk       5/8/2026 02:14:33 AM
@@ -258,12 +268,8 @@ echo "  + Add:    $ADD"
 echo "  ~ Update: $UPDATE"
 echo "  - Delete: $DELETE"
 echo ""
-
 echo "=== Resources by type ==="
-echo "$PLAN_OUTPUT" | jq -r '
-  .resource_changes[] |
-  "\\(.actions[0]) \\(.type) (\\(.name))" ' \\
-  | sort | uniq -c | sort -rn`,
+echo "$PLAN_OUTPUT" | jq -r '.resource_changes[] | "\\(.actions[0]) \\(.type) (\\(.name))"' | sort | uniq -c | sort -rn`,
     output: `=== Terraform Plan Summary ===
   + Add:    12
   ~ Update: 5
