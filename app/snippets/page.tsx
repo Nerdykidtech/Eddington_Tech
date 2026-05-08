@@ -4,11 +4,11 @@ import { useState } from "react";
 import { snippets } from "@/lib/snippets";
 
 const categories = [
-  { value: "all", label: "All" },
-  { value: "iam", label: "IAM" },
-  { value: "security", label: "Security" },
-  { value: "infrastructure", label: "Infrastructure" },
-  { value: "productivity", label: "Productivity" },
+  { value: "all", label: "All", color: "text-zinc-400" },
+  { value: "iam", label: "IAM", color: "border-orange-500/50 bg-orange-500/10 text-orange-400" },
+  { value: "security", label: "Security", color: "border-red-500/50 bg-red-500/10 text-red-400" },
+  { value: "infrastructure", label: "Infrastructure", color: "border-blue-500/50 bg-blue-500/10 text-blue-400" },
+  { value: "productivity", label: "Productivity", color: "border-green-500/50 bg-green-500/10 text-green-400" },
 ];
 
 const languages = [
@@ -58,19 +58,22 @@ export default function SnippetsPage() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Category</span>
             <div className="flex gap-1.5">
-              {categories.map((cat) => (
-                <button
-                  key={cat.value}
-                  onClick={() => setCategory(cat.value)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                    category === cat.value
-                      ? "border-brand-500/50 bg-brand-500/10 text-brand-400"
-                      : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const active = category === cat.value;
+                return (
+                  <button
+                    key={cat.value}
+                    onClick={() => setCategory(cat.value)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                      active
+                        ? cat.color
+                        : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:text-zinc-300"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="flex items-center gap-2">
