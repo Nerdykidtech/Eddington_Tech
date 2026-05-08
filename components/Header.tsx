@@ -31,6 +31,9 @@ export function Header() {
           <Link href="/tools" className="hover:text-white transition-colors">
             Tools
           </Link>
+          <Link href="/snippets" className="hover:text-white transition-colors">
+            Snippets
+          </Link>
           <Link href="/privacy" className="hover:text-white transition-colors">
             Privacy
           </Link>
@@ -93,6 +96,13 @@ export function Header() {
               onClick={() => setOpen(false)}
             >
               Tools
+            </Link>
+            <Link
+              href="/snippets"
+              className="hover:text-white transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              Snippets
             </Link>
             <Link
               href="/privacy"
