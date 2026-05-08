@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-white/5 bg-surface-900 px-6 py-32 sm:py-44">
+      <section className="relative overflow-hidden border-b border-white/5 bg-surface-900 px-6 py-24 sm:py-40">
         {/* Animated grid background */}
         <div className="absolute inset-0 grid-bg opacity-30" />
         {/* Gradient orbs */}
@@ -29,7 +29,7 @@ export default function HomePage() {
             Systems · Identity · iOS
           </div>
 
-          <h1 className="font-display text-5xl font-bold tracking-tight text-white sm:text-6xl">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
             System Engineer &{" "}
             <span className="relative">
               <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
@@ -38,20 +38,20 @@ export default function HomePage() {
               <span className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-60" />
             </span>
           </h1>
-          <p className="mt-6 text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto">
+          <p className="mt-6 text-base sm:text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto px-2">
             I design and harden infrastructure, identity systems, and access controls.
             And I build iOS apps that put security in your pocket.
           </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <div className="mt-10 flex flex-wrap justify-center gap-3 sm:gap-4">
             <a
               href="#about"
-              className="group relative rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-500 hover:shadow-[0_0_30px_-5px_rgba(14,165,233,0.4)]"
+              className="group relative rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-500 hover:shadow-[0_0_30px_-5px_rgba(14,165,233,0.4)]"
             >
               About me
             </a>
             <a
               href="#apps"
-              className="rounded-lg border border-white/10 bg-white/5 px-6 py-2.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+              className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
             >
               My apps
             </a>
@@ -60,15 +60,15 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="about" className="scroll-mt-20 px-6 py-24 sm:py-32">
+      <section id="about" className="scroll-mt-20 px-6 py-20 sm:py-32">
         <div className="mx-auto max-w-3xl">
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <p className="text-xs font-mono uppercase tracking-widest text-brand-500 mb-3">Background</p>
-            <h2 className="font-display text-3xl font-semibold text-white">
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-white">
               Who I am
             </h2>
           </div>
-          <div className="space-y-5 text-zinc-400 leading-relaxed text-base">
+          <div className="space-y-5 text-zinc-400 leading-relaxed text-sm sm:text-base">
             <p>
               I'm a <span className="text-zinc-200 font-medium">System Engineer</span> and{" "}
               <span className="text-zinc-200 font-medium">IAM (Identity & Access Management) Engineer</span>.
@@ -88,7 +88,7 @@ export default function HomePage() {
           </div>
 
           {/* Skill pills */}
-          <div className="mt-10 flex flex-wrap gap-2">
+          <div className="mt-8 sm:mt-10 flex flex-wrap gap-2">
             {["Identity & Access Management", "OAuth 2.0 / OIDC", "Zero Trust Architecture", "iOS Development", "Swift / SwiftUI", "Keychain & Secure Enclave", "System Hardening", "Terraform / Infrastructure as Code"].map((skill) => (
               <span key={skill} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-400 backdrop-blur-sm">
                 {skill}
@@ -99,14 +99,14 @@ export default function HomePage() {
       </section>
 
       {/* Apps */}
-      <section id="apps" className="scroll-mt-20 border-t border-white/5 bg-surface-800/30 px-6 py-24 sm:py-32">
+      <section id="apps" className="scroll-mt-20 border-t border-white/5 bg-surface-800/30 px-6 py-20 sm:py-32">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-10">
+          <div className="mb-8 sm:mb-10">
             <p className="text-xs font-mono uppercase tracking-widest text-brand-500 mb-3">Portfolio</p>
-            <h2 className="font-display text-3xl font-semibold text-white">
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-white">
               iOS apps
             </h2>
-            <p className="mt-2 text-zinc-400">
+            <p className="mt-2 text-zinc-400 text-sm sm:text-base">
               Side projects and experiments. Each has its own page —{" "}
               <Link href="/autheris" className="text-brand-400 hover:text-brand-300 transition-colors">
                 start with Autheris
@@ -114,7 +114,7 @@ export default function HomePage() {
               .
             </p>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 sm:mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {apps.map((app) => (
               <AppCard key={app.id} app={app} />
             ))}
