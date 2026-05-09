@@ -143,7 +143,7 @@ More as it develops.
 
 *Source: [Krebs on Security — Canvas Breach Disrupts Schools & Colleges Nationwide](https://krebsonsecurity.com/2026/05/canvas-breach-disrupts-schools-colleges-nationwide/)*`,
   },
-{
+  {
     slug: "cpanel-three-vulnerabilities-patch-now",
     title: "cPanel Dropped Three Security Updates Today — Here's the One That Actually Matters",
     date: "2026-05-09",
@@ -160,7 +160,7 @@ That CVSS score of 4.3 is misleading. CVSS scores measure exploit complexity and
 
 The other two vulnerabilities are a code execution flaw and a DoS affecting the file manager. The DoS matters if you're running a hosted service where uptime is part of your offering — a crash taking down the control panel means your customers can't manage their sites.
 
-What I'm watching is the patch cadence problem. cPanel doesn't update the way an OS package manager does. Most cPanel installations go months without running `/usr/local/cpanel/scripts/upcp`. The update is available now, but the lag between patch release and patch deployment is where attacks happen. Adversaries automate scanning for unpatched cPanel instances the same day patches drop.
+What I'm watching is the patch cadence problem. cPanel doesn't update the way an OS package manager does. Most cPanel installations go months without running /usr/local/cpanel/scripts/upcp. The update is available now, but the lag between patch release and patch deployment is where attacks happen. Adversaries automate scanning for unpatched cPanel instances the same day patches drop.
 
 If you're running cPanel or WHM: update today. Not this week. Today. The dashboard will flag the available update, or you can run the updater manually. It's not dramatic. It's just one of those patches that can't wait.
 
