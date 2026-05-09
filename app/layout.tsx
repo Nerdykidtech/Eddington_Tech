@@ -24,6 +24,10 @@ export const metadata: Metadata = {
     title: "Eddington.Tech",
     description: "System Engineer, IAM Engineer, iOS developer.",
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
