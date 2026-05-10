@@ -16,6 +16,25 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title: `${post.title} | Blog | Eddington.Tech`,
     description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: "article",
+      publishedTime: post.date,
+      authors: [post.author ?? "Hunter Eddington"],
+      section: post.category,
+      tags: [post.category],
+      images: post.image ? [{ url: post.image, alt: post.title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+      images: post.image ? [post.image] : [],
+    },
+    alternates: {
+      canonical: `https://eddington.tech/blog/${post.slug}`,
+    },
   };
 }
 
@@ -45,6 +64,33 @@ export default function BlogPostPage({ params }: PageProps) {
           {post.title}
         </h1>
       </header>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            headline: post.title,
+            description: post.excerpt,
+            datePublished: post.date,
+            author: {
+              "@type": "Person",
+              name: post.author ?? "Hunter Eddington",
+              url: "https://eddington.tech/about",
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "Eddington.Tech",
+              url: "https://eddington.tech",
+            },
+            image: post.image ?? "https://eddington.tech/og-image.png",
+            keywords: post.category,
+            articleSection: post.category,
+            url: `https://eddington.tech/blog/${post.slug}`,
+          }),
+        }}
+      />
 
       <div className="prose prose-invert prose-zinc prose-sm sm:prose-base max-w-none">
         {post.content.split("\n\n").map((paragraph, i) => (

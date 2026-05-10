@@ -1,4 +1,4 @@
-// File: /Users/huntereddington/Projects/Eddington_Tech/app/autheris/layout.tsx
+// File: /home/hermes/Projects/Eddington_Tech/app/autheris/layout.tsx
 import * as entry from '../../../../app/autheris/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
