@@ -64,13 +64,31 @@ const highlights = [
 export default function AutherisPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "Autheris",
+            operatingSystem: "iOS",
+            applicationCategory: "UtilityApplication",
+            description: autheris.description,
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "USD",
+            },
+          }),
+        }}
+      />
       {/* Hero */}
       <section className="border-b border-surface-700 bg-gradient-to-b from-surface-800/60 to-surface-900 px-6 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
           <div className="mb-8 flex justify-center" aria-hidden>
             <img
               src="/autheris-icon.png"
-              alt=""
+              alt="Autheris - Secure 2FA Token Manager for iOS"
               width={120}
               height={120}
               className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover"
