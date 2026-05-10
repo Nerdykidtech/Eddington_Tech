@@ -21,8 +21,17 @@ export const metadata: Metadata = {
   description:
     "Personal site of Hunter Eddington — System Engineer, IAM Engineer, and iOS developer. Showcase of apps and projects.",
   openGraph: {
-    title: "Eddington.Tech",
-    description: "System Engineer, IAM Engineer, iOS developer.",
+    title: "Eddington.Tech | System Engineer & IAM Engineer",
+    description:
+      "Personal site of Hunter Eddington — System Engineer, IAM Engineer, and iOS developer.",
+    url: "https://eddington.tech",
+    siteName: "Eddington.Tech",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    creator: "@huntereddington",
   },
   robots: {
     index: true,
