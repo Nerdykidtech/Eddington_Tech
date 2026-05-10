@@ -203,4 +203,33 @@ I'll probably regret writing this on a Friday afternoon, but here it is. If you'
 
 *Source: [Krebs on Security — Russia's Forest Blizzard Hacked 18,000 SOHO Routers for Microsoft OAuth Theft](https://krebsonsecurity.com/2026/05/russia-gru-hacked-18-000-soho-routers/)*`,
   },
+  {
+    slug: "muddywater-microsoft-teams-social-engineering",
+    title: "MuddyWater's False Flag: Ransomware Is the Cover, Persistence Is the Game",
+    date: "2026-05-10",
+    excerpt: "Iranian state hackers used Microsoft Teams social engineering to breach a target, then planted Chaos ransomware artifacts as misdirection while they quietly exfiltrated data via remote access tools. This is what state-sponsored intrusion looks like when it borrows the cybercrime playbook.",
+    category: "Threat Intelligence",
+    readTime: "5 min",
+    content: `MuddyWater is an Iranian state-sponsored group. They also apparently really like ransomware — or at least they want you to think they do.
+
+Rapid7 published an analysis this week of an attack they observed in early 2026. The victim was hit with what looked like a Chaos ransomware operation — double extortion, leak site, the whole thing. Except it wasn't. The ransomware was theater. The real objective was data exfiltration and long-term persistence inside the network.
+
+Here's how it worked: MuddyWater-initiated external chat requests via Microsoft Teams, impersonating IT support. They engaged employees directly, used interactive screen-sharing to walk them through "troubleshooting steps," and convinced them to enter credentials into text files. In at least one case, they told the user to disable antivirus. That's the level of trust they were able to establish.
+
+Once inside, they skipped file encryption entirely. Chaos ransomware artifacts were present — the researchers think they were planted as misdirection — but the actual playbook was remote access tools: DWAgent and AnyDesk. They used RDP to download an executable from an external server, ran discovery commands, grabbed VPN configuration files, and established persistent access without triggering any ransomware detection logic.
+
+This is the attribution problem in practice. Check Point, Broadcom, and JUMPSEC have all documented Iranian threat actors increasingly borrowing from the cybercriminal playbook. The theory is that using Qilin ransomware, running affiliate programs, and operating through Rehub and RAMP forums makes it harder to tell who's actually behind the keyboard. Nation-state or criminal? Both looks like either when you're using the same toolkit.
+
+The code-signing certificate helps. Rapid7 tied this campaign to MuddyWater through a certificate attributed to "Donald Gay," previously used to sign CastleLoader. That's one data point. It's also possible this is exactly what they want defenders to think.
+
+What's not ambiguous: the Omani government operation. Hunt.io found an open directory on a RouterHosting VPS in the UAE containing the full toolkit, C2 code, session logs, and exfiltrated data from the Ministry of Justice. SAM and SYSTEM registry hives. Judicial case data. 26,000 user records. All sitting on an exposed server. That wasn't a sophisticated operation — that was negligence. The kind that happens when you're not expecting someone to be looking.
+
+The physical domain escalation is worth noting. Pro-Iran hacktivist group Handala Hack claimed credit for publishing details on nearly 400 US Navy personnel in the Persian Gulf and an attack on the Port of Fujairah that allegedly enabled missile targeting based on stolen shipping and customs data. Check Point's read: the cyber and kinetic domains are now explicitly connected. This is the most serious manifestation of that pattern they've seen.
+
+If you're running Microsoft Teams in an enterprise environment: the external chat feature is a legitimate attack surface. This campaign used it as the initial access vector. Your MFA is bypassable if an attacker can sit on the other end of a Teams screen-sharing session and convince a user to type their credentials into a notepad file.
+
+---
+
+*Source: [The Hacker News — MuddyWater Uses Microsoft Teams to Steal Credentials in False Flag Ransomware Attack](https://thehackernews.com/2026/05/muddywater-uses-microsoft-teams-to.html)*`,
+  },
 ];
