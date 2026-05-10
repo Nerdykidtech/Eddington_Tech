@@ -106,13 +106,27 @@ export default function HomePage() {
               get the right access — and nothing more.
             </p>
             <p>
-              Beyond infrastructure and IAM, I build iOS apps — like{" "}
+              On the backend, I spend most of my time in Entra ID, Okta, AWS IAM,
+              and custom IdP integrations — writing policies, auditing access, and
+              building zero trust frameworks that actually hold up under pressure.
+              I automate everything with Terraform, Python, and PowerShell because
+              manual processes don't scale and they breed drift.
+            </p>
+            <p>
+              On iOS, I build tools like{" "}
               <Link href="/autheris" className="text-brand-400 hover:text-brand-300 transition-colors">
                 Autheris
               </Link>{" "}
-              — to explore authentication and security in the palm of your hand.
-              This site is where I showcase those projects and point to their
-              dedicated pages.
+              — a secure 2FA token manager that lives entirely on-device. The goal
+              is to take the same security principles I apply to cloud infrastructure
+              and make them practical in the palm of your hand. This site is where I
+              showcase those projects and point to their dedicated pages. When I'm not
+              building, I write about IAM hardening, authentication patterns, and
+              threat intelligence on the{" "}
+              <Link href="/blog" className="text-brand-400 hover:text-brand-300 transition-colors">
+                blog
+              </Link>
+              .
             </p>
           </div>
 
