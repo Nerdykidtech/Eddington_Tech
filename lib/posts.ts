@@ -204,32 +204,32 @@ I'll probably regret writing this on a Friday afternoon, but here it is. If you'
 *Source: [Krebs on Security — Russia's Forest Blizzard Hacked 18,000 SOHO Routers for Microsoft OAuth Theft](https://krebsonsecurity.com/2026/05/russia-gru-hacked-18-000-soho-routers/)*`,
   },
   {
-    slug: "muddywater-microsoft-teams-social-engineering",
-    title: "MuddyWater's False Flag: Ransomware Is the Cover, Persistence Is the Game",
+    slug: "pcpjack-credential-stealer-cloud-worm",
+    title: "PCPJack: Credential-Stealing Worm Exploits 5 CVEs to Spread Across Cloud Infrastructure",
     date: "2026-05-10",
-    excerpt: "Iranian state hackers used Microsoft Teams social engineering to breach a target, then planted Chaos ransomware artifacts as misdirection while they quietly exfiltrated data via remote access tools. This is what state-sponsored intrusion looks like when it borrows the cybercrime playbook.",
+    excerpt: "SentinelOne researchers have unpacked PCPJack, a credential theft framework that targets Docker, Kubernetes, Redis, MongoDB and RayML environments. It exploits five CVEs, spreads like a worm, kicks TeamPCP to the curb, and uses Telegram for C2.",
     category: "Threat Intelligence",
     readTime: "5 min",
-    content: `MuddyWater is an Iranian state-sponsored group. They also apparently really like ransomware — or at least they want you to think they do.
+    content: `Security researchers at SentinelOne have detailed a new credential theft campaign they're calling PCPJack. It's a modular worm that goes after exposed cloud services — Docker, Kubernetes, Redis, MongoDB, RayML — and spreads by exploiting known vulnerabilities.
 
-Rapid7 published an analysis this week of an attack they observed in early 2026. The victim was hit with what looked like a Chaos ransomware operation — double extortion, leak site, the whole thing. Except it wasn't. The ransomware was theater. The real objective was data exfiltration and long-term persistence inside the network.
+The attack chain starts with a bootstrap shell script. That script preps the environment, downloads next-stage Python tooling, terminates any TeamPCP processes already running on the box, and then settles in for the long haul. It even installs Python if it's not there already.
 
-Here's how it worked: MuddyWater-initiated external chat requests via Microsoft Teams, impersonating IT support. They engaged employees directly, used interactive screen-sharing to walk them through "troubleshooting steps," and convinced them to enter credentials into text files. In at least one case, they told the user to disable antivirus. That's the level of trust they were able to establish.
+Five CVEs fuel the spread: CVE-2025-55182, CVE-2025-29927, CVE-2026-1357, CVE-2025-9501, and CVE-2025-48703. All are known flaws in the target platforms. If you're patched, you won't get owned this way. That's the tl;dr.
 
-Once inside, they skipped file encryption entirely. Chaos ransomware artifacts were present — the researchers think they were planted as misdirection — but the actual playbook was remote access tools: DWAgent and AnyDesk. They used RDP to download an executable from an external server, ran discovery commands, grabbed VPN configuration files, and established persistent access without triggering any ransomware detection logic.
+What's interesting is the relationship to TeamPCP, a threat actor that made noise late last year using similar TTPs — exploiting React2Shell and misconfigs in cloud services. PCPJack actively removes TeamPCP artifacts from compromised hosts. When it reports home, it even includes a "PCP replaced" field in its C2 traffic, essentially saying "yep, we handled the squatters." SentinelOne's Alex Delamotte noted this implies the actor was specifically focused on clearing out competitors rather than just opportunistic cloud exploitation.
 
-This is the attribution problem in practice. Check Point, Broadcom, and JUMPSEC have all documented Iranian threat actors increasingly borrowing from the cybercriminal playbook. The theory is that using Qilin ransomware, running affiliate programs, and operating through Rehub and RAMP forums makes it harder to tell who's actually behind the keyboard. Nation-state or criminal? Both looks like either when you're using the same toolkit.
+The credential haul is broad: cloud services, container environments, developer tools, productivity apps, financial platforms. The C2 channel is Telegram — simple, disposable, and unlikely to get flagged by your average perimeter security stack.
 
-The code-signing certificate helps. Rapid7 tied this campaign to MuddyWater through a certificate attributed to "Donald Gay," previously used to sign CastleLoader. That's one data point. It's also possible this is exactly what they want defenders to think.
+One thing that stands out: PCPJack doesn't deploy cryptocurrency miners. TeamPCP did. Either the operator has a different monetization plan, or they're planning to sell the stolen credentials instead of turning cycles into cash. That part isn't clear yet.
 
-What's not ambiguous: the Omani government operation. Hunt.io found an open directory on a RouterHosting VPS in the UAE containing the full toolkit, C2 code, session logs, and exfiltrated data from the Ministry of Justice. SAM and SYSTEM registry hives. Judicial case data. 26,000 user records. All sitting on an exposed server. That wasn't a sophisticated operation — that was negligence. The kind that happens when you're not expecting someone to be looking.
+The propagation logic pulls target lists from Common Crawl's parquet archives — so it's automating reconnaissance on a massive dataset to find exposed services. The check.sh script handles OS detection and picks the right Sliver binary, then queries IMDS endpoints, Kubernetes service accounts, and Docker instances for credentials tied to Anthropic, Digital Ocean, Discord, Google API, Grafana Cloud, HashiCorp Vault, and others.
 
-The physical domain escalation is worth noting. Pro-Iran hacktivist group Handala Hack claimed credit for publishing details on nearly 400 US Navy personnel in the Persian Gulf and an attack on the Port of Fujairah that allegedly enabled missile targeting based on stolen shipping and customs data. Check Point's read: the cyber and kinetic domains are now explicitly connected. This is the most serious manifestation of that pattern they've seen.
+Bottom line: if your cloud services are internet-facing and unpatched, you're in someone's crosshairs. The fact that one actor is actively kicking another off compromised hosts tells you there's real money in this. Not script kiddie stuff — organized, deliberate credential harvesting at scale.
 
-If you're running Microsoft Teams in an enterprise environment: the external chat feature is a legitimate attack surface. This campaign used it as the initial access vector. Your MFA is bypassable if an attacker can sit on the other end of a Teams screen-sharing session and convince a user to type their credentials into a notepad file.
+Patch the five CVEs. Lock down IMDS access. Monitor for unexpected Python spawning and outbound Telegram traffic. That's the stack.
 
 ---
 
-*Source: [The Hacker News — MuddyWater Uses Microsoft Teams to Steal Credentials in False Flag Ransomware Attack](https://thehackernews.com/2026/05/muddywater-uses-microsoft-teams-to.html)*`,
+*Source: [The Hacker News — PCPJack Credential Stealer Exploits 5 CVEs to Spread Worm-Like Across Cloud Systems](https://thehackernews.com/2026/05/pcpjack-credential-stealer-exploits-5.html)*`,
   },
 ];
