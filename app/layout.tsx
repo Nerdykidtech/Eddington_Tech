@@ -50,6 +50,24 @@ export default function RootLayout({
       className={`${outfit.variable} ${jetbrainsMono.variable} font-sans`}
     >
       <body className="min-h-screen flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              name: "Hunter Eddington",
+              url: "https://eddington.tech",
+              sameAs: [
+                "https://www.linkedin.com/in/huntereddington",
+                "https://github.com/nerdykidtech",
+              ],
+              jobTitle: "System Engineer & IAM Engineer",
+              description:
+                "Identity & Access Management, iOS Security, System Hardening",
+            }),
+          }}
+        />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
