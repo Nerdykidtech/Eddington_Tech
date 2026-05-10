@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "Eddington.Tech | System Engineer & IAM Engineer",
   description:
     "Personal site of Hunter Eddington — System Engineer, IAM Engineer, and iOS developer. Showcase of apps and projects.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
   openGraph: {
     title: "Eddington.Tech | System Engineer & IAM Engineer",
     description:
