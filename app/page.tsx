@@ -2,6 +2,38 @@ import Link from "next/link";
 import { AppCard } from "@/components/AppCard";
 import { apps } from "@/lib/apps";
 
+export const metadata = {
+  title: "Eddington.Tech — Hunter Eddington",
+  description:
+    "System Engineer & IAM Engineer. I design and harden infrastructure, identity systems, and access controls — and build iOS apps that put security in your pocket.",
+  alternates: {
+    canonical: "https://eddington.tech",
+  },
+  openGraph: {
+    title: "Eddington.Tech — Hunter Eddington",
+    description:
+      "System Engineer & IAM Engineer. I design and harden infrastructure, identity systems, and access controls — and build iOS apps that put security in your pocket.",
+    url: "https://eddington.tech",
+    siteName: "Eddington.Tech",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Eddington.Tech — Hunter Eddington",
+    description:
+      "System Engineer & IAM Engineer. I design and harden infrastructure, identity systems, and access controls — and build iOS apps that put security in your pocket.",
+    images: [
+      {
+        url: "https://eddington.tech/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eddington.Tech",
+      },
+    ],
+  },
+};
+
 export default function HomePage() {
   return (
     <>

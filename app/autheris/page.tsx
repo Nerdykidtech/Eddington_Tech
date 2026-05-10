@@ -6,9 +6,29 @@ const autheris = apps.find((a) => a.id === "autheris")!;
 export const metadata = {
   title: `Autheris | Eddington.Tech`,
   description: autheris.description,
+  alternates: {
+    canonical: "https://eddington.tech/autheris",
+  },
   openGraph: {
     title: "Autheris — Secure 2FA Token Manager",
     description: autheris.tagline,
+    url: "https://eddington.tech/autheris",
+    siteName: "Eddington.Tech",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Autheris — Secure 2FA Token Manager",
+    description: autheris.tagline,
+    images: [
+      {
+        url: "https://eddington.tech/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Autheris — Secure 2FA Token Manager",
+      },
+    ],
   },
 };
 
