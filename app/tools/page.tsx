@@ -1,6 +1,38 @@
 import { ToolCard } from "@/components/ToolCard";
 import { tools } from "@/lib/tools";
 
+export const metadata = {
+  title: "Tools | Eddington.Tech",
+  description:
+    "Privacy-first tools I actually use and recommend for teams who care about data sovereignty, open-source, and staying off the big-tech radar.",
+  alternates: {
+    canonical: "https://eddington.tech/tools",
+  },
+  openGraph: {
+    title: "Privacy-first Tools | Eddington.Tech",
+    description:
+      "Tools I actually use and recommend for teams who care about data sovereignty, open-source, and staying off the big-tech radar.",
+    url: "https://eddington.tech/tools",
+    siteName: "Eddington.Tech",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy-first Tools | Eddington.Tech",
+    description:
+      "Tools I actually use and recommend for teams who care about data sovereignty, open-source, and staying off the big-tech radar.",
+    images: [
+      {
+        url: "https://eddington.tech/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eddington.Tech Tools",
+      },
+    ],
+  },
+};
+
 export default function ToolsPage() {
   return (
     <div className="px-6 py-20 sm:py-32">
