@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { snippets } from "@/lib/snippets";
 
 export const metadata: Metadata = {
   title: "Snippets | Eddington.Tech",
@@ -37,5 +38,27 @@ export default function SnippetsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "IAM & Security Scripts | Eddington.Tech",
+            description: "PowerShell, Bash, Python, and TypeScript scripts for IAM, infrastructure, and security tasks.",
+            itemListElement: snippets.map((s, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: s.title,
+              description: s.description,
+              url: `https://eddington.tech/snippets#${s.id}`,
+            })),
+          }),
+        }}
+      />
+      {children}
+    </>
+  );
 }
