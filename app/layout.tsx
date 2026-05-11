@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
+    apple: "/autheris-icon.png",
   },
   openGraph: {
     title: "Eddington.Tech | System Engineer & IAM Engineer",
