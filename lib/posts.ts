@@ -7,6 +7,7 @@ export interface Post {
   readTime: string;
   content: string; // markdown-like body
   author?: string;
+  source?: string;
   image?: string;
 }
 
@@ -43,6 +44,7 @@ This one is worth tracking. QLNX is new and the delivery mechanism is still uncl
 
 `,
     author: "Hunter Eddington",
+    source: "The Hacker News — Quasar Linux RAT Steals Developer Credentials for Software Supply Chain Compromise|https://thehackernews.com/2026/05/quasar-linux-rat-steals-developer.html",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -76,6 +78,7 @@ Patch when vendors ship. Until then, understand your exposure.
 
 `,
     author: "Hunter Eddington",
+    source: "BleepingComputer — New Linux 'Dirty Frag' zero-day with PoC exploit gives root privileges|https://www.bleepingcomputer.com/news/security/new-linux-dirty-frag-zero-day-with-poc-exploit-gives-root-privileges/",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -103,6 +106,7 @@ PamDOORa isn't confirmed in the wild yet. But it's for sale for $900, down from 
 
 `,
     author: "Hunter Eddington",
+    source: "The Hacker News — New Linux PamDOORa Backdoor Uses PAM Modules to Steal SSH Credentials|https://thehackernews.com/2026/05/new-linux-pamdoora-backdoor-uses-pam.html",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -153,6 +157,7 @@ More as it develops.
 
 `,
     author: "Hunter Eddington",
+    source: "Krebs on Security — Canvas Breach Disrupts Schools & Colleges Nationwide|https://krebsonsecurity.com/2026/05/canvas-breach-disrupts-schools-colleges-nationwide/",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -182,6 +187,7 @@ This is the kind of vulnerability that looks boring until you realize how many s
 
 `,
     author: "Hunter Eddington",
+    source: "The Hacker News — cPanel, WHM Release Fixes for Three New Vulnerabilities — Patch Now|https://thehackernews.com/2026/05/cpanel-whm-patch-3-new-vulnerabilities.html",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -217,6 +223,7 @@ I'll probably regret writing this on a Friday afternoon, but here it is. If you'
 
 `,
     author: "Hunter Eddington",
+    source: "Krebs on Security — Russia's Forest Blizzard Hacked 18,000 SOHO Routers for Microsoft OAuth Theft|https://krebsonsecurity.com/2026/05/russia-gru-hacked-18-000-soho-routers/",
     image: "https://eddington.tech/og-image.png",
   },
   {
@@ -248,6 +255,7 @@ Patch the five CVEs. Lock down IMDS access. Monitor for unexpected Python spawni
 
 `,
     author: "Hunter Eddington",
+    source: "The Hacker News — PCPJack Credential Stealer Exploits 5 CVEs to Spread Worm-Like Across Cloud Systems|https://thehackernews.com/2026/05/pcpjack-credential-stealer-exploits-5.html",
     image: "https://eddington.tech/og-image.png",
   }
 ];

@@ -99,6 +99,33 @@ export default function BlogPostPage({ params }: PageProps) {
           </p>
         ))}
       </div>
+
+      <footer className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <span>Written by</span>
+          <span className="text-brand-400 font-medium">{post.author ?? "Hunter Eddington"}</span>
+        </div>
+        {post.source && (
+          <div className="text-sm text-zinc-500">
+            <span>Source: </span>
+            {typeof post.source === 'string' && post.source.includes('|') ? (
+              <>
+                {post.source.split('|')[0]}
+                <a
+                  href={post.source.split('|')[1]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-400 hover:text-brand-300 ml-1"
+                >
+                  →
+                </a>
+              </>
+            ) : (
+              <span>{post.source}</span>
+            )}
+          </div>
+        )}
+      </footer>
     </div>
   );
 }
