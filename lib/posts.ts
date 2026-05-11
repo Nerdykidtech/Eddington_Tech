@@ -257,5 +257,35 @@ Patch the five CVEs. Lock down IMDS access. Monitor for unexpected Python spawni
     author: "Hunter Eddington",
     source: "The Hacker News — PCPJack Credential Stealer Exploits 5 CVEs to Spread Worm-Like Across Cloud Systems|https://thehackernews.com/2026/05/pcpjack-credential-stealer-exploits-5.html",
     image: "https://eddington.tech/og-image.png",
+  },
+  {
+    slug: "ai-generated-zero-day-exploits",
+    title: "Google Confirms: Threat Actors Are Using AI to Write Zero-Day Exploits",
+    date: "2026-05-11",
+    excerpt: "Google Threat Intelligence Group identified what they believe is the first AI-generated zero-day exploit in the wild. Python code with LLM hallmarks— docstrings, hallucinated CVSS scores, textbook structure— was found targeting an unnamed web admin tool.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    content: `Google's Threat Intelligence Group just confirmed something that was probably inevitable: threat actors are now using LLMs to write zero-day exploits.
+
+The discovery came when GTIG analysts dissected an exploit targeting an unnamed open-source web administration tool. The Python code had obvious fingerprints. Educational docstrings everywhere. A hallucinated CVSS score embedded in comments. The tidy, textbook structure of code that has never been reviewed by a human.
+
+Google has high confidence this was AI-generated. The vulnerability itself—a semantic logic bug, not a memory corruption issue—is exactly the kind of flaw LLMs excel at finding. Different from what fuzzing catches.
+
+This is not theoretical. Multiple APT groups are already operational with this approach. Chinese actors—APT27, APT45, UNC2814, UNC5673, UNC6201—are using AI for vulnerability discovery and exploit development. North Korean operators are in the mix too. Russian groups have been observed generating decoy code to hide malware like CANFAIL and LONGSTREAM.
+
+The implications are straightforward and annoying: the barrier to entry for zero-day development just dropped. You do not need deep systems expertise anymore. You need a prompt and a target.
+
+This is not about AI replacing human researchers. Sophisticated operations still require operational discipline, infrastructure, and the patience to weaponize findings without burning them. But the discovery phase—the hard part of finding bugs in complex software—just got cheaper and faster for anyone with API access.
+
+For defenders, this means the same thing it has always meant, just accelerated. Patch quickly. Assume compromise. Monitor for post-exploitation behavior because you will not catch the initial entry with signature-based tools.
+
+The attack surface is still the attack surface. The difference is who can reach it now.
+
+---
+
+`,
+    author: "Hunter Eddington",
+    source: "BleepingComputer — Google: Hackers used AI to develop zero-day exploit for web admin tool|https://www.bleepingcomputer.com/news/security/google-hackers-used-ai-to-develop-zero-day-exploit-for-web-admin-tool/",
+    image: "https://eddington.tech/og-image.png",
   }
 ];
