@@ -287,5 +287,36 @@ The attack surface is still the attack surface. The difference is who can reach 
     author: "Hunter Eddington",
     source: "BleepingComputer — Google: Hackers used AI to develop zero-day exploit for web admin tool|https://www.bleepingcomputer.com/news/security/google-hackers-used-ai-to-develop-zero-day-exploit-for-web-admin-tool/",
     image: "https://eddington.tech/og-image.png",
+  },
+  {
+    slug: "checkmarx-jenkins-plugin-compromised",
+    title: "TeamPCP Hits Checkmarx Jenkins Plugin",
+    date: "2026-05-12",
+    excerpt: "TeamPCP strikes again. This time they got into the Checkmarx Jenkins AST plugin on the Marketplace, bundling an infostealer into the official release.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    content: `TeamPCP is having a busy month.
+
+They hit the KICS scanner a few weeks ago, and now they have the Checkmarx Jenkins Application Security Testing plugin too. The modified version was on the Jenkins Marketplace. Teams pulling updates got an infostealer bundled in.
+
+This is the same pattern we are seeing everywhere. TeamPCP is building a credential harvesting operation. They do not need exploits. They need maintainer access, time, and a CI/CD pipeline that trusts the vendor.
+
+If you pulled the Checkmarx plugin recently, check your version. Anything after December 17, 2025 is suspect. The last clean version is 2.0.13-829.vc72453fa_1c16.
+
+Three things worth doing:
+- Pin your Jenkins plugin versions. "Latest" is not a version.
+- Build from source when you can. The Marketplace is convenient, not verified.
+- Check your build artifacts. Infostealers in CI/CD usually do not hide well. They rely on nobody looking.
+
+This extends the Shai-Hulud campaign. Same actors, same objective, different target. Security vendors are attractive because their tools run with privileges by design. Compromise one, move laterally across the build environment.
+
+The Jenkins issue is patched. Checkmarx shipped a clean version. But if you ran the bad plugin for even a day, rotate your credentials. Assume compromise. Then verify.
+
+---
+
+`,
+    author: "Hunter Eddington",
+    source: "The Hacker News — TeamPCP Compromises Checkmarx Jenkins AST Plugin|https://thehackernews.com/2026/05/teampcp-compromises-checkmarx-jenkins.html",
+    image: "https://eddington.tech/og-image.png",
   }
 ];
