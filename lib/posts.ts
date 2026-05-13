@@ -318,5 +318,37 @@ The Jenkins issue is patched. Checkmarx shipped a clean version. But if you ran 
     author: "Hunter Eddington",
     source: "The Hacker News — TeamPCP Compromises Checkmarx Jenkins AST Plugin|https://thehackernews.com/2026/05/teampcp-compromises-checkmarx-jenkins.html",
     image: "https://eddington.tech/og-image.png",
+  },
+  {
+    slug: "microsoft-patch-tuesday-may-138-vulns",
+    title: "Microsoft Patch Tuesday: 138 Flaws, Including DNS and Netlogon RCE",
+    date: "2026-05-13",
+    excerpt: "Microsoft shipped 138 vulnerabilities this Patch Tuesday, including wormable DNS RCE and a Netlogon flaw that bypasses Entra ID entirely.",
+    category: "Hardening",
+    readTime: "3 min",
+    content: `Microsoft shipped 138 flaws this Patch Tuesday. Thirty of them are Critical. Two stand out.
+
+CVE-2026-41096 is a DNS client heap overflow that gives remote code execution. Send the right malformed DNS response, corrupt memory, execute code. No authentication needed. Microsoft confirmed this is wormable in the right network conditions.
+
+CVE-2026-41103 is a Netlogon spoofing bug that lets an attacker impersonate any Entra ID user. Adam Barnett at Rapid7 pointed out the obvious: this bypasses Entra ID entirely. That's your identity layer going out the window.
+
+The DNS vulnerability bothers me more than it should. DNS clients are everywhere. They run in containers, VMs, laptops, IoT devices. Most networks have internal DNS resolvers forwarding to external ones. If you're pivoting laterally and hit one of these unpatched systems, you don't need credentials anymore. You just need to poison the right response.
+
+Then there's CVE-2026-42898 in Dynamics CRM. Jack Bicer at Action1 walked through why this is worse than the CVSS implies. Low-privilege account, arbitrary code execution over the network, no user interaction. CRM environments connect to identity services, databases, financial systems. Get in through a low-level sales account, walk out with ERP access.
+
+61 privilege escalation bugs in this batch. 32 remote code execution. That's not a quiet month.
+
+Microsoft also confirmed 16 of these were found by MDASH — their multi-model AI scanning system. They're expecting AI-driven discovery to keep increasing the patch volume. The report this morning made it sound like a feature. If you're patching manually, it feels like a threat.
+
+There is one housekeeping item hiding in the changelog. Secure Boot certificates from 2011 expire next month. Devices without the updated trust anchors will fail to boot or drop into degraded security states after June 26. Microsoft announced this last November. The deadline is thirty days away.
+
+Check your DNS settings on any Windows host. Check your Entra ID audit logs for anomalous authentications. And if you haven't rotated to the 2023 Secure Boot certs, do that this week. Not everything on Patch Tuesday is a CVE. Some of it is just as damaging.
+
+---
+
+`,
+    author: "Hunter Eddington",
+    source: "The Hacker News — Microsoft Patches 138 Vulnerabilities, Including DNS and Netlogon RCE Flaws|https://thehackernews.com/2026/05/microsoft-patches-138-vulnerabilities.html",
+    image: "https://eddington.tech/og-image.png",
   }
 ];
