@@ -350,5 +350,37 @@ Check your DNS settings on any Windows host. Check your Entra ID audit logs for 
     author: "Hunter Eddington",
     source: "The Hacker News — Microsoft Patches 138 Vulnerabilities, Including DNS and Netlogon RCE Flaws|https://thehackernews.com/2026/05/microsoft-patches-138-vulnerabilities.html",
     image: "https://eddington.tech/og-image.png",
-  }
+  },
+  {
+    slug: "foxconn-nitrogen-ransomware-8tb-data-stolen",
+    title: "Foxconn Confirms Cyberattack After Nitrogen Ransomware Gang Claims 8TB of Data Stolen",
+    date: "2026-05-13",
+    excerpt: "Foxconn confirms North American factories hit by cyberattack. Nitrogen ransomware gang claims 8TB of data stolen — 11 million documents — from the world's largest electronics manufacturer.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "BleepingComputer|https://www.bleepingcomputer.com/news/security/electronics-giant-foxconn-confirms-cyberattack-on-north-american-factories/",
+    image: "https://eddington.tech/og-image.png",
+    content: `Foxconn just confirmed what the Nitrogen ransomware gang claimed three days ago: North American factories are down, and 8TB of data — 11 million documents — is in the hands of extortionists.
+
+Foxconn is not a small target. They have over 900,000 employees across 240 campuses in 24 countries. Revenue in 2025 was $260 billion. They manufacture for Apple, Nvidia, Intel, Google, and basically every major electronics company you've heard of.
+
+The attack affected North American operations specifically. Foxconn's statement says they "immediately activated the response mechanism" and are "implementing multiple operational measures to ensure the continuity of factory operations." The wording matters here: they're talking about continuity, not containment.
+
+Nitrogen is a ransomware operation that emerged around late 2023. They don't just encrypt — they steal first, then threaten to leak. The 8TB claim is specific and unusually large. For context, that's roughly the storage capacity of 1,600 DVDs. Most ransomware groups claim hundreds of gigabytes when they want headlines.
+
+The supply chain angle is what makes this bigger than one company. Foxconn's customers include some of the most valuable brands in the world. If the stolen data includes design specifications, manufacturing processes, supplier contracts, or pricing information, the blast radius extends far beyond Foxconn's own infrastructure.
+
+Foxconn is being relatively tight-lipped about the scope, which is typical for a company at this scale in early response. What we know: North American factories were affected. What we don't know yet: which factories, whether the 8TB claim is accurate, what type of data was exfiltrated, and whether any customer IP was compromised.
+
+The fact that Foxconn confirmed at all — rather than going with "technical difficulties" — suggests the operational impact was significant enough that they couldn't plausibly deny it.
+
+This is worth watching. Ransomware groups are increasingly targeting manufacturers because the downtime costs are immediate and severe. A factory that can't ship affects quarterly revenue. That pressure makes companies more likely to pay.
+
+If you work with Foxconn as a supplier or customer: expect communication from them about data exposure. If you don't hear from them in the next week, that's a signal too.
+
+---
+
+`,
+  },
 ];
