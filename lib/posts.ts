@@ -461,4 +461,43 @@ Patch it.
 ---
 `,
   },
+  {
+    slug: "fragnesia-linux-kernel-lpe-cve-2026-46300",
+    title: "Fragnesia: The Third Linux Kernel LPE in Two Weeks",
+    date: "2026-05-14",
+    excerpt: "Linux kernel page cache corruption strikes again with CVE-2026-46300. This XFRM ESP-in-TCP bug joins Copy Fail and Dirty Frag as the third critical LPE to drop this month.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/new-fragnesia-linux-kernel-lpe-grants.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Three Linux root exploits in two weeks. The third one just dropped.
+
+CVE-2026-46300, codenamed Fragnesia, is a local privilege escalation in the Linux kernel's XFRM ESP-in-TCP subsystem. William Bowling from V12 security found it. A PoC was released. It works on Ubuntu, RHEL, SUSE, Debian, AlmaLinux, basically everything.
+
+Here's the technical bit: Fragnesia lets an unprivileged local attacker corrupt the page cache of read-only files. The mechanism leverages a logic bug in how the kernel handles ESP-in-TCP encapsulation. You write specially crafted data through the XFRM subsystem, the kernel misparses the sequence, and you get arbitrary byte writes into the page cache of files that should be immutable.
+
+The Fragnesia PoC targets /usr/bin/su. Corrupt that binary in memory, run it, you have root. No race condition. Reliable exploitation. Third time in two weeks — Copy Fail, then Dirty Frag, now Fragnesia. Same attack surface, different bugs.
+
+The mitigations are the same as Dirty Frag. Disable esp4, esp6, and related xfrm modules:
+
+    printf 'install esp4 /bin/false\\ninstall esp6 /bin/false\\n' > /etc/modprobe.d/fragnesia.conf
+
+That breaks IPsec. Again. If you are running production Linux with IPsec requirements, you are choosing between functional VPNs and local root access for any authenticated user. Red Hat is still assessing whether their Dirty Frag mitigation guidance covers this CVE. CloudLinux says the same mitigation works.
+
+Wiz noted that AppArmor restrictions on unprivileged user namespaces might help, but that requires additional bypasses. Which is security researcher speak for "this makes exploitation harder but probably not impossible."
+
+What I keep thinking about: this is the third page-cache corruption bug in the XFRM subsystem in fourteen days. Copy Fail got CISA attention. Dirty Frag got federal agencies a seven day patch deadline. Fragnesia is out there now with a public PoC and no word on active exploitation yet.
+
+The Linux kernel's XFRM code is clearly undertested. The ESP-in-TCP path in particular has now yielded three high-impact LPEs. When researchers find a bug class that quickly, more are coming. Page cache corruption via networking subsystems is apparently a rich vein.
+
+Microsoft security intelligence put out a statement urging patching immediately or applying the Dirty Frag mitigations. That is notable. Microsoft does not usually comment on Linux CVEs this quickly. The Windows team calling attention to a Linux kernel bug suggests they view the risk as severe and widely applicable.
+
+There is also a threat actor called berz0k advertising a zero-day Linux LPE for $170,000 on cybercrime forums. That exploit claims TOCTOU-based privilege escalation, stable, no crashes. I don't know if it is related to Fragnesia or something else. But the timing is awful. Researchers are finding bugs faster than vendors can ship patches, and criminals are selling exploits for bugs that might not even be public yet.
+
+The lesson here is boring and important: the Linux kernel page cache is a shared surface with complex interactions. Networking code that writes to it has been undertested. The same defensive advice keeps being relevant. Patch fast. If you can't patch, understand your exposure. Monitor for module loading and privilege escalation patterns. Treat local access as a significant risk boundary, not a perimeter security afterthought.
+
+This is going to keep happening until the XFRM subsystem gets a proper audit. Based on the pace so far, probably in the next month.
+`,
+  },
 ];
