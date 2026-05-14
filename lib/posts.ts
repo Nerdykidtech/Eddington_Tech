@@ -383,4 +383,41 @@ If you work with Foxconn as a supplier or customer: expect communication from th
 
 `,
   },
+  {
+    slug: "ollama-memory-leak-cve-2026-7482",
+    title: "Ollama's Memory Leak Is a Self-Hosting Problem We Can't Keep Ignoring",
+    date: "2026-05-14",
+    excerpt: "A critical out-of-bounds read in Ollama before 0.17.1 lets attackers leak process memory including API keys from over 300,000 exposed servers.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News — Ollama Out-of-Bounds Read Vulnerability Allows Remote Process Memory Leak|https://thehackernews.com/2026/05/ollama-out-of-bounds-read-vulnerability.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Ollama's Memory Leak Is a Self-Hosting Problem We Can't Keep Ignoring
+
+Cyera found a critical out-of-bounds read in Ollama versions before 0.17.1. Tracked as CVE-2026-7482 with a CVSS score of 9.1, it affects over 300,000 exposed Ollama servers globally.
+
+The attack is simple. Send a maliciously crafted GGUF model file to an Ollama server. The server parses it, triggers the out-of-bounds read, and leaks process memory back to you. That memory can contain API keys, environment variables, chat history -- whatever was in the heap at that moment.
+
+Ollama isn't supposed to be internet-facing. The official documentation says bind to localhost. But people expose it anyway, because that's how we've been trained to deploy services. Docker, cloud VMs, reverse proxies -- the defaults drift toward "accessible" rather than "isolated."
+
+This is why I keep hammering on hardening basics. Ollama is a single-binary Go application that downloads and runs large language models. It has an HTTP API. It runs as the user who started it. The security model assumes you're on a trusted network.
+
+The GGUF file format is what LLMs use to store weights and metadata. Ollama pulls these from Hugging Face, from private registries, from disk. The vulnerability is in how Ollama parses tensor metadata within GGUF files -- insufficient bounds checking on the buffer that holds tensor info.
+
+When the bug triggers, you can leak anywhere from a few KB to the entire process heap depending on the crafted file. Cyera demonstrated recovering API keys from memory. That's not theoretical -- that's the exploit.
+
+300,000 exposed instances is a big number. The actual risk depends on what those instances have access to. A personal Ollama server running on your laptop is different from one deployed in a corporate VPC with access to internal APIs. But the exposure pattern matters. If you're running Ollama on a cloud instance, check your security groups. If 11434 is open to the world, that's a problem.
+
+Ollama patched this in 0.17.1. The changelog just says "security fixes" without details -- typical responsible disclosure. If you're running Ollama, upgrade now. If you're managing infrastructure where developers spin up Ollama containers, audit what's actually running. Don't assume people followed the localhost guidance.
+
+The larger point: self-hosted AI infrastructure is becoming a standard part of dev environments. These tools come with assumptions that don't match how people actually deploy them. "Bind to localhost" is meaningless when the default Docker run command publishes the port.
+
+This vulnerability is exploitable remotely, requires no authentication, and gives you the server's memory. That's as bad as it gets for an information disclosure bug.
+
+Patch it.
+
+---
+`,
+  },
 ];
