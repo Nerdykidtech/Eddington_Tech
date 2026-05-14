@@ -14,6 +14,47 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "bitlocker-winre-yellowkey-bypass",
+    title: "BitLocker's WinRE Backdoor: YellowKey and the FsTx Bypass",
+    date: "2026-05-14",
+    excerpt: "A researcher going by Chaotic Eclipse published a BitLocker bypass that uses NTFS transactions in the Windows Recovery Environment. It works. Even with TPM+PIN, apparently.",
+    category: "Hardening",
+    readTime: "4 min",
+    content: `The BitLocker bypass dropped this morning, and it's nastier than the headlines suggest.
+
+A researcher calling themselves Chaotic Eclipse — also Nightmare Eclipse on GitHub — published proof-of-concept code for what they're calling YellowKey. It's a BitLocker bypass that works through the Windows Recovery Environment, and it's being described as functioning like a backdoor because the vulnerable component only exists in WinRE.
+
+Here's what it actually does. You put specially crafted files in a \\System Volume Information\\FsTx directory — either on a USB drive or directly on the EFI partition. Reboot into WinRE, hold down CTRL, and instead of the recovery environment you get a command prompt. With the BitLocker volume still unlocked.
+
+Will Dormann from Tharros Labs explained the mechanics: Windows looks for FsTx directories on attached drives when entering recovery, then replays NTFS transaction logs. That process deletes X:\\Windows\\System32\\winpeshl.ini, which is supposed to launch the actual recovery tools. Without it, Windows drops to CMD.EXE. The disk is already decrypted at this point because WinRE needs access to fix boot issues.
+
+Kevin Beaumont confirmed it works. He recommended BitLocker PIN plus BIOS password as mitigation, which slows down an attacker who has physical access.
+
+But here's the part that should get attention: Chaotic Eclipse claims this still works with TPM+PIN enabled. They haven't released that version of the PoC, but their statement is unambiguous: "No, TPM+PIN does not help, the issue is still exploitable regardless."
+
+The PIN prompt happens before WinRE loads. So the PIN doesn't protect against this attack path — you're already past it.
+
+This follows BlueHammer and RedSun, two other Windows zero-days the same researcher disclosed recently. Both saw exploit attempts within days of publication. Chaotic Eclipse is promising a "big surprise" for the next Patch Tuesday, which suggests they have more material and are releasing on a schedule.
+
+The decision to publish these as zero-days rather than through coordinated disclosure appears to be rooted in frustration with Microsoft's handling of previous reports. Not taking sides on that — just noting that this is becoming a pattern, and Microsoft's security response is now being bypassed by researchers who've lost patience.
+
+The real issue here isn't this specific bug. It's that WinRE has a massive trust boundary problem. It's designed to access encrypted volumes for repair purposes. That design decision created an attack surface that BitLocker was never really designed to protect against. When WinRE loads, the disk is accessible. Full stop. Finding ways to hijack that process is just playing within the rules Microsoft established.
+
+If you're relying on BitLocker for physical security: understand what this bypass means. Physical access was already a threat model edge case, but this lowers the bar significantly. An attacker with brief access to a powered-off machine can potentially get a shell with full disk access in minutes, not hours.
+
+The fix is going to involve changing how WinRE handles those FsTx directories, or disabling WinRE entirely (which breaks recovery scenarios). Neither is a great option. Microsoft will patch this specific path, but the architectural issue — trusted recovery environment with full disk access — remains.
+
+Check your BitLocker configuration. TPM+PIN helps against cold boot attacks and some DMA scenarios. It doesn't help here. The PIN unlocks the volume before WinRE even enters the picture, and WinRE is trusted by design.
+
+Chaotic Eclipse isn't done. Patch Tuesday should be interesting.
+
+---
+`,
+    author: "Hunter Eddington",
+    source: "BleepingComputer — Windows BitLocker zero-day gives access to protected drives, PoC released|https://www.bleepingcomputer.com/news/security/windows-bitlocker-zero-day-gives-access-to-protected-drives-poc-released/",
+    image: "https://eddington.tech/og-image.png",
+  },
+  {
     slug: "quasar-linux-rat-developer-cred-harvest",
     title: "Quasar Linux RAT: The Developer Machine Nightmare You Should Actually Worry About",
     date: "2026-05-09",
