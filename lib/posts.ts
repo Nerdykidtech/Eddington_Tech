@@ -500,4 +500,35 @@ The lesson here is boring and important: the Linux kernel page cache is a shared
 This is going to keep happening until the XFRM subsystem gets a proper audit. Based on the pace so far, probably in the next month.
 `,
   },
+  {
+    slug: "cisco-sd-wan-auth-bypass-cve-2026-20182",
+    title: "Cisco SD-WAN Authentication Bypass: CVE-2026-20182 and the Repeat of CVE-2026-20127",
+    date: "2026-05-15",
+    excerpt: "Cisco confirmed another critical authentication bypass in SD-WAN Controller with active exploitation. CVE-2026-20182 carries a CVSS 10.0 and bypasses authentication entirely—no patch bypass of the earlier CVE-2026-20127, just a different bug in the same service.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/cisco-catalyst-sd-wan-controller-auth.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Cisco dropped a security advisory yesterday that should get everyone's attention. Another authentication bypass in Catalyst SD-WAN Controller. CVE-2026-20182. CVSS score of 10.0. Actively exploited.
+
+The vulnerability sits in the peering authentication mechanism of the vdaemon service over DTLS on UDP port 12346. An unauthenticated attacker sends a crafted request, bypasses authentication entirely, and logs in as an internal high-privilege user. From there they can access NETCONF and manipulate the entire SD-WAN fabric.
+
+Rapid7 found this one. They noted it affects the same vdaemon service that was vulnerable to CVE-2026-20127, another CVSS 10.0 authentication bypass exploited since 2023 by a threat actor called UAT-8616. This new bug is not a patch bypass. It's a different issue in a similar part of the networking stack. The end result is identical: remote admin access without credentials.
+
+The affected deployments include on-prem SD-WAN Controller, SD-WAN Cloud-Pro, SD-WAN Cloud (Cisco Managed), and SD-WAN for Government (FedRAMP). That's basically every deployment model Cisco offers.
+
+This is the second authentication bypass in the same component within months. The first one was being exploited in the wild for two years before disclosure. The pattern here is not encouraging: the vdaemon service appears to have fundamental architectural issues around authentication that patch cycles haven't addressed.
+
+For defenders, the immediate action is patching. Cisco has released fixed versions. But the fact that this is being exploited "in limited attacks" before the advisory dropped suggests threat actors already had the vulnerability and were using it quietly. That limited attacks language usually means incident response found it, not security research.
+
+The broader issue is what this says about SD-WAN security posture. These controllers manage the network fabric for thousands of sites. Compromise the controller, you own the network configuration for the entire deployment. The attack surface is meant to be internal, but authentication bypasses turn internal trust boundaries into external access points.
+
+If you're running affected versions: patch now. If you're running SD-WAN Cloud: Cisco manages the fix, but you should verify your tenant is updated. If you're on FedRAMP: same situation, but verify through your Cisco account team.
+
+The repeat nature of this vulnerability in the same service within a short timeframe suggests the code review happened under pressure rather than systematically. CVE-2026-20127 was a wake-up call. CVE-2026-20182 should be treated as evidence that the wake-up call didn't result in sufficient hardening of the vdaemon authentication path.
+
+Cisco's security response has been prompt on disclosure. The question is why a second authentication bypass existed in a component that had already demonstrated it was a high-value target for exploitation.
+`,
+  },
 ];
