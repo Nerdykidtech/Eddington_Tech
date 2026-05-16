@@ -531,4 +531,33 @@ The repeat nature of this vulnerability in the same service within a short timef
 Cisco's security response has been prompt on disclosure. The question is why a second authentication bypass existed in a component that had already demonstrated it was a high-value target for exploitation.
 `,
   },
+  {
+    slug: "microsoft-exchange-cve-2026-42897-xss-active-exploitation",
+    title: "Exchange CVE-2026-42897 Is Being Exploited Right Now",
+    date: "2026-05-16",
+    excerpt: "Microsoft confirmed active exploitation of a cross-site scripting flaw in on-prem Exchange Server. CVSS 8.1, no patch yet, and attackers are already using it.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/on-prem-microsoft-exchange-server-cve.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Microsoft confirmed yesterday that CVE-2026-42897 is being exploited in the wild. It's a cross-site scripting vulnerability in on-premise Exchange Server with a CVSS score of 8.1, and there's no patch yet.
+
+This shouldn't feel routine, but it kind of does. Exchange keeps showing up in active exploitation reports because it's the identity system for most enterprises. If you own Exchange, you own email. If you own email, you own password resets, MFA codes, and every conversation the company has.
+
+The mechanics here are straightforward: crafted emails exploit a spoofing bug in Exchange's handling of certain content. Microsoft hasn't released full technical details yet—they almost never do when exploitation is ongoing—but the CVSS score and the XSS classification tell enough of the story. This is a client-side bug that probably gives you session tokens or administrative access when an Outlook Web App user opens the wrong message.
+
+Exchange vulnerabilities have a pattern. They get disclosed in batches, often around Patch Tuesday. Researchers find them through fuzzing and source code analysis. Then state actors and ransomware gangs start scanning for unpatched servers within hours. The timeline from disclosure to exploitation keeps shrinking.
+
+For this one, Microsoft is recommending mitigations while a patch is developed. The Exchange Online variant—Microsoft's cloud-hosted email—is apparently not affected in the same way. This keeps happening: cloud customers get isolation and faster patching, on-prem customers get the full brunt of zero-day risk. If you're still running self-hosted Exchange, this is the tradeoff you signed up for.
+
+The mitigation details aren't fully public yet. Microsoft's security advisory mentions the usual workarounds: web application firewalls with XSS filtering, mail filtering for suspicious attachments, and the temporary disabling of certain features if your environment can tolerate it. None of these are satisfying. The real fix is patching, and that's not available.
+
+Here's what I'd actually do if I ran an Exchange environment right now: pull your Exchange logs and look for suspicious external emails with unusual character sets or encoding patterns. Monitor OWA sessions for anomalous access patterns. If you have the telemetry to catch someone pivoting from an XSS payload to Exchange admin, that's your detection gap to close.
+
+The vulnerability was reported by an anonymous researcher. That detail matters. The Exchange attack surface is large enough that motivated individuals can still find exploitable bugs without nation-state resources. That means the barrier to finding the next one is lower than it should be.
+
+Patch when Microsoft releases it. Until then, understand that your email infrastructure is currently a target for which no complete defense exists. The attackers know this too.
+`,
+  },
 ];
