@@ -6,6 +6,12 @@ interface PageProps {
   params: { slug: string };
 }
 
+function getRandomPosts(currentSlug: string, count: number = 3) {
+  const otherPosts = posts.filter((p) => p.slug !== currentSlug);
+  const shuffled = [...otherPosts].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 export async function generateStaticParams() {
   return posts.map((post) => ({ slug: post.slug }));
 }
@@ -41,6 +47,8 @@ export async function generateMetadata({ params }: PageProps) {
 export default function BlogPostPage({ params }: PageProps) {
   const post = posts.find((p) => p.slug === params.slug);
   if (!post) notFound();
+
+  const relatedPosts = getRandomPosts(post.slug, 3);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
@@ -126,6 +134,38 @@ export default function BlogPostPage({ params }: PageProps) {
           </div>
         )}
       </footer>
+
+      {relatedPosts.length > 0 && (
+        <aside className="mt-12 border-t border-white/10 pt-8">
+          <h2 className="text-lg font-display font-semibold text-white mb-4">
+            More from the blog
+          </h2>
+          <div className="space-y-4">
+            {relatedPosts.map((relatedPost) => (
+              <article key={relatedPost.slug}>
+                <Link
+                  href={`/blog/${relatedPost.slug}`}
+                  className="block group"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-brand-400 font-medium mt-0.5">
+                      {relatedPost.category}
+                    </span>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-zinc-300 group-hover:text-brand-400 transition-colors line-clamp-2">
+                        {relatedPost.title}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-1">
+                        {relatedPost.excerpt}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              </article>
+            ))}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
