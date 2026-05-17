@@ -560,4 +560,33 @@ The vulnerability was reported by an anonymous researcher. That detail matters. 
 Patch when Microsoft releases it. Until then, understand that your email infrastructure is currently a target for which no complete defense exists. The attackers know this too.
 `,
   },
+  {
+    slug: "funnel-builder-woocommerce-skimmer-sansec",
+    title: "Funnel Builder Skimmer: 40,000 WooCommerce Stores at Risk",
+    date: "2026-05-17",
+    excerpt: "A missing authorization check in the Funnel Builder WordPress plugin allowed attackers to inject payment skimmers into 40,000+ WooCommerce stores. Sansec reports active exploitation.",
+    category: "Security",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/05/funnel-builder-flaw-under-active.html",
+    content: `Sansec published an analysis this week of a payment skimming campaign hitting WooCommerce stores. The vulnerability is in Funnel Builder, a WordPress plugin with over 40,000 active installations. All versions before 3.15.0.3 are affected. The plugin has since been patched.
+
+The mechanics are straightforward: Funnel Builder exposes a checkout endpoint that accepts a parameter choosing which internal method to run. Older versions never checked caller permissions or limited which methods could be invoked. An unauthenticated request can reach an internal method that writes attacker-controlled data directly into the plugin's global settings.
+
+From there, the injected JavaScript loads on every Funnel Builder checkout page. The payload Sansec observed masquerades as Google Tag Manager code — it sits alongside legitimate analytics tags where reviewers tend to skip past it. The fake GTM loader opens a WebSocket connection to wss://protect-wss[.]com/ws, retrieves a tailored skimmer, and starts harvesting credit card numbers, CVVs, and billing addresses.
+
+This is a recurring Magecart pattern. Attackers dress skimmers up as familiar tracking tags because people review code differently when it looks like infrastructure they already trust. Sansec has documented this approach repeatedly — the GTM disguise, the WebSocket C2, the checkout page targeting. It's effective because detection often relies on noticing anomalies, and these payloads blend into legitimate analytics noise.
+
+The vulnerable endpoint is publicly exposed without authentication. No privilege escalation required. The attack chain is: send a crafted request to the checkout endpoint → write malicious JavaScript to the External Scripts setting → wait for customers to check out → harvest payment data via WebSocket.
+
+For store owners running Funnel Builder: update to 3.15.0.3 immediately. Then check Settings > Checkout > External Scripts for anything unfamiliar. Sansec found attackers were planting scripts that look like ordinary analytics. You have to actually read the code, not just scan for suspicious domains.
+
+The broader pattern here is plugin security in the WordPress ecosystem. Funnel Builder is popular — 40,000 stores — and handles checkout flows where sensitive data enters the system. The vulnerability is a missing authorization check on an endpoint that writes to global settings. That's not a subtle bug. That's a fundamental security control that was never implemented.
+
+Payment skimming via WordPress plugins continues because the economics work. Compromise one plugin, affect thousands of stores, harvest cards until detected. The barrier to entry is low and the return is high. Individual store owners can't fix the plugin — they can only patch when the developer releases an update.
+
+If you're running WooCommerce with Funnel Builder: patch now, audit your External Scripts setting, and consider whether you need the plugin enabled if you're not actively using it. Every active plugin is attack surface.
+`,
+  },
 ];
