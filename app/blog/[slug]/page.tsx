@@ -148,7 +148,7 @@ export default function BlogPostPage({ params }: PageProps) {
                   className="block group"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="text-xs text-brand-400 font-medium mt-0.5">
+                    <span className="text-xs text-brand-400 font-medium mt-0.5 min-w-[100px] text-right shrink-0">
                       {relatedPost.category}
                     </span>
                     <div className="flex-1">
