@@ -382,5 +382,298 @@ Exported to ./keyvault-expiry-report.csv`,
     tags: ["Azure", "Key Vault", "Secrets Management", "Certificate Expiry"],
     date: "2026-05-19",
   },
+  {
+    id: "entra-risky-signins",
+    title: "Entra ID Risky Sign-in Report",
+    description: "Query risky sign-ins from the last 30 days, categorize by risk level, and export high-risk events requiring investigation.",
+    category: "security",
+    language: "powershell",
+    code: `Connect-MgGraph -Scopes "IdentityRiskEvent.Read.All", "AuditLog.Read.All"
+
+$startDate = (Get-Date).AddDays(-30)
+$filter = "riskState eq 'atRisk' or riskState eq 'confirmedCompromised'"
+
+Write-Host "Fetching risky sign-ins from last 30 days..." -Foreground Cyan
+
+$riskySignIns = Get-MgRiskDetection -Filter $filter -All | Where-Object {
+    $_.DetectedDateTime -gt $startDate
+}
+
+$report = $riskySignIns | ForEach-Object {
+    $riskLevel = switch ($_.RiskLevel) {
+        "high" { "HIGH" }
+        "medium" { "MEDIUM" }
+        "low" { "LOW" }
+        default { $_.RiskLevel }
+    }
+    
+    [PSCustomObject]@{
+        User           = $_.UserDisplayName
+        UPN            = $_.UserPrincipalName
+        DetectedTime   = $_.DetectedDateTime
+        RiskLevel      = $riskLevel
+        RiskType       = $_.RiskEventType -join "; "
+        IPAddress      = $_.IPAddress
+        Location       = "$($_.Location.City), $($_.Location.CountryOrRegion)"
+        Status         = $_.RiskState
+        MitigationTime = $_.MitigationDateTime
+    }
+}
+
+$highRisk = $report | Where-Object RiskLevel -eq "HIGH"
+$mediumRisk = $report | Where-Object RiskLevel -eq "MEDIUM"
+
+Write-Host ""
+Write-Host "=== Risky Sign-in Summary ===" -Foreground Cyan
+Write-Host "Total risky events: $($report.Count)"
+Write-Host "High risk:          $($highRisk.Count)" -Foreground Red
+Write-Host "Medium risk:        $($mediumRisk.Count)" -Foreground Yellow
+Write-Host "Low risk:           $($($report | Where-Object RiskLevel -eq "LOW").Count)"
+
+if ($highRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH RISK EVENTS (Immediate Action Required):" -Foreground Red
+    $highRisk | Select-Object UPN, RiskType, IPAddress, Location | Format-Table
+}
+
+$report | Export-Csv -Path "./risky-signins-report.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./risky-signins-report.csv"`,
+    output: `Fetching risky sign-ins from last 30 days...
+
+=== Risky Sign-in Summary ===
+Total risky events: 47
+High risk:          8
+Medium risk:        23
+Low risk:           16
+
+HIGH RISK EVENTS (Immediate Action Required):
+UPN                       RiskType                              IPAddress     Location
+---                       --------                              ---------     --------
+admin@eddington.tech      anonymizedIPAddress, impossibleTravel 185.220.1.x   Moscow, RU
+jdevops@partner.com       leakedCredentials                     103.75.2.x    São Paulo, BR
+guest_vip@eddington.tech  unfamiliarSignInProperties            91.203.5.x    Kyiv, UA
+
+Report exported to ./risky-signins-report.csv`,
+    tags: ["Entra ID", "Risk Detection", "Threat Intelligence", "Security"],
+    date: "2026-05-19",
+  },
+  {
+    id: "storage-public-access-scanner",
+    title: "Azure Storage Public Access Scanner",
+    description: "Scan all storage accounts in a subscription to identify publicly accessible containers and blobs. Exposes data exposure risks before they're exploited.",
+    category: "security",
+    language: "powershell",
+    code: `Connect-AzAccount
+$SubscriptionId =  "your-subscription-id"
+Select-AzSubscription -SubscriptionId $SubscriptionId
+
+$publicAccounts = @()
+$storageAccounts = Get-AzStorageAccount
+
+foreach ($account in $storageAccounts) {
+    Write-Host "Scanning $($account.StorageAccountName)..." -Foreground Cyan
+    
+    # Check account-level public access setting
+    $publicNetworkAccess = $account.PublicNetworkAccess
+    
+    # Get context for blob operations
+    $ctx = $account.Context
+    
+    # Check containers
+    $containers = Get-AzStorageContainer -Context $ctx -ErrorAction SilentlyContinue
+    $publicContainers = @()
+    
+    foreach ($container in $containers) {
+        if ($container.PublicAccess -ne "Off") {
+            $publicContainers += $container.Name
+        }
+    }
+    
+    if ($publicNetworkAccess -eq "Enabled" -or $publicContainers.Count -gt 0) {
+        $publicAccounts += [PSCustomObject]@{
+            StorageAccount    = $account.StorageAccountName
+            ResourceGroup     = $account.ResourceGroupName
+            PublicNetwork     = $publicNetworkAccess
+            PublicContainers  = $publicContainers -join "; "
+            ContainerCount    = $publicContainers.Count
+        }
+    }
+}
+
+Write-Host ""
+Write-Host "=== Public Storage Exposure Report ===" -Foreground Cyan
+Write-Host "Total storage accounts scanned: $($storageAccounts.Count)"
+Write-Host "Accounts with public exposure:   $($publicAccounts.Count)" -Foreground Yellow
+Write-Host ""
+
+if ($publicAccounts.Count -gt 0) {
+    Write-Host "EXPOSED RESOURCES (Review Immediately):" -Foreground Yellow
+    $publicAccounts | Format-Table -AutoSize
+    
+    Write-Host ""
+    Write-Host "RECOMMENDATION:" -Foreground Cyan
+    Write-Host "1. Disable public network access: Set-AzStorageAccount -ResourceGroupName <RG> -Name <Account> -PublicNetworkAccess Disabled"
+    Write-Host "2. For containers requiring limited access, use SAS tokens with expiration"
+    Write-Host "3. Enable Private Endpoints for secure access from VNets"
+}
+
+$publicAccounts | Export-Csv -Path "./storage-public-access-report.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./storage-public-access-report.csv"`,
+    output: `Scanning storageacct-prod...
+Scanning storageacct-staging...
+Scanning storageacct-logs...
+
+=== Public Storage Exposure Report ===
+Total storage accounts scanned: 12
+Accounts with public exposure:   3
+
+EXPOSED RESOURCES (Review Immediately):
+StorageAccount       ResourceGroup    PublicNetwork    PublicContainers         ContainerCount
+--------------       -------------    -------------    ----------------         --------------
+storageacct-staging  rg-web          Enabled           uploads; temp-files     2
+storageacct-logs     rg-monitoring   Enabled           public-reports; exports 2
+storageacct-backup   rg-disaster     Enabled           (none)                  0
+
+RECOMMENDATION:
+1. Disable public network access: Set-AzStorageAccount -ResourceGroupName <RG> -Name <Account> -PublicNetworkAccess Disabled
+2. For containers requiring limited access, use SAS tokens with expiration
+3. Enable Private Endpoints for secure access from VNets
+
+Report exported to ./storage-public-access-report.csv`,
+    tags: ["Azure", "Storage", "Public Access", "Data Exposure"],
+    date: "2026-05-19",
+  },
+  {
+    id: "service-principal-secret-expiry",
+    title: "Service Principal Secret Expiry Monitor",
+    description: "Audit all app registrations and service principals for expiring client secrets and certificates. Prevents authentication failures from expired credentials.",
+    category: "iam",
+    language: "powershell",
+    code: `Connect-MgGraph -Scopes "Application.Read.All", "Directory.Read.All"
+
+$WarningThreshold = (Get-Date).AddDays(30)
+$ExpiredThreshold = (Get-Date)
+
+Write-Host "Scanning service principals for expiring credentials..." -Foreground Cyan
+
+$apps = Get-MgApplication -All -Property Id, DisplayName, AppId, PasswordCredentials, KeyCredentials
+$findings = @()
+
+foreach ($app in $apps) {
+    # Check password credentials (client secrets)
+    foreach ($secret in $app.PasswordCredentials) {
+        if ($secret.EndDateTime -lt $ExpiredThreshold) {
+            $findings += [PSCustomObject]@{
+                AppName     = $app.DisplayName
+                AppId       = $app.AppId
+                Type        = "Client Secret"
+                Name        = $secret.DisplayName
+                Status      = "EXPIRED"
+                ExpiryDate  = $secret.EndDateTime
+                DaysAgo     = ((Get-Date) - $secret.EndDateTime).Days
+            }
+        } elseif ($secret.EndDateTime -lt $WarningThreshold) {
+            $daysLeft = ($secret.EndDateTime - (Get-Date)).Days
+            $findings += [PSCustomObject]@{
+                AppName     = $app.DisplayName
+                AppId       = $app.AppId
+                Type        = "Client Secret"
+                Name        = $secret.DisplayName
+                Status      = "EXPIRING_SOON"
+                ExpiryDate  = $secret.EndDateTime
+                DaysLeft    = $daysLeft
+            }
+        }
+    }
+    
+    # Check certificate credentials
+    foreach ($cert in $app.KeyCredentials) {
+        if ($cert.EndDateTime -lt $ExpiredThreshold) {
+            $findings += [PSCustomObject]@{
+                AppName     = $app.DisplayName
+                AppId       = $app.AppId
+                Type        = "Certificate"
+                Name        = $cert.DisplayName
+                Status      = "EXPIRED"
+                ExpiryDate  = $cert.EndDateTime
+                DaysAgo     = ((Get-Date) - $cert.EndDateTime).Days
+            }
+        } elseif ($cert.EndDateTime -lt $WarningThreshold) {
+            $daysLeft = ($cert.EndDateTime - (Get-Date)).Days
+            $findings += [PSCustomObject]@{
+                AppName     = $app.DisplayName
+                AppId       = $app.AppId
+                Type        = "Certificate"
+                Name        = $cert.DisplayName
+                Status      = "EXPIRING_SOON"
+                ExpiryDate  = $cert.EndDateTime
+                DaysLeft    = $daysLeft
+            }
+        }
+    }
+}
+
+$expired = $findings | Where-Object Status -eq "EXPIRED"
+$warning = $findings | Where-Object Status -eq "EXPIRING_SOON"
+
+Write-Host ""
+Write-Host "=== Service Principal Credential Report ===" -Foreground Cyan
+Write-Host "Total apps scanned:           $($apps.Count)"
+Write-Host "Expired credentials:        $($expired.Count)" -Foreground Red
+Write-Host "Expiring within 30 days:    $($warning.Count)" -Foreground Yellow
+
+if ($expired.Count -gt 0) {
+    Write-Host ""
+    Write-Host "EXPIRED CREDENTIALS (Will Cause Failures):" -Foreground Red
+    $expired | Select-Object AppName, Type, Name, DaysAgo | Format-Table -AutoSize
+}
+
+if ($warning.Count -gt 0) {
+    Write-Host ""
+    Write-Host "EXPIRING SOON (Rotation Required):" -Foreground Yellow
+    $warning | Select-Object AppName, Type, Name, DaysLeft | Format-Table -AutoSize
+}
+
+Write-Host ""
+Write-Host "REMEDIATION:" -Foreground Cyan
+Write-Host "1. Generate new secret: New-MgApplicationPasswordCredential -ApplicationId <AppId>"
+Write-Host "2. Update downstream apps with new secret"
+Write-Host "3. Remove old expired secret: Remove-MgApplicationPasswordCredential -ApplicationId <AppId> -KeyId <KeyId>"
+
+$findings | Export-Csv -Path "./sp-credential-expiry-report.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./sp-credential-expiry-report.csv"`,
+    output: `Scanning service principals for expiring credentials...
+
+=== Service Principal Credential Report ===
+Total apps scanned:           47
+Expired credentials:        5
+Expiring within 30 days:    12
+
+EXPIRED CREDENTIALS (Will Cause Failures):
+AppName              Type           Name                     DaysAgo
+-------              ----           ----                     -------
+backup-service-prd   Client Secret  vault-backup-secret        3
+legacy-integration     Client Secret  old-api-key               45
+monitoring-agent       Certificate    agent-auth-cert          12
+
+EXPIRING SOON (Rotation Required):
+AppName              Type           Name                     DaysLeft
+-------              ----           ----                     ------
+terraform-sp        Client Secret  tf-deployment-key         5
+data-factory-svc    Client Secret  df-pipeline-secret        8
+function-app-auth   Certificate    func-auth-cert           18
+
+REMEDIATION:
+1. Generate new secret: New-MgApplicationPasswordCredential -ApplicationId <AppId>
+2. Update downstream apps with new secret
+3. Remove old expired secret: Remove-MgApplicationPasswordCredential -ApplicationId <AppId> -KeyId <KeyId>
+
+Report exported to ./sp-credential-expiry-report.csv`,
+    tags: ["Entra ID", "Service Principal", "App Registration", "Secret Rotation"],
+    date: "2026-05-19",
+  },
 ];
 
