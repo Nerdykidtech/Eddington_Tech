@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { posts } from "@/lib/posts";
 
 interface PageProps {
@@ -100,12 +102,29 @@ export default function BlogPostPage({ params }: PageProps) {
         }}
       />
 
-      <div className="prose prose-invert prose-zinc prose-sm sm:prose-base max-w-none">
-        {post.content.split("\n\n").map((paragraph, i) => (
-          <p key={i} className="text-zinc-400 leading-relaxed mb-4">
-            {paragraph}
-          </p>
-        ))}
+      <div className="prose prose-invert prose-zinc prose-sm sm:prose-base lg:prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h2:text-white prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:text-white/90 prose-h3:mt-6 prose-h3:mb-3 prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-4 prose-strong:text-white prose-strong:font-semibold prose-code:text-brand-400 prose-code:bg-brand-500/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-pre:text-sm prose-blockquote:border-l-4 prose-blockquote:border-brand-500/50 prose-blockquote:bg-zinc-900/50 prose-blockquote:pl-6 prose-blockquote:py-3 prose-blockquote:my-6 prose-ul:text-zinc-400 prose-ul:my-4 prose-ul:ml-4 prose-li:mb-2 prose-a:text-brand-400 prose-a:no-underline hover:prose-a:underline prose-hr:border-zinc-800 prose-hr:my-8">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code(props) {
+              const { children, className, ...rest } = props;
+              const match = /language-(\w+)/.exec(className || "");
+              return match ? (
+                <pre className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg overflow-x-auto text-sm my-4">
+                  <code className={className} {...rest}>
+                    {children}
+                  </code>
+                </pre>
+              ) : (
+                <code className="text-brand-400 bg-brand-500/10 px-1 py-0.5 rounded text-sm" {...rest}>
+                  {children}
+                </code>
+              );
+            },
+          }}
+        >
+          {post.content}
+        </ReactMarkdown>
       </div>
 
       <footer className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
