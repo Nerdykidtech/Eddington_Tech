@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { AppCard } from "@/components/AppCard";
 import { apps } from "@/lib/apps";
+import { posts } from "@/lib/posts";
+
+// Get 3 most recent posts
+const recentPosts = [...posts]
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  .slice(0, 3);
 
 export const metadata = {
   title: "Eddington.Tech — Hunter Eddington",
@@ -160,6 +166,54 @@ export default function HomePage() {
           <div className="mt-8 sm:mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {apps.map((app) => (
               <AppCard key={app.id} app={app} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Recent Blog Posts - SEO Internal Linking Section */}
+      <section className="scroll-mt-20 border-t border-white/5 px-6 py-20 sm:py-32">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-8 sm:mb-10">
+            <p className="text-xs font-mono uppercase tracking-widest text-brand-500 mb-3">Latest</p>
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-white">
+              Recent posts
+            </h2>
+            <p className="mt-2 text-zinc-400 text-sm sm:text-base">
+              Security research, technical deep-dives, and threat intelligence.{" "}
+              <Link href="/blog" className="text-brand-400 hover:text-brand-300 transition-colors">
+                View all posts →
+              </Link>
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recentPosts.map((post) => (
+              <Link
+                key={post.slug}
+                href={`/blog/${post.slug}`}
+                className="group block rounded-lg border border-white/10 bg-white/5 p-5 transition-all hover:border-brand-500/30 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-mono text-brand-500">{post.category}</span>
+                  <span className="text-xs text-zinc-600">·</span>
+                  <span className="text-xs text-zinc-500">{post.readTime}</span>
+                </div>
+                <h3 className="text-base font-semibold text-zinc-200 group-hover:text-brand-400 transition-colors line-clamp-2">
+                  {post.title}
+                </h3>
+                <p className="mt-2 text-sm text-zinc-400 line-clamp-2">
+                  {post.excerpt}
+                </p>
+                <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
+                  <time dateTime={post.date}>
+                    {new Date(post.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </time>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
