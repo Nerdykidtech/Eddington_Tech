@@ -102,30 +102,8 @@ export default function BlogPostPage({ params }: PageProps) {
         }}
       />
 
-      <div className="prose prose-invert prose-zinc prose-sm sm:prose-base lg:prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h2:text-white prose-h2:mt-12 prose-h2:mb-6 prose-h3:text-xl prose-h3:text-white/90 prose-h3:mt-8 prose-h3:mb-4 prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6 prose-strong:text-white prose-strong:font-semibold prose-code:text-brand-400 prose-code:bg-brand-500/10 prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto prose-pre:text-sm prose-blockquote:border-l-4 prose-blockquote:border-brand-500/50 prose-blockquote:bg-zinc-900/50 prose-blockquote:pl-6 prose-blockquote:py-4 prose-blockquote:my-8 prose-ul:text-zinc-400 prose-ul:my-6 prose-ul:ml-6 prose-li:mb-3 prose-ol:text-zinc-400 prose-ol:my-6 prose-ol:ml-6 prose-a:text-brand-400 prose-a:no-underline hover:prose-a:underline prose-hr:border-zinc-700 prose-hr:my-10">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            code(props) {
-              const { children, className, ...rest } = props;
-              const match = /language-(\w+)/.exec(className || "");
-              if (match) {
-                return (
-                  <pre className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg overflow-x-auto text-sm my-6 not-prose">
-                    <code className={`${className} text-zinc-300`} {...rest}>
-                      {children}
-                    </code>
-                  </pre>
-                );
-              }
-              return (
-                <code className="text-brand-400 bg-brand-500/10 px-1.5 py-1 rounded text-sm not-prose" {...rest}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-        >
+      <div className="prose prose-invert prose-zinc prose-sm sm:prose-base lg:prose-lg max-w-none dark:prose-invert prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h2:text-white prose-h2:mt-12 prose-h2:mb-6 prose-h3:text-xl prose-h3:text-white/90 prose-h3:mt-8 prose-h3:mb-4 prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6 prose-strong:text-white prose-strong:font-semibold prose-code:text-brand-400 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-zinc-900 prose-pre:border-zinc-800 prose-pre:p-4 prose-pre:rounded-lg prose-pre:text-sm prose-blockquote:border-l-4 prose-blockquote:border-brand-500/50 prose-blockquote:bg-zinc-900/50 prose-blockquote:pl-6 prose-blockquote:py-4 prose-blockquote:my-8 prose-ul:text-zinc-400 prose-ul:my-6 prose-ol:text-zinc-400 prose-ol:my-6 prose-li:mb-2">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {post.content}
         </ReactMarkdown>
       </div>
