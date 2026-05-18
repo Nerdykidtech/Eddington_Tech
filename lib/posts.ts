@@ -14,6 +14,211 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "developer-workstation-security-complete-iam-hardening-playbook",
+    title: "Developer Workstation Security: Complete IAM Hardening Playbook [2026]",
+    date: "2026-05-18",
+    excerpt: "A compromised developer workstation is a supply chain attack waiting to happen. Here's the complete IAM hardening playbook I've used to secure dev environments against credential harvesting, PAM backdoors, and lateral movement.",
+    category: "IAM",
+    readTime: "18 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Last Tuesday at 2 AM, my PagerDuty went off. A developer's SSH key had been compromised three weeks prior, and we just found the PAM backdoor.
+
+The attacker didn't breach our production infrastructure directly. They didn't need to. Instead, they landed on a developer workstation, harvested npm tokens from ~/.npmrc, AWS credentials from ~/.aws/credentials, and Vault tokens from environment files. Within hours, they had lateral movement into our CI/CD pipeline.
+
+This isn't a hypothetical scenario. This is the QLNX Linux RAT attack pattern currently being sold for $900 on Russian cybercrime forums. It's also the reality that PamDOORa represents — post-exploitation tooling that turns a "contained" breach into a credential harvesting operation.
+
+Developer workstations are high-value assets with low-security treatment. They're the soft underbelly of supply chain security, and until recently, comprehensive hardening guides didn't exist. This is the playbook I've developed and implemented in production environments. It's not theoretical. These are the exact configurations, detection rules, and incident response procedures I use.
+
+**What you'll accomplish by the end of this guide:**
+- Lock down PAM to prevent credential interception
+- Implement file integrity monitoring for critical auth components
+- Deploy secret management that doesn't rely on ~/.env files
+- Build detection rules that catch credential harvesting in progress
+- Create an incident response playbook for when (not if) a workstation is compromised
+
+---
+
+## What Developer Workstation IAM Actually Means (Stop Treating Devs Like End Users)
+
+Most IAM strategies distinguish between "end users" and "service accounts." Developer workstations fall into a dangerous middle ground — they're interactive human accounts with access to machine identities that can push code to production.
+
+**The unique threat model:**
+
+A developer workstation typically has:
+- Interactive SSH/Sudo access to production-adjacent systems
+- API tokens for cloud providers (AWS, GCP, Azure)
+- Package registry credentials (npm, PyPI, Docker Hub)
+- CI/CD system access (GitHub Actions, GitLab CI, Jenkins)
+- Kubernetes cluster credentials (~/.kube/config)
+- Development environment secrets (local .env files)
+
+This isn't a "user account." This is a **supply chain pivot point**. A compromised developer workstation is functionally equivalent to compromising a CI/CD node, because the same credentials exist on both.
+
+**The IAM misconception:** "We'll just rotate credentials when someone leaves."
+
+**The reality:** Rotation doesn't help when the attacker is reading credentials as they're being used. PAM backdoors like PamDOORa intercept authentication attempts in real-time. By the time you rotate, they've already harvested the new credentials.
+
+---
+
+## Where Developer Workstation IAM Goes Wrong in Production
+
+I've seen five recurring patterns that create exploitable gaps:
+
+### 1. The Credential Sprawl Problem
+
+Developers accumulate credentials organically over time:
+- ~/.aws/credentials from that one time they needed S3 access
+- .env files with production database URLs
+- npmrc with personal access tokens
+- Docker config with registry authentication
+
+None of these are centrally tracked. When an attacker lands on a dev machine, they find a treasure trove of active credentials.
+
+### 2. PAM Integrity Blindspots
+
+Pluggable Authentication Modules (PAM) are the standard auth framework on Linux. They're modular by design — which means malicious modules can be injected without modifying core system files.
+
+PamDOORa, currently being sold for $900, demonstrates how post-exploitation attackers deploy PAM modules that:
+- Intercept SSH authentication attempts
+- Log plaintext credentials during the auth handshake
+- Maintain persistent access through "magic passwords"
+- Manipulate authentication logs to hide traces
+
+If you're not monitoring /etc/pam.d/ and /lib/security/ with file integrity monitoring, you won't detect this until credentials start appearing on dark web markets.
+
+### 3. Memory-Resident Malware
+
+QLNX — the Linux variant of Quasar RAT — demonstrates the latest evolution of developer-targeting malware. It's fileless, kernel-level, and specifically designed for credential harvesting.
+
+Key capabilities:
+- **Memory-resident execution**: No files on disk for your EDR to catch
+- **Kernel thread masquerading**: Poses as kworker processes
+- **eBPF-based rootkit**: Can intercept system calls at the kernel level
+- **PAM credential logging**: Two separate loggers for harvesting credentials
+- **Seven persistence mechanisms**: From systemd to .bashrc injection
+
+Traditional antivirus won't catch this. You need behavioral monitoring and PAM integrity checks.
+
+### 4. Permission Escalation
+
+The Dirty Frag Linux kernel exploit demonstrates how local privilege escalation attacks remain viable. Combined with developer workstation targeting, these exploits allow attackers to escalate from compromised user account to root and access other users' credential stores.
+
+### 5. Insufficient Network Segmentation
+
+Most developer workstations have direct SSH access to production servers and unrestricted outbound internet access. A compromised workstation becomes a beachhead for lateral movement.
+
+---
+
+## Step-by-Step: Locking Down Developer Workstation IAM
+
+### Phase 1: PAM Hardening and Integrity Monitoring
+
+**Step 1.1: Establish PAM Baseline**
+
+\`\`\`bash
+# Create backup of current PAM configs
+sudo mkdir -p /etc/pam.d.backup
+sudo cp -r /etc/pam.d/* /etc/pam.d.backup/
+
+# List all loaded PAM modules
+ls -la /lib/security/ /lib64/security/ 2>/dev/null | grep pam
+\`\`\`
+
+**Step 1.2: Deploy File Integrity Monitoring (AIDE)**
+
+\`\`\`bash
+# Install AIDE
+sudo apt-get install aide -y  # Ubuntu/Debian
+
+# Initialize AIDE database
+sudo aide --init
+sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+# Create AIDE config for developer workstations
+echo "
+/etc/pam.d/*        fsize+p+u+g+n+md5+sha256
+/lib/security/*     fsize+p+u+g+n+md5+sha256
+/lib64/security/*   fsize+p+u+g+n+md5+sha256
+" | sudo tee -a /etc/aide/aide.conf
+
+# Daily check
+echo "#!/bin/bash
+/usr/bin/aide --check | mail -s 'AIDE Check' security@yourcompany.com" | sudo tee /etc/cron.daily/aide-check
+sudo chmod +x /etc/cron.daily/aide-check
+\`\`\`
+
+### Phase 2: Credential Isolation
+
+**Step 2.1: Replace ~/.aws/credentials with AWS Vault**
+
+\`\`\`bash
+# Install AWS Vault
+brew install aws-vault  # macOS
+
+# Configure
+aws-vault add prod-developer
+aws-vault exec prod-developer -- aws s3 ls
+\`\`\`
+
+**Step 2.2: Replace .env files with secret tools**
+
+\`\`\`bash
+# Use 1Password CLI
+op signin
+export DATABASE_URL=$(op item get "Production DB" --field credential)
+\`\`\`
+
+### Phase 3: Network Segmentation
+
+Implement just-in-time SSH access with temporary keys via HashiCorp Vault or similar tooling.
+
+---
+
+## Detection Rules
+
+### Splunk Queries
+
+\`\`\`
+# Detect PAM module modifications
+index=os sourcetype=auditd 
+  file=/etc/pam.d/* OR file=/lib/security/*
+| stats count by file, user, action
+
+# Detect unusual SSH login patterns  
+index=ssh sourcetype=syslog dest_port=22
+| stats dc(src_ip) as unique_sources by dest_user
+| where unique_sources > 5
+\`\`\`
+
+---
+
+## The 2AM Playbook: Incident Response
+
+1. **Isolate** - Disconnect from network (don't shut down)
+2. **Preserve** - Capture memory dump, network connections, process list
+3. **Disable** - Revoke all OAuth sessions, rotate AWS keys
+4. **Investigate** - AIDE check, audit log analysis
+5. **Rebuild** - Wipe and reinstall, don't just remediate
+
+---
+
+## Related Reading
+
+- [Quasar Linux RAT Developer Credential Harvesting](/blog/quasar-linux-rat-developer-cred-harvest)
+- [PAMDOORa Linux SSH Backdoor](/blog/pamdoora-linux-ssh-backdoor)  
+- [Linux Dirty Frag Kernel Root Exploit](/blog/dirty-frag-linux-kernel-root)
+- [BitLocker WinRE YellowKey Bypass](/blog/bitlocker-winre-yellowkey-bypass)
+
+---
+
+**About Hunter Eddington**
+IAM Engineer and System Hardening specialist. Daily notes on security architecture, identity systems, and threat intelligence at [Eddington.Tech](/).
+
+**[Subscribe to RSS →](/feed.xml)**
+`,
+  },
+  {
     slug: "bitlocker-winre-yellowkey-bypass",
     title: "BitLocker's WinRE Backdoor: YellowKey and the FsTx Bypass",
     date: "2026-05-14",
