@@ -609,6 +609,48 @@ If you're running WooCommerce with Funnel Builder: patch now, audit your Externa
     image: "https://eddington.tech/og-image.png",
     content: "The Tycoon2FA phishing kit was supposed to be dead.\n\nInternational law enforcement took it down in March. Infrastructure seized. Operators disrupted. And yet here we are in May, watching it bounce back with new features.\n\nThe latest addition? Device code phishing.\n\nDevice code flow was designed for devices that cannot easily show a login screen - think IoT devices, command-line tools, smart TVs. You get a code and a URL. Enter the code on another device, and you are authenticated. It is a legitimate OAuth 2.0 mechanism.\n\nTycoon2FA turned it into a weapon.\n\nHere is how it works: The victim gets an email that looks legitimate. Inside is a link that routes through Trustifi click-tracking URLs. That forwards to a fake Microsoft 365 login page. But instead of asking for a password, it displays a device authorization code.\n\nThe victim enters that code on their real Microsoft account. Their account authenticates Tycoon2FA device instead. The attacker now has a token. Not a password - a token, which can be refreshed indefinitely.\n\nThis matters because device code attacks bypass traditional phishing detection. Security tools look for credential input fields. They look for password harvesting. Device code authentication happens on Microsofts actual site. The malicious part is just the social engineering.\n\nThe March takedown should have been a win. Instead, it was a temporary inconvenience. Abnormal Security reports Tycoon2FA is back to normal activity and has added obfuscation layers specifically designed to frustrate future disruption attempts.\n\nThis is a pattern I keep seeing: takedowns work temporarily, but phishing kits are modular and cheap to rebuild. The developers learn from each disruption and come back harder.\n\nWhat this means for defenders: train users to recognize unsolicited device authorization requests. No legitimate service sends these out of the blue. If you did not initiate a login, do not enter a code.",
   },
+  {
+    slug: "cisa-aws-govcloud-github-credentials-leaked",
+    title: "CISA Contractor Leaked AWS GovCloud Keys on GitHub for Weeks",
+    date: "2026-05-19",
+    excerpt: "A CISA contractor ran a public GitHub repo called 'Private-CISA' with plaintext passwords, AWS GovCloud admin credentials, and disabled secret scanning. GitGuardian spotted it. The government didn't.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "Krebs on Security|https://krebsonsecurity.com/2026/05/cisa-admin-leaked-aws-govcloud-keys-on-github/",
+    image: "https://eddington.tech/og-image.png",
+    content: `A CISA contractor kept a public GitHub repository running for weeks, named it "Private-CISA," and filled it with AWS GovCloud admin credentials, plaintext passwords, and internal build system details. They also disabled GitHub's secret detection feature so the platform wouldn't flag the commits.
+
+GitGuardian's Guillaume Valadon found it this weekend while scanning public repos. He tried contacting the owner. Nobody responded. The credentials stayed public until KrebsOnSecurity broke the story yesterday.
+
+Here's what was in there:
+
+- A file called "importantAWStokens" with admin credentials to three AWS GovCloud servers
+- "AWS-Workspace-Firefox-Passwords.csv" with plaintext logins for dozens of internal CISA systems  
+- Commit logs showing the owner explicitly disabled GitHub's default secret blocking
+- Files documenting how CISA builds, tests, and deploys software internally
+- Access to the Landing Zone DevSecOps environment - the agency's secure development pipeline
+
+Philippe Caturegli from Seralys tested the AWS keys. They worked. The GovCloud accounts were still active.
+
+The repository wasn't accidental or abandoned. Commit history shows ongoing maintenance. The owner knew enough about GitHub to disable secret detection deliberately. They were using the repo as a synchronization mechanism between systems, treating it like a personal cloud storage account that happened to be public and searchable.
+
+Valadon called it "the worst leak I've witnessed in my career." He's seen a lot of credential exposures.
+
+For IAM teams, this is a case study in what happens when institutional controls fail:
+
+- Individual GitHub accounts holding production credentials instead of centralized secrets management
+- No pre-commit hooks or automated scanning before code hits public repos
+- GovCloud access keys stored in plaintext CSV files
+- Passwords for production systems living in a browser's saved password export
+
+CISA's job is telling organizations how to secure their infrastructure. The repository exposes how their own contractor was handling secrets while working on CISA systems.
+
+The AWS accounts have been locked down now. The repository is gone. But those credentials were public for an unknown period - weeks at minimum. Anyone scanning GitHub for patterns matching GovCloud credential formats had access.
+
+If you're running AWS GovCloud environments: rotate long-lived credentials. Check your CloudTrail logs for access from unfamiliar IPs. And if your developers are exporting browser passwords to CSV files, find out why and stop it.
+`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
