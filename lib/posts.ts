@@ -14,6 +14,54 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "cisa-admin-leaked-aws-govcloud-keys-github",
+    title: "CISA Admin Leaked AWS GovCloud Keys on Github",
+    date: "2026-05-20",
+    excerpt: "A CISA contractor pushed AWS GovCloud credentials, plaintext passwords, and internal system configs to a public GitHub repo for six months. The cybersecurity agency responsible for protecting federal infrastructure failed at the basics.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "Krebs on Security|https://krebsonsecurity.com/2026/05/cisa-admin-leaked-aws-govcloud-keys-on-github/",
+    image: "https://eddington.tech/og-image.png",
+    content: `A CISA contractor maintained a public GitHub repository named "Private-CISA" for six months. It contained AWS GovCloud administrative credentials, plaintext passwords for dozens of internal systems, and the agency's internal software build pipeline configs.
+
+This isn't a supply chain attack. Nobody got phished. There was no zero-day. Just a contractor using GitHub as a personal sync service between work and home machines, with public visibility and secrets detection explicitly disabled.
+
+Guillaume Valadon from GitGuardian found it. His company scans public repos for exposed secrets and alerts account owners. He reached out to the repo owner. No response. He looked deeper and realized the credentials were for actual CISA systems. This wasn't a honeypot or a test. The file named "importantAWStokens" contained real admin credentials for three AWS GovCloud accounts.
+
+Philippe Caturegli at Seralys validated the keys. They worked. High privilege level, full access to the GovCloud environments. He also found credentials for CISA's internal artifactory — their software build repository. Caturegli noted this is where you'd want to be if you were planning to backdoor CISA software builds: "Backdoor in some software packages, and every time they build something new they deploy your backdoor left and right."
+
+The repository went public around November 2025. It stayed up until Krebs and Seralys notified CISA this weekend. The keys remained valid for another 48 hours after the repo was taken down.
+
+Here's what was in the repo:
+- Admin credentials to three AWS GovCloud accounts
+- Plaintext usernames and passwords from "AWS-Workspace-Firefox-Passwords.csv"
+- Access to LZ-DSO (Landing Zone DevSecOps), CISA's secure build environment
+- Internal artifactory credentials
+- Files describing how CISA builds, tests and deploys software
+
+The contractor disabled GitHub's default secret scanning protection. The commit logs show explicit commands to turn off the feature that blocks SSH keys and other secrets from being pushed to public repos. This wasn't an accident — it was a deliberate choice to make the repo work the way they wanted.
+
+Caturegli's analysis suggests the repo was used as a synchronization mechanism between a work laptop and home computer. The commit history shows regular activity since November 2025. The pattern matches someone using GitHub as a personal Dropbox alternative, not a curated project repository.
+
+CISA's statement: "Currently, there is no indication that any sensitive data was compromised as a result of this incident." They're investigating. Nightwing, the contractor's employer, declined to comment.
+
+The exposure comes at a difficult time for the agency. CISA has lost roughly a third of its workforce since early 2025 through retirements, buyouts, and resignations. The people who would normally catch this kind of thing — the internal security team that reviews repository access, the IAM group that monitors for exposed credentials, the cloud security team watching GovCloud configurations — those teams are smaller now.
+
+What gets me is the password pattern. The repo showed the contractor using passwords like "PlatformName2026" for internal resources. Platform name plus current year. This would be a problem even if the repo never went public. Internal network traffic can be sniffed. Compromised endpoints can read browser password stores. Easy passwords matter.
+
+GitGuardian, an external company, caught this. Not CISA's internal security tooling. Not AWS GuardDuty or GovCloud native monitoring. A third-party service that scans public GitHub repos for API keys and secrets.
+
+If you're managing AWS credentials for your organization: this is why short-lived credentials exist. AWS GovCloud supports IAM Roles Anywhere, OIDC federation, and temporary credentials via STS. Static admin keys should not exist, and if they must, they should never be in repositories.
+
+If you're running GitHub Enterprise or managing developer access: organization-level controls matter. GitHub allows org admins to prevent users from disabling secret scanning on repos under their domain. Individual repos should not be able to opt out of protection when they contain agency credentials.
+
+The repo is down. The keys are rotated (presumably). But the pattern — using GitHub as a sync service, disabling protections, weak passwords, no detection of exfiltration for six months — that pattern doesn't get fixed by rotating credentials.
+
+CISA will investigate and implement safeguards. The rest of us should look at our own GitHub orgs and ask who has public repos, what protections are enabled, and whether anyone is monitoring for secrets in commits. Because GitGuardian shouldn't be finding your agency's admin credentials before you do.
+`,
+  },
+  {
     slug: "nodejs-supply-chain-security-developer-workstation-protection",
     title: "Node.js Supply Chain Security: Developer Workstation Protection Against npm Backdoors [2026]",
     date: "2026-05-18",
