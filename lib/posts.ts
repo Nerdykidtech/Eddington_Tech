@@ -699,6 +699,33 @@ The AWS accounts have been locked down now. The repository is gone. But those cr
 If you're running AWS GovCloud environments: rotate long-lived credentials. Check your CloudTrail logs for access from unfamiliar IPs. And if your developers are exporting browser passwords to CSV files, find out why and stop it.
 `,
   },
+  {
+    slug: "microsoft-defender-privilege-escalation-active-exploitation",
+    title: "Microsoft Defender Under Active Attack: SYSTEM Privilege Flaw Being Exploited",
+    date: "2026-05-21",
+    excerpt: "Microsoft disclosed two actively exploited vulnerabilities in Defender — a privilege escalation with a CVSS 7.8 score that gives attackers SYSTEM rights, and a denial-of-service flaw. Both are being used in the wild now.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/05/microsoft-warns-of-two-actively.html",
+    content: `Microsoft disclosed two actively exploited vulnerabilities in Defender this week. One is a privilege escalation that gives you SYSTEM. The other is a denial of service. Both are being hit in the wild right now.
+
+CVE-2026-41091 is the privilege escalation. CVSS 7.8. An attacker who can run code on a Windows box can exploit improper link resolution — basically symbolic link following — to escalate from user to SYSTEM. That's local admin on most endpoints. Microsoft isn't sharing how widespread the exploitation is, or who is behind it. Just that it's happening.
+
+There's also CVE-2026-45498, a denial of service flaw in Defender. Also actively exploited. Again, no details on attack patterns or threat actors.
+
+Here's what's frustrating: these are in Defender, the security tool that ships with every Windows installation. Defender runs with the highest privileges on the system — it has to, to scan files and block malware. When Defender has a vulnerability, that's a high-value target for attackers. You don't need to bring your own tools if the security software already on the box can be weaponized.
+
+The link following class of bug keeps showing up in Windows. It's not new. Symbolic links are a well-understood attack surface. The vulnerability allows an attacker to trick Defender into accessing files or directories through a link that resolves to somewhere the attacker shouldn't have access to. In this case, that somewhere is SYSTEM-level access.
+
+Microsoft patched both vulnerabilities on Tuesday. If you're running Windows, you have these patches available now. The advice is the same as always: patch immediately. For the cases where you can't, Microsoft suggests monitoring Defender processes for suspicious activity and restricting user permissions. Those are workarounds, not fixes.
+
+The fact that both flaws are actively exploited is the key detail. This isn't theoretical. Someone is using these in real attacks. And the timeline from disclosure to patch suggests Microsoft knew about active exploitation before the advisory dropped — which is typical for in-the-wild attacks, but means the window of exposure was longer than it appeared.
+
+If you're managing endpoint security: verify your patching. Defender updates come through Windows Update, but version strings matter. Make sure your endpoints actually got the June 3 patches. Check the Defender version. Don't assume automatic updates covered it.
+`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
