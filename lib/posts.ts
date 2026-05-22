@@ -14,6 +14,41 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "megalodon-github-attack-5561-repos-cicd",
+    title: "Megalodon: 5,561 GitHub Repos Compromised in Six Hours",
+    date: "2026-05-22",
+    excerpt: "A new automated campaign injected malicious CI/CD workflows into 5,561 GitHub repositories, harvesting AWS credentials, SSH keys, Vault tokens, and OIDC tokens from CI environments.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/megalodon-github-attack-targets-5561.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `SafeDep discovered a campaign they're calling Megalodon that pushed 5,718 malicious commits to 5,561 GitHub repositories in a six-hour window. The attacker used throwaway GitHub accounts with forged author identities like "build-bot" and "auto-ci" to blend into normal commit logs.
+
+The payload was straightforward: base64-encoded bash scripts injected into GitHub Actions workflows. When the workflow ran, it harvested everything from the CI environment. The credential list is revealing — AWS credentials from IMDSv2, Google Cloud tokens, Azure Instance Metadata, SSH private keys, Vault tokens, Terraform credentials, Kubernetes configs, shell history, .env files, kubeconfigs, and over 30 other secret patterns matched by regex.
+
+The C2 server sat at 216.126.225[.]129:8443. The attacker infrastructure probably rotated by now, but the scope of the compromise remains.
+
+This isn't a sophisticated exploit. It's automation at scale. The attacker didn't need zero-days or advanced techniques. They needed throwaway accounts, a target list, and workflow files that would execute in privileged CI environments with access to repository secrets.
+
+The CI/CD execution context matters here. GitHub Actions workflows run with access to OIDC tokens for cloud federation, GITHUB_TOKEN with elevated permissions, and any repository secrets configured by maintainers. Once the malicious workflow file is committed, the attacker controls an environment that has been explicitly granted access to infrastructure resources.
+
+The forged author identities are deliberately mundane. "build-bot", "auto-ci", "pipeline-bot" — these are names that wouldn't trigger suspicion in a busy repository's commit history. If you're not specifically monitoring for changes to .github/workflows/, these commits blend in with legitimate automation.
+
+Five thousand repositories in six hours tells you this was organized. The attacker had infrastructure ready, credential exfiltration capabilities tested, and a target discovery mechanism that worked at speed. The GitHub accounts used a common email domain: gitbuild@runnerservice.xyz. GitHub has since suspended those accounts, but the commits remain in repository histories until they're explicitly removed.
+
+If you're maintaining a repository: check your recent Actions runs for unexpected workflow executions. Review your .github/workflows/ directory for files you didn't create. Look for commits from author names you don't recognize. The attack artifacts are visible if you know what to look for.
+
+If you were affected: rotate every credential your workflows touch. AWS access keys. GCP service accounts. Vault tokens. SSH keys deployed to servers. Terraform backend credentials. The attacker had access to your CI environment for some period of time. Assume they extracted everything that was available.
+
+The practical defense is branch protection rules that require review for any changes to .github/workflows/. Most teams have code review requirements, but workflow files often get automated updates that bypass those controls. Treat workflow modifications as infrastructure changes because that's what they are.
+
+It's worth noting the attack vector here. GitHub Actions workflows are code that executes in privileged environments. They're as sensitive as Terraform configurations or Kubernetes manifests, but they're often treated as secondary to application code. That hierarchy is backwards. Workflow files control the context where application artifacts are built and secrets are accessed. They should be subject to the same or stricter controls than the application itself.
+
+SafeDep is notifying affected users via GitHub Issues. If you get one of those notifications, take it seriously. Rotate credentials. Audit Action execution logs. And add those branch protection rules before the next campaign is discovered.
+`,
+  },
+  {
     slug: "cisa-admin-leaked-aws-govcloud-keys-github",
     title: "CISA Admin Leaked AWS GovCloud Keys on Github",
     date: "2026-05-20",
