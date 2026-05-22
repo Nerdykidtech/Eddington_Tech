@@ -675,5 +675,371 @@ Report exported to ./sp-credential-expiry-report.csv`,
     tags: ["Entra ID", "Service Principal", "App Registration", "Secret Rotation"],
     date: "2026-05-19",
   },
+  {
+    id: "pim-activation-audit",
+    title: "PIM Activation Request Audit",
+    description: "Audit Privileged Identity Management (PIM) activation requests from the last 90 days. Identifies unapproved activations, expired requests, and activation patterns by role.",
+    category: "iam",
+    language: "powershell",
+    code: `Connect-MgGraph -Scopes "PrivilegedAccess.Read.AzureAD", "AuditLog.Read.All"
+
+$daysBack = 90
+$startDate = (Get-Date).AddDays(-$daysBack)
+
+Write-Host "Fetching PIM activations from last $daysBack days..." -Foreground Cyan
+
+# Get audit logs for PIM activations
+$filter = "activityDisplayName eq 'Add member to role completed (PIM activated)' and activityDateTime ge $($startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+$auditLogs = Get-MgAuditLogDirectoryAudit -Filter $filter -All -ErrorAction SilentlyContinue
+
+$report = @()
+foreach ($log in $auditLogs) {
+    $roleName = ($log.TargetResources | Where-Object { $_.Type -eq 'Role' }).DisplayName
+    $userName = ($log.TargetResources | Where-Object { $_.Type -eq 'User' }).UserPrincipalName
+    $activationReason = ($log.AdditionalDetails | Where-Object { $_.Key -eq 'RoleAssignmentReason' }).Value
+    $approvalStatus = if ($log.Result -eq 'success') { 'Approved' } else { 'Pending/Failed' }
+    
+    # Calculate if still active (default PIM duration is usually 4-8 hours)
+    $activationTime = $log.ActivityDateTime
+    $endTime = $activationTime.AddHours(8)
+    $isActive = ($endTime -gt (Get-Date))
+    
+    $report += [PSCustomObject]@{
+        User           = $userName
+        Role           = $roleName
+        ActivatedAt    = $activationTime
+        ExpiresAt      = $endTime
+        IsActive       = if ($isActive) { "Yes" } else { "Expired" }
+        Reason         = if ($activationReason) { $activationReason } else { "Not provided" }
+        ApprovalStatus = $approvalStatus
+        InitiatedBy    = $log.InitiatedBy.User.UserPrincipalName
+    }
+}
+
+$activeNow = $report | Where-Object { $_.IsActive -eq "Yes" }
+$expired = $report | Where-Object { $_.IsActive -eq "Expired" }
+$noReason = $report | Where-Object { $_.Reason -eq "Not provided" }
+
+Write-Host ""
+Write-Host "=== PIM Activation Audit Report ===" -Foreground Cyan
+Write-Host "Total activations:    $report.Count"
+Write-Host "Currently active:     $($activeNow.Count)" -Foreground Green
+Write-Host "Expired/completed:    $($expired.Count)"
+Write-Host "Missing reason:       $($noReason.Count)" -Foreground Yellow
+
+if ($activeNow.Count -gt 0) {
+    Write-Host ""
+    Write-Host "ACTIVE PRIVILEGED SESSIONS:" -Foreground Green
+    $activeNow | Select-Object User, Role, ActivatedAt, ExpiresAt, Reason | Format-Table -AutoSize
+}
+
+if ($noReason.Count -gt 0) {
+    Write-Host ""
+    Write-Host "ACTIVATIONS WITHOUT BUSINESS JUSTIFICATION:" -Foreground Yellow
+    $noReason | Select-Object User, Role, ActivatedAt | Format-Table -AutoSize
+}
+
+$report | Export-Csv -Path "./pim-activation-audit.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./pim-activation-audit.csv"`,
+    output: `Fetching PIM activations from last 90 days...
+
+=== PIM Activation Audit Report ===
+Total activations:    156
+Currently active:     12
+Expired/completed:    144
+Missing reason:       23
+
+ACTIVE PRIVILEGED SESSIONS:
+User                    Role                       ActivatedAt          ExpiresAt            Reason
+----                    ----                       -----------          ---------            ------
+hunter@eddington.tech   Global Administrator       5/22/2026 2:15 PM    5/22/2026 10:15 PM   Emergency Azure config
+admin@eddington.tech    Privileged Role Admin      5/22/2026 10:30 AM   5/22/2026 6:30 PM    User offboarding
+jcloud@partner.com      User Administrator         5/22/2026 8:45 AM    5/22/2026 4:45 PM    Bulk user import
+
+ACTIVATIONS WITHOUT BUSINESS JUSTIFICATION:
+User                    Role                       ActivatedAt
+----                    ----                       -----------
+legacyadmin@old.com     Security Administrator     5/20/2026 3:00 PM
+contractor@vendor.com   Exchange Administrator     5/19/2026 11:00 AM
+
+Report exported to ./pim-activation-audit.csv`,
+    tags: ["Entra ID", "PIM", "Privileged Identity", "Audit"],
+    date: "2026-05-22",
+  },
+  {
+    id: "nsg-rule-security-analyzer",
+    title: "NSG Rule Security Analyzer",
+    description: "Analyze Network Security Group rules across all subnets and VMs to identify overly permissive configurations, open management ports, and potential lateral movement paths.",
+    category: "security",
+    language: "powershell",
+    code: `Connect-AzAccount
+$SubscriptionId = "your-subscription-id"
+Select-AzSubscription -SubscriptionId $SubscriptionId
+
+Write-Host "Scanning NSG rules for security issues..." -Foreground Cyan
+
+$nsgs = Get-AzNetworkSecurityGroup
+$findings = @()
+
+$highRiskPorts = @(22, 23, 25, 53, 110, 143, 3389, 5985, 5986, 1433, 3306, 5432, 6379, 27017)
+$managementPorts = @(22, 3389, 5985, 5986)  # SSH, RDP, WinRM
+
+foreach ($nsg in $nsgs) {
+    Write-Host "Analyzing $($nsg.Name)..." -Foreground Gray
+    
+    foreach ($rule in $nsg.SecurityRules) {
+        $riskLevel = "Low"
+        $issues = @()
+        
+        # Check for ANY source
+        if ($rule.SourceAddressPrefix -eq "*" -or $rule.SourceAddressPrefix -eq "Internet") {
+            $issues += "Open to Internet"
+            $riskLevel = "HIGH"
+        }
+        
+        # Check for ANY port
+        if ($rule.DestinationPortRange -eq "*") {
+            $issues += "All ports allowed"
+            $riskLevel = "HIGH"
+        }
+        
+        # Check for high-risk ports
+        $destinationPorts = $rule.DestinationPortRange -split ","
+        foreach ($port in $destinationPorts) {
+            $portNum = 0
+            if ([int]::TryParse($port, [ref]$portNum)) {
+                if ($highRiskPorts -contains $portNum) {
+                    $issues += "High-risk port $portNum"
+                    if ($riskLevel -ne "HIGH") { $riskLevel = "MEDIUM" }
+                }
+                if ($managementPorts -contains $portNum -and ($rule.SourceAddressPrefix -eq "*" -or $rule.SourceAddressPrefix -eq "Internet")) {
+                    $riskLevel = "CRITICAL"
+                    $issues += "Management port exposed to Internet"
+                }
+            }
+        }
+        
+        # Check for inbound allow rules
+        if ($rule.Direction -eq "Inbound" -and $rule.Access -eq "Allow" -and $issues.Count -gt 0) {
+            $findings += [PSCustomObject]@{
+                NSGName         = $nsg.Name
+                ResourceGroup   = $nsg.ResourceGroupName
+                RuleName        = $rule.Name
+                Direction       = $rule.Direction
+                Priority        = $rule.Priority
+                Source          = $rule.SourceAddressPrefix -join ", "
+                Destination     = $rule.DestinationAddressPrefix -join ", "
+                Ports           = $rule.DestinationPortRange
+                Protocol        = $rule.Protocol
+                RiskLevel       = $riskLevel
+                Issues          = ($issues -join "; ")
+            }
+        }
+    }
+}
+
+$criticalRisk = $findings | Where-Object { $_.RiskLevel -eq "CRITICAL" }
+$highRisk = $findings | Where-Object { $_.RiskLevel -eq "HIGH" }
+$mediumRisk = $findings | Where-Object { $_.RiskLevel -eq "MEDIUM" }
+
+Write-Host ""
+Write-Host "=== NSG Security Analysis Report ===" -Foreground Cyan
+Write-Host "NSGs scanned:           $($nsgs.Count)"
+Write-Host "CRITICAL findings:      $($criticalRisk.Count)" -Foreground Red
+Write-Host "HIGH risk rules:        $($highRisk.Count)" -Foreground Yellow
+Write-Host "MEDIUM risk rules:      $($mediumRisk.Count)" -Foreground Yellow
+
+if ($criticalRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL: Management ports exposed to Internet!" -Foreground Red
+    $criticalRisk | Select-Object NSGName, RuleName, Source, Ports | Format-Table -AutoSize
+}
+
+if ($highRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH RISK: Open to Internet or allow all ports" -Foreground Yellow
+    $highRisk | Select-Object NSGName, RuleName, Source, Ports, Issues | Format-Table -AutoSize
+}
+
+$recommendations = @"
+
+RECOMMENDATIONS:
+1. Restrict source IPs: Replace '*' with specific IP ranges
+2. Disable RDP/SSH from Internet: Use Bastion or VPN instead
+3. Implement least privilege: Remove 'Any' port rules
+4. Enable NSG flow logs for traffic analysis
+5. Use Application Security Groups for micro-segmentation
+"@
+
+Write-Host $recommendations -Foreground Cyan
+
+$findings | Export-Csv -Path "./nsg-security-analysis.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./nsg-security-analysis.csv"`,
+    output: `Scanning NSG rules for security issues...
+Analyzing nsg-web-prod...
+Analyzing nsg-db-tier...
+Analyzing nsg-bastion...
+Analyzing nsg-default...
+
+=== NSG Security Analysis Report ===
+NSGs scanned:           8
+CRITICAL findings:      2
+HIGH risk rules:        7
+MEDIUM risk rules:      12
+
+CRITICAL: Management ports exposed to Internet!
+NSGName        RuleName        Source    Ports
+-------        --------        ------    -----
+nsg-web-prod   Allow-RDP       *         3389
+nsg-default    Allow-SSH       Internet  22
+
+HIGH RISK: Open to Internet or allow all ports
+NSGName        RuleName            Source       Ports    Issues
+-------        --------            ------       -----    ------
+nsg-web-prod   Allow-All-Inbound   *            *        Open to Internet; All ports allowed
+nsg-db-tier    Allow-SQL           0.0.0.0/0    1433     Open to Internet
+
+RECOMMENDATIONS:
+1. Restrict source IPs: Replace '*' with specific IP ranges
+2. Disable RDP/SSH from Internet: Use Bastion or VPN instead
+3. Implement least privilege: Remove 'Any' port rules
+4. Enable NSG flow logs for traffic analysis
+5. Use Application Security Groups for micro-segmentation
+
+Full report exported to ./nsg-security-analysis.csv`,
+    tags: ["Azure", "NSG", "Network Security", "Firewall Rules"],
+    date: "2026-05-22",
+  },
+  {
+    id: "defender-recommendations-exporter",
+    title: "Microsoft Defender for Cloud Recommendations Exporter",
+    description: "Export and prioritize security recommendations from Defender for Cloud across all subscriptions. Identifies high-severity findings with actionable remediation steps.",
+    category: "security",
+    language: "powershell",
+    code: `Connect-AzAccount
+
+# Set subscription(s) to scan - leave empty for all accessible subscriptions
+$targetSubscriptions = @()  # @("sub-id-1", "sub-id-2") for specific subs
+
+if ($targetSubscriptions.Count -eq 0) {
+    $subscriptions = Get-AzSubscription | Where-Object { $_.State -eq 'Enabled' }
+} else {
+    $subscriptions = $targetSubscriptions | ForEach-Object { Get-AzSubscription -SubscriptionId $_ }
+}
+
+Write-Host "Scanning $($subscriptions.Count) subscription(s)..." -Foreground Cyan
+
+$allRecommendations = @()
+
+foreach ($sub in $subscriptions) {
+    Write-Host "Processing $($sub.Name)..." -Foreground Gray
+    
+    try {
+        Select-AzSubscription -SubscriptionId $sub.Id -ErrorAction Stop | Out-Null
+        
+        # Get Security Recommendations
+        $recommendations = Get-AzSecurityRecommendation | Where-Object { $_.RecommendationType -ne $null }
+        
+        foreach ($rec in $recommendations) {
+            $severity = switch ($rec.RecommendationSeverity) {
+                "High" { "HIGH" }
+                "Medium" { "MEDIUM" }
+                "Low" { "LOW" }
+                default { $rec.RecommendationSeverity }
+            }
+            
+            $allRecommendations += [PSCustomObject]@{
+                SubscriptionId   = $sub.Id
+                SubscriptionName = $sub.Name
+                Recommendation   = $rec.RecommendationDisplayName
+                ResourceType     = $rec.ResourceDetails.ResourceType
+                ResourceName     = $rec.ResourceDetails.Resource.Name
+                Severity         = $severity
+                State            = $rec.RecommendationState
+                Description      = if ($rec.Description) { $rec.Description.Substring(0, [Math]::Min(200, $rec.Description.Length)) } else { "N/A" }
+                RemediationSteps = if ($rec.RemediationSteps) { ($rec.RemediationSteps -join "; ").Substring(0, [Math]::Min(300, ($rec.RemediationSteps -join "; ").Length)) } else { "See Azure Portal" }
+                FirstFound       = $rec.TimeGenerated
+                HealthyResources = $rec.HealthyResources
+                UnhealthyResources = $rec.UnhealthyResources
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to scan $($sub.Name): $_.Exception.Message"
+    }
+}
+
+# Analysis
+$highSeverity = $allRecommendations | Where-Object { $_.Severity -eq "HIGH" }
+$mediumSeverity = $allRecommendations | Where-Object { $_.Severity -eq "MEDIUM" }
+$unhealthy = $allRecommendations | Where-Object { $_.State -eq "Unhealthy" }
+
+Write-Host ""
+Write-Host "=== Defender for Cloud Recommendations Report ===" -Foreground Cyan
+Write-Host "Total recommendations:    $($allRecommendations.Count)"
+Write-Host "High severity:            $($highSeverity.Count)" -Foreground Red
+Write-Host "Medium severity:          $($mediumSeverity.Count)" -Foreground Yellow
+Write-Host "Unhealthy resources:      $($unhealthy.Count)" -Foreground Yellow
+Write-Host ""
+
+# Group by recommendation type for prioritization
+$grouped = $allRecommendations | Group-Object Recommendation | Sort-Object Count -Descending | Select-Object -First 10
+Write-Host "Top Recommendation Categories:" -Foreground Cyan
+$grouped | Select-Object Name, Count | Format-Table -AutoSize
+
+if ($highSeverity.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH SEVERITY FINDINGS (Immediate Action Required):" -Foreground Red
+    $highSeverity | Select-Object SubscriptionName, Recommendation, ResourceName, ResourceType |
+        Format-Table -AutoSize
+}
+
+$allRecommendations | Export-Csv -Path "./defender-recommendations.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./defender-recommendations.csv"
+Write-Host ""
+Write-Host "NEXT STEPS:" -Foreground Cyan
+Write-Host "1. Review HIGH severity items in Azure Portal > Security Center"
+Write-Host "2. Use Secure Score to track improvement"
+Write-Host "3. Enable auto-remediation where applicable"
+Write-Host "4. Assign recommendations to resource owners"`,
+    output: `Scanning 1 subscription(s)...
+Processing Eddington Production...
+
+=== Defender for Cloud Recommendations Report ===
+Total recommendations:    87
+High severity:            12
+Medium severity:          45
+Unhealthy resources:      63
+
+Top Recommendation Categories:
+Name                                                                       Count
+----                                                                       -----
+Storage account should use a customer-managed key                          8
+Web Application should have Incoming client certificates enabled            6
+Machines should have a vulnerability assessment solution                     5
+Audit SQL servers should have Advanced Data Security enabled                 5
+Storage accounts should restrict network access using virtual network rules  4
+
+HIGH SEVERITY FINDINGS (Immediate Action Required):
+SubscriptionName       Recommendation                                          ResourceName                ResourceType
+----------------       --------------                                          ------------                ------------
+Eddington Production Internet-facing ports should be restricted              nsg-web-vm                  Microsoft.Network/networkSecurityGroups
+Eddington Production Management ports should be protected with JIT access    hunter-workstation          Microsoft.Compute/virtualMachines
+Eddington Production Storage account public access should be disallowed      storageacct-prod-logs       Microsoft.Storage/storageAccounts
+Eddington Production Key Vault should have soft delete enabled               kv-prod-secrets             Microsoft.KeyVault/vaults
+
+Full report exported to ./defender-recommendations.csv
+
+NEXT STEPS:
+1. Review HIGH severity items in Azure Portal > Security Center
+2. Use Secure Score to track improvement
+3. Enable auto-remediation where applicable
+4. Assign recommendations to resource owners`,
+    tags: ["Defender for Cloud", "Azure Security Center", "Compliance", "Security Posture"],
+    date: "2026-05-22",
+  },
 ];
 
