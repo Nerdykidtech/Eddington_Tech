@@ -14,6 +14,34 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "drupal-cve-2026-9082-sql-injection-cisa-kev",
+    title: "Drupal CVE-2026-9082: From Patch to KEV in 48 Hours",
+    date: "2026-05-23",
+    excerpt: "CISA added CVE-2026-9082 to its Known Exploited Vulnerabilities catalog 48 hours after Drupal's disclosure. Over 15,000 attack attempts are now targeting Drupal Core's SQL injection flaw.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/drupal-core-sql-injection-bug-actively.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `CISA added CVE-2026-9082 to its Known Exploited Vulnerabilities catalog yesterday — barely 48 hours after the Drupal security team released patches. The delay between disclosure and active exploitation is shrinking.
+
+The vulnerability is a SQL injection in Drupal Core's database abstraction layer. It affects all supported versions. Imperva caught over 15,000 attack attempts targeting nearly 6,000 sites across 65 countries. Most of it looks like probing — attackers trying to identify vulnerable PostgreSQL-backed Drupal installations.
+
+Gaming and financial services sites are taking the hits so far, accounting for roughly half of the observed traffic.
+
+The CVSS score is 6.5 — not critical by the numbers, but that undersells the risk. SQL injection can lead to privilege escalation and remote code execution on Drupal installations with the right database configuration.
+
+Drupal's security advisory warned this was being actively exploited as of May 22. CISA moved it to the KEV catalog on May 23. Federal Civilian Executive Branch agencies have until June 5 to patch or take affected systems offline.
+
+I've seen this cycle before. Vulnerability patches drop, attackers add exploit code to their scanners within days. The first wave is automated — bots probing for exploitable sites. The second wave, if it comes, is targeted exploitation of confirmed vulnerable targets.
+
+The PostgreSQL angle matters. Drupal's database abstraction layer was designed to prevent exactly this kind of SQL injection. The bug bypasses the built-in protections under specific conditions.
+
+If you're running Drupal: check your version. Patches are out for Drupal 10.4, 10.5, and 11.x. The mitigation is straightforward — update and clear caches — but you need to be on a patched release first.
+
+The broader point here is response time. Two days from patch to CISA KEV listing. That's faster than previous cycles, and it reflects the reality that attackers are watching security advisories just as closely as defenders are.`,
+  },
+  {
     slug: "megalodon-github-attack-5561-repos-cicd",
     title: "Megalodon: 5,561 GitHub Repos Compromised in Six Hours",
     date: "2026-05-22",
