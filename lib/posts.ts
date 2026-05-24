@@ -789,6 +789,37 @@ The fact that both flaws are actively exploited is the key detail. This isn't th
 If you're managing endpoint security: verify your patching. Defender updates come through Windows Update, but version strings matter. Make sure your endpoints actually got the June 3 patches. Check the Defender version. Don't assume automatic updates covered it.
 `,
   },
+  {
+    slug: "npm-2fa-staged-publishing-supply-chain",
+    title: "npm Gets 2FA-Gated Publishing: Finally",
+    date: "2026-05-24",
+    excerpt: "GitHub shipped staged publishing for npm. It's a 2FA gate that sits between your CI pipeline and the public registry. You can't publish without a human approving it.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/npm-adds-2fa-gated-publishing-and.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `GitHub shipped staged publishing for npm this week. It's a simple idea that's been missing for years: before a package version becomes public on npmjs.com, a human maintainer has to approve it with a 2FA challenge.
+
+The way it worked before: your CI workflow publishes, the package is immediately visible and installable. If someone's compromised your token or your CI environment, they have full registry access. The attack window is the time it takes for npm to process the upload.
+
+The way it works now: you run npm publish, the tarball goes to a staging queue. Nothing happens until a human logs in, passes a 2FA check, and explicitly approves the release. The "proof of presence" requirement means even if an attacker has your publish token, they can't get code to the registry without also having your second factor.
+
+GitHub recommends pairing staged publishing with OIDC-based trusted publishing. The OIDC path handles machine-to-machine authentication, the staging queue handles human approval. Together they split the trust model — machines can propose releases, humans have to ratify them.
+
+There are some catches. Staged publishing only works for existing packages on the registry. You can't stage a brand new package. You need npm CLI 11.15.0 or newer. And it requires 2FA on your npm account, which you should have done already but lots of maintainers still don't.
+
+The attack model this addresses isn't theoretical. We've seen attackers steal npm tokens from CI environments and use them to push malicious versions of legitimate packages. The malicious commits can come from throwaway GitHub accounts, the publish comes from a legit maintainer token, and by the time it's noticed the package has been downloaded thousands of times.
+
+I see this as part of a broader shift in package registry security. npm now supports "package install controls" — the ability to gate what gets installed based on organizational policies. The registry is moving from an open firehose toward a model where you have more control over the blast radius.
+
+If you're a maintainer: enable staged publishing. The command is npm stage publish instead of npm publish. Set up your 2FA if you haven't already. Review your trusted publishing configuration and make sure OIDC is set up correctly for your CI/CD pipelines.
+
+If you're a consumer: this doesn't change your immediate risk profile. Staged publishing helps prevent compromised packages from getting into the registry, but it doesn't guarantee packages you install are safe. You still need lockfiles, SBOMs, and dependency scanning. The supply chain defense is still layered.
+
+The real value here is in slowing down automated attacks. An attacker who compromises a token or a CI workflow now has an additional barrier. They need your 2FA or they need to compromise an actual human's session. That's a significantly harder target than a publish token sitting in environment variables.
+`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
