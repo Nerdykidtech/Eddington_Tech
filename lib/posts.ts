@@ -42,6 +42,36 @@ If you're running Drupal: check your version. Patches are out for Drupal 10.4, 1
 The broader point here is response time. Two days from patch to CISA KEV listing. That's faster than previous cycles, and it reflects the reality that attackers are watching security advisories just as closely as defenders are.`,
   },
   {
+    slug: "trapdoor-supply-chain-npm-pypi-cargo",
+    title: "TrapDoor: A Supply Chain Attack Hitting npm, PyPI, and Cargo at the Same Time",
+    date: "2026-05-25",
+    excerpt: "A coordinated supply chain attack codenamed TrapDoor spread credential-stealing malware through 34 malicious packages on npm, PyPI, and Crates.io. The campaign uses postinstall hooks, build scripts, and even AI assistant prompts to steal credentials and maintain persistence on developer machines.",
+    category: "Threat Intelligence",
+    readTime: "2 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/trapdoor-supply-chain-attack-spreads.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `A new supply chain attack called TrapDoor showed up this week targeting three package registries at once: npm, PyPI, and Crates.io. The Rust crate registry. That's not common.
+
+The campaign started on May 22. Thirty-four malicious packages across 384 versions. All published in waves from a cluster of accounts. Socket Research spotted it first.
+
+The npm packages run a JavaScript payload called trap-core.js. It scans for AWS credentials, GitHub tokens, SSH keys, crypto wallets, browser data. It validates the stolen tokens against AWS and GitHub APIs to make sure they're live. Then it sets up persistence through cron jobs, systemd services, Git hooks, shell hooks, and SSH. Lateral movement is built in.
+
+The Python packages work differently. They auto-execute on import, downloading JavaScript from an attacker-controlled GitHub Pages domain and running it with node. The payload lives externally, so the attacker can update behavior without publishing new PyPI releases. That's sneaky.
+
+The Rust crates use build.rs scripts — executed during compilation — to search local keystores, XOR encrypt the data with a hardcoded key, and exfiltrate to GitHub Gists. Targeting Sui and Move developers specifically.
+
+Here's the part that got my attention: they're planting .cursorrules and CLAUDE.md files with hidden instructions to trick AI assistants into running "security scans" that actually steal secrets. Then they open pull requests on popular repos like browser-use, LangChain, and LangFlow to distribute these files.
+
+It's not just package installation anymore. The attack chain now includes AI-assisted development environments. The malware doesn't need to exploit a vulnerability. It just needs you to use an AI coding assistant on a compromised project.
+
+The credential targets are what you'd expect: .env files, AWS credentials, cryptocurrency wallets, GitHub tokens, cloud service configs. The kind of secrets that live on developer machines and have way more access than they should.
+
+This is a credential theft operation at scale. The multi-ecosystem approach means they're not betting on one language community. They're hitting JavaScript, Python, and Rust developers simultaneously. The earliest packages went up May 22. If you've installed anything from npm, PyPI, or Crates.io in the past few days, check your dependency tree.
+
+The mitigation is straightforward: audit recent package installs, rotate any credentials that touched your dev environment, and watch for unexpected .cursorrules or CLAUDE.md files in your repositories.`,
+  },
+  {
     slug: "megalodon-github-attack-5561-repos-cicd",
     title: "Megalodon: 5,561 GitHub Repos Compromised in Six Hours",
     date: "2026-05-22",
