@@ -14,6 +14,38 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "glassworm-takedown-supply-chain-developers",
+    title: "GlassWorm Botnet Takedown: CrowdStrike Cripples Supply Chain Attack Infrastructure",
+    date: "2026-05-27",
+    excerpt: "CrowdStrike, Google, and the Shadowserver Foundation dismantled GlassWorm's C2 infrastructure. The campaign pushed trojanized VS Code extensions and malicious npm packages to harvest developer credentials at scale.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/glassworm-malware-takedown-disrupts.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `CrowdStrike, working with Google and the Shadowserver Foundation, took down GlassWorm's entire command-and-control infrastructure this week. The botnet has been targeting software developers since early 2025.
+
+Developers are not random targets here. They have access to source code repositories, cloud platforms, CI/CD pipelines, and package registries. Compromise one developer workstation and you can poison builds that get distributed to thousands of downstream users. That's the supply chain gamble, and GlassWorm played it aggressively.
+
+The infection vectors were varied. Trojanized VS Code extensions on both the Microsoft marketplace and Open VSX — hitting forks like Cursor and Windsurf. Malicious npm and Python packages. Each delivery mechanism ended with the same payload: a data-theft framework built for credential harvesting, cryptocurrency wallet extraction, and system profiling.
+
+Endor Labs researcher Kiran Raj noted that infected hosts were converted into covert infrastructure — SOCKS proxies, hidden VNC servers, and remote execution capabilities. The malware searched specifically for developer credentials: GitHub tokens, NPM credentials, OpenVSX tokens, crypto wallet keys. These weren't opportunistic attacks. The targets were chosen because compromising them enables further repository and package registry access.
+
+The Shadowserver Foundation data puts numbers to the scope. The takedown disrupted roughly 3,000 active implants across 47 countries. Most infections cluster in the US, UK, and Germany — tech hubs with dense developer populations. Over 100 malicious VS Code extensions and 200+ malicious packages were identified and removed from registries.
+
+What strikes me is the specificity. GlassWorm wasn't built for general-purpose infection. It was built for the software supply chain. The Chrome extension component collected screenshots, keystrokes, and clipboard data — surveillance tooling you use when you want to understand internal development workflows, not just steal credentials.
+
+The operation required coordination. Taking down C2 infrastructure isn't just blocking domains. When you dismantle a botnet, the implants go dark. Attackers know immediately that something changed. CrowdStrike and partners had to hit every channel simultaneously to prevent the operators from cutting new paths while defenders were still mapping the first ones.
+
+For defenders: this validates what supply chain security practitioners have been saying. Treat developer workstations as tier-one assets. The code those machines touch ends up in production. The credentials they hold unlock your build pipeline.
+
+If you're running VS Code or any fork, audit your installed extensions — especially anything added in the past few months. Check for packages with suspicious install spikes or unusual dependency chains. The malicious extensions had names designed to blend in: "Prettier Advanced," "Code AI Assistant," "Docker Helper Pro."
+
+The infrastructure is down. The implants are still on infected machines, but they can't phone home anymore. That buys time for incident response. Clean the endpoints, rotate the credentials, audit the code those developers touched.
+
+This takedown won't be the last. GlassWorm was active since last year. It took months to map and hours to dismantle. The next one is already running somewhere.`,
+  },
+  {
     slug: "drupal-cve-2026-9082-sql-injection-cisa-kev",
     title: "Drupal CVE-2026-9082: From Patch to KEV in 48 Hours",
     date: "2026-05-23",
