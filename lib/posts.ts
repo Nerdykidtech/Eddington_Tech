@@ -915,6 +915,36 @@ If you're a consumer: this doesn't change your immediate risk profile. Staged pu
 The real value here is in slowing down automated attacks. An attacker who compromises a token or a CI workflow now has an additional barrier. They need your 2FA or they need to compromise an actual human's session. That's a significantly harder target than a publish token sitting in environment variables.
 `,
   },
+  {
+    slug: "ghost-cms-cve-2026-26980-clickfix-attacks",
+    title: "Ghost CMS CVE-2026-26980: SQL Injection Used to Hijack 700+ Sites",
+    date: "2026-05-28",
+    excerpt: "Ghost CMS patched CVE-2026-26980 in February. Attackers are exploiting the SQL injection vulnerability at scale to hijack sites and inject ClickFix malware. Over 700 sites have been compromised so far.",
+    category: "Hardening",
+    readTime: "2 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/ghost-cms-cve-2026-26980-exploited-to.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Ghost CMS patched CVE-2026-26980 back in February. Attackers are using it now anyway.
+
+The vulnerability is an SQL injection in Ghost's Content API. CVSS 9.4. Unauthenticated. An attacker sends a malformed request and reads whatever they want from the database — including the Admin API Key. Once they have that key, they own the site.
+
+QiAnXin XLab says over 700 Ghost sites have been compromised so far. The attackers aren't defacing pages or planting ransomware. They're injecting JavaScript at the bottom of articles to fuel ClickFix attacks — those fake CAPTCHA pages that trick users into running malicious PowerShell commands.
+
+Here's what's interesting: Anthropic's Claude found this bug. It's one of over 10,000 vulnerabilities Project Glasswing has identified in systemically important software. The patch has been out for months. Yet here we are in late May watching it get exploited at scale because people haven't updated.
+
+The attack chain is straightforward. The SQL injection lets you read the Admin API Key. The Admin API lets you modify published articles. Modified articles serve malicious JavaScript. The JavaScript shows a fake CAPTCHA and tells the user to "verify you're human" by pressing Win+R, pasting PowerShell, and hitting Enter. That downloads the next stage.
+
+Ghost CMS is used by roughly 30,000 sites — publications, companies, independent blogs. Many of them haven't updated to 6.19.1 or later. The Content API is exposed by default on Ghost installations. That's the attack surface.
+
+What makes this work as a campaign is the automation. The attackers aren't manually compromising each site. They're scanning for Ghost instances, testing for the vulnerability, extracting keys, and pushing malicious JavaScript in bulk. XLab describes it as "large-scale poisoning." The number keeps climbing.
+
+The defensive move here is simple: patch Ghost CMS to 6.19.1 or later. The fix came out in February. If you're running an older version, check your Content API exposure and audit articles for unauthorized JavaScript injections. Look at the bottom of pages specifically — that's where the ClickFix loaders are being placed.
+
+The larger problem is the patch gap. A critical SQL injection with a public exploit has been available for months. Attackers are only now weaponizing it at scale. That delay between patch release and mass exploitation is the window where most of the damage happens. February to May is a long time to leave a CVSS 9.4 SQLi unpatched.
+
+If you're running Ghost CMS, this deserves immediate attention. Check your version. Check your articles. Update if you haven't already.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
