@@ -14,6 +14,32 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "forticlient-ems-cve-2026-35616-credential-stealer",
+    title: "Threat Actors Exploit Critical FortiClient EMS Flaw to Deploy Credential Stealer",
+    date: "2026-05-29",
+    excerpt: "CVE-2026-35616 in FortiClient EMS is being actively exploited to deploy credential-stealing malware. The attackers abuse the management infrastructure itself to push malware to every managed endpoint.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/threat-actors-exploit-critical.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `CVE-2026-35616 is a pre-authentication API bypass in FortiClient EMS - CVSS 9.1. Active exploitation began this month from what Arctic Wolf is tracking.
+
+The mechanics are straightforward and brutal. Attackers who can reach the EMS API use the management infrastructure itself to push malware to every managed endpoint. The payload arrives disguised as a Fortinet update called "FortiEndpoint_Patch.exe". It's actually an information stealer that scrapes browser data from Chromium and Gecko browsers.
+
+The abuse of management infrastructure is deliberate. EMS is designed to push software to endpoints at scale. The attackers are using that exact capability against the people who deployed it. They modify remote access policies to insert malicious PowerShell execution, then push the script through FortiClient's management pathway. Every endpoint that trusts that EMS server becomes an execution target without needing a separate intrusion path.
+
+Arctic Wolf noted the execution pattern resembles legitimate management operations specifically because it IS legitimate from the endpoint's perspective. The commands come from the EMS server. They use fortitray.exe, a legitimate FortiClient binary, to launch cmd.exe running a script that downloads more payload and exfiltrates data to 83.138.53[.]110.
+
+The credential stealer writes harvested data to ProgramData before the PowerShell wrapper handles exfiltration. There's no direct network capability in the stealer itself. This design separates collection from transmission. If endpoint detection catches the stealer, it just looks like a dropped executable. The C2 channel is abstracted behind the legitimate management operations already expected by defenders.
+
+What gets my attention is the configuration changes. Attackers aren't just dropping malware and moving on. They actively modify EMS settings to defer firmware upgrade reminders. That keeps the window open longer.
+
+Fortinet patched this in FortiClient EMS 7.4.7. The advisory came out earlier this year. The gap between patch availability and active exploitation is where these incidents happen. Arctic Wolf is seeing this in May 2026 against deployments that haven't updated.
+
+If you're running EMS: check your version. The patch has been available for months. The exploitation is current. The attack chain starts with API access, but the damage comes from weaponizing the management plane itself.`,
+  },
+  {
     slug: "glassworm-takedown-supply-chain-developers",
     title: "GlassWorm Botnet Takedown: CrowdStrike Cripples Supply Chain Attack Infrastructure",
     date: "2026-05-27",
