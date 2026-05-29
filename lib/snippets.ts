@@ -1041,5 +1041,433 @@ NEXT STEPS:
     tags: ["Defender for Cloud", "Azure Security Center", "Compliance", "Security Posture"],
     date: "2026-05-22",
   },
+  {
+    id: "azure-rbac-permissions-audit",
+    title: "Azure RBAC Permissions Audit and Overprivileged Detection",
+    description: "Export all Azure RBAC role assignments across subscriptions to identify overprivileged accounts, external guests with elevated roles, and service principals with excessive permissions.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+
+$Subscriptions = Get-AzSubscription | Where-Object { $_.State -eq 'Enabled' }
+$PrivilegedRoles = @(
+    "Owner",
+    "Contributor",
+    "User Access Administrator",
+    "Role Based Access Control Administrator"
+)
+
+$report = @()
+$stats = @{
+    TotalAssignments       = 0
+    PrivilegedAssignments  = 0
+    ExternalGuestElevated  = 0
+    ServicePrincipalOwner  = 0
+}
+
+Write-Host "Scanning $($Subscriptions.Count) subscriptions for RBAC assignments..." -Foreground Cyan
+
+foreach ($sub in $Subscriptions) {
+    Write-Host "Processing: $($sub.Name)" -Foreground Gray
+    Select-AzSubscription -SubscriptionId $sub.Id | Out-Null
+
+    try {
+        $assignments = Get-AzRoleAssignment -ErrorAction SilentlyContinue
+
+        foreach ($assignment in $assignments) {
+            $stats.TotalAssignments++
+
+            $isPrivileged = $PrivilegedRoles -contains $assignment.RoleDefinitionName
+            $isExternal = $assignment.SignInName -like "*#EXT#*" -or $assignment.SignInName -match "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+            $isServicePrincipal = $assignment.ObjectType -eq "ServicePrincipal"
+            $isGuest = $assignment.ObjectType -eq "User" -and ($assignment.SignInName -notmatch "@(eddington\.tech|eddington\.com)$")
+
+            $riskLevel = "Low"
+            $issues = @()
+
+            if ($isPrivileged) {
+                $stats.PrivilegedAssignments++
+                if ($isExternal -or $isGuest) {
+                    $riskLevel = "HIGH"
+                    $issues += "External/Guest with privileged role"
+                    $stats.ExternalGuestElevated++
+                }
+                if ($isServicePrincipal) {
+                    $issues += "Service Principal with elevated access"
+                    $stats.ServicePrincipalOwner++
+                    if ($assignment.RoleDefinitionName -eq "Owner") {
+                        $riskLevel = "CRITICAL"
+                    } elseif ($riskLevel -ne "CRITICAL") {
+                        $riskLevel = "MEDIUM"
+                    }
+                }
+            }
+
+            if ($issues.Count -gt 0 -or $isPrivileged) {
+                $report += [PSCustomObject]@{
+                    SubscriptionId    = $sub.Id
+                    SubscriptionName  = $sub.Name
+                    PrincipalName     = if ($assignment.SignInName) { $assignment.SignInName } else { $assignment.DisplayName }
+                    PrincipalType     = $assignment.ObjectType
+                    Role              = $assignment.RoleDefinitionName
+                    Scope             = $assignment.Scope
+                    RiskLevel         = $riskLevel
+                    Issues            = ($issues -join "; ")
+                    IsPrivileged      = $isPrivileged
+                }
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to scan $($sub.Name): $_ExceptionMessage"
+    }
+}
+
+$criticalRisk = $report | Where-Object { $_.RiskLevel -eq "CRITICAL" }
+$highRisk = $report | Where-Object { $_.RiskLevel -eq "HIGH" }
+$mediumRisk = $report | Where-Object { $_.RiskLevel -eq "MEDIUM" }
+
+Write-Host ""
+Write-Host "=== Azure RBAC Permissions Audit ===" -Foreground Cyan
+Write-Host "Subscriptions scanned:        $($Subscriptions.Count)"
+Write-Host "Total role assignments:     $($stats.TotalAssignments)"
+Write-Host "Privileged assignments:     $($stats.PrivilegedAssignments)"
+Write-Host "CRITICAL risk:              $($criticalRisk.Count)" -Foreground Red
+Write-Host "HIGH risk:                  $($highRisk.Count)" -Foreground Yellow
+Write-Host "External/Guest privileged:  $($stats.ExternalGuestElevated)" -Foreground Yellow
+
+if ($criticalRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL: Service Principals with Owner role!" -Foreground Red
+    $criticalRisk | Select-Object PrincipalName, SubscriptionName, Scope | Format-Table -AutoSize
+}
+
+if ($highRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH RISK: External/Guest accounts with privileged access" -Foreground Yellow
+    $highRisk | Select-Object PrincipalName, Role, SubscriptionName, Issues | Format-Table -AutoSize
+}
+
+$report | Export-Csv -Path "./azure-rbac-permissions-audit.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./azure-rbac-permissions-audit.csv"`,
+    output: String.raw`Scanning 4 subscriptions for RBAC assignments...
+Processing: Eddington Production
+Processing: Eddington Staging
+Processing: Eddington Dev
+Processing: Eddington Shared Services
+
+=== Azure RBAC Permissions Audit ===
+Subscriptions scanned:        4
+Total role assignments:     127
+Privileged assignments:     34
+CRITICAL risk:              3
+HIGH risk:                  8
+External/Guest privileged:  5
+
+CRITICAL: Service Principals with Owner role!
+PrincipalName                 SubscriptionName        Scope
+-------------                 ----------------        -----
+terraform-sp-eddington        Eddington Production    /subscriptions/a1b2c3d4...
+legacy-deployment-svc         Eddington Staging       /subscriptions/e5f6g7h8...
+backup-automation-sp          Eddington Shared        /subscriptions/i9j0k1l2...
+
+HIGH RISK: External/Guest accounts with privileged access
+PrincipalName                 Role                    SubscriptionName      Issues
+-------------                 ----                    ----------------      ------
+consultant@vendor.com#EXT#    Contributor             Eddington Production  External/Guest with privileged role
+contractor@partner.com#EXT#   Owner                   Eddington Staging     External/Guest with privileged role
+external-auditor@firm.com     User Access Admin       Eddington Shared      External/Guest with privileged role
+
+Full report exported to ./azure-rbac-permissions-audit.csv`,
+    tags: ["Azure", "RBAC", "IAM", "Privileged Access", "Audit"],
+    date: "2026-05-29",
+  },
+  {
+    id: "jit-access-request-tracker",
+    title: "JIT VM Access Request Tracker and Audit",
+    description: "Monitor and audit Just-In-Time (JIT) VM access requests across Azure subscriptions. Tracks active JIT sessions, analyzes request patterns, and identifies failed or suspicious access attempts.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+
+$Subscriptions = Get-AzSubscription | Where-Object { $_.State -eq 'Enabled' }
+$DaysBack = 30
+$StartDate = (Get-Date).AddDays(-$DaysBack)
+
+$report = @()
+$stats = @{
+    TotalRequests     = 0
+    ApprovedRequests  = 0
+    DeniedRequests    = 0
+    ActiveSessions    = 0
+    ExpiredSessions   = 0
+}
+
+Write-Host "Fetching JIT access requests from last $DaysBack days..." -Foreground Cyan
+
+foreach ($sub in $Subscriptions) {
+    Select-AzSubscription -SubscriptionId $sub.Id | Out-Null
+
+    try {
+        # Get JIT policies and active requests
+        $jitPolicies = Get-AzJitNetworkAccessPolicy -ErrorAction SilentlyContinue
+
+        foreach ($policy in $jitPolicies) {
+            $vmName = $policy.VirtualMachine.Name
+            $resourceGroup = $policy.VirtualMachine.ResourceGroup
+
+            foreach ($rule in $policy.VirtualMachines) {
+                foreach ($port in $rule.Ports) {
+                    $requestHistory = Get-AzJitNetworkAccessPolicy -ResourceGroupName $resourceGroup -Name $policy.Name -ErrorAction SilentlyContinue
+
+                    if ($requestHistory) {
+                        foreach ($req in $requestHistory.Requests) {
+                            if ($req.StartTimeUtc -gt $StartDate) {
+                                $stats.TotalRequests++
+
+                                $status = $req.Status
+                                if ($status -eq "Approved") { $stats.ApprovedRequests++ }
+                                if ($status -eq "Denied") { $stats.DeniedRequests++ }
+
+                                # Check if session is still active
+                                $endTime = $req.EndTimeUtc
+                                $isActive = ($endTime -gt (Get-Date).ToUniversalTime())
+                                if ($isActive) { $stats.ActiveSessions++ } else { $stats.ExpiredSessions++ }
+
+                                $report += [PSCustomObject]@{
+                                    SubscriptionId   = $sub.Id
+                                    SubscriptionName = $sub.Name
+                                    VMName           = $vmName
+                                    ResourceGroup    = $resourceGroup
+                                    Requestor        = $req.Requestor
+                                    StartTime        = $req.StartTimeUtc
+                                    EndTime          = $endTime
+                                    Status           = $status
+                                    IsActive         = if ($isActive) { "Yes" } else { "No" }
+                                    Port             = $port.Number
+                                    AllowedSourceIP  = ($req.SourceIPs -join "; ")
+                                    DurationMinutes  = ($endTime - $req.StartTimeUtc).TotalMinutes
+                                    Justification    = if ($req.Justification) { $req.Justification } else { "Not provided" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to scan $($sub.Name): $_ExceptionMessage"
+    }
+}
+
+$activeNow = $report | Where-Object { $_.IsActive -eq "Yes" }
+$deniedRequests = $report | Where-Object { $_.Status -eq "Denied" }
+$noJustification = $report | Where-Object { $_.Justification -eq "Not provided" }
+
+Write-Host ""
+Write-Host "=== JIT Access Request Tracker ===" -Foreground Cyan
+Write-Host "Subscriptions scanned:  $($Subscriptions.Count)"
+Write-Host "Total JIT requests:     $($stats.TotalRequests)"
+Write-Host "Approved:               $($stats.ApprovedRequests)"
+Write-Host "Denied:                 $($stats.DeniedRequests)"
+Write-Host "Currently active:       $($activeNow.Count)" -Foreground Green
+Write-Host "Expired:                $($stats.ExpiredSessions)"
+Write-Host "Missing justification:  $($noJustification.Count)"
+
+if ($activeNow.Count -gt 0) {
+    Write-Host ""
+    Write-Host "ACTIVE JIT SESSIONS:" -Foreground Green
+    $activeNow | Select-Object VMName, Requestor, StartTime, EndTime, Port | Format-Table -AutoSize
+}
+
+if ($deniedRequests.Count -gt 0) {
+    Write-Host ""
+    Write-Host "DENIED REQUESTS (Review for policy violations):" -Foreground Yellow
+    $deniedRequests | Select-Object VMName, Requestor, StartTime, Justification | Format-Table -AutoSize
+}
+
+# Top requestors analysis
+$topRequestors = $report | Group-Object Requestor | Sort-Object Count -Descending | Select-Object -First 5
+Write-Host ""
+Write-Host "Top JIT Requestors:" -Foreground Cyan
+$topRequestors | Select-Object Name, Count | Format-Table -AutoSize
+
+$report | Export-Csv -Path "./jit-access-request-tracker.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./jit-access-request-tracker.csv"`,
+    output: String.raw`Fetching JIT access requests from last 30 days...
+
+=== JIT Access Request Tracker ===
+Subscriptions scanned:  3
+Total JIT requests:     156
+Approved:               148
+Denied:                 8
+Currently active:       12
+Expired:                144
+Missing justification:  23
+
+ACTIVE JIT SESSIONS:
+VMName                Requestor               StartTime             EndTime               Port
+------                ---------               ---------             -------               ----
+vm-admin-prod-01      hunter@eddington.tech   5/29/2026 1:30 PM     5/29/2026 9:30 PM     3389
+vm-webserver-02       admin@eddington.tech      5/29/2026 8:00 AM     5/29/2026 4:00 PM     22
+vm-db-primary         dbadmin@eddington.tech    5/29/2026 9:15 AM     5/29/2026 5:15 PM     1433
+
+DENIED REQUESTS (Review for policy violations):
+VMName                Requestor                 StartTime             Justification
+------                ---------                 ---------             -------------
+vm-domain-controller  unknown@external.com      5/28/2026 3:00 PM
+vm-admin-prod-01      consultant@vendor.com     5/27/2026 11:00 AM    Emergency access
+
+Top JIT Requestors:
+Name                                  Count
+----                                  -----
+hunter@eddington.tech                 42
+admin@eddington.tech                  28
+jcloud@eddington.tech               19
+
+Full report exported to ./jit-access-request-tracker.csv`,
+    tags: ["Azure", "JIT", "VM Access", "Security Center", "Audit"],
+    date: "2026-05-29",
+  },
+  {
+    id: "dlp-policy-incident-exporter",
+    title: "Microsoft 365 DLP Policy Incident Exporter",
+    description: "Export Data Loss Prevention (DLP) policy incidents from Microsoft 365 to analyze data exfiltration attempts, policy violations by department, and trends over time for compliance reporting.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`Connect-IPPSSession
+
+$DaysBack = 90
+$StartDate = (Get-Date).AddDays(-$DaysBack)
+$EndDate = (Get-Date)
+
+Write-Host "Fetching DLP incidents from last $DaysBack days..." -Foreground Cyan
+
+try {
+    # Get DLP incidents
+    $incidents = Get-DlpIncidentDetailReport -StartDate $StartDate -EndDate $EndDate -ErrorAction SilentlyContinue
+
+    $report = @()
+    $stats = @{
+        TotalIncidents        = 0
+        HighSeverity          = 0
+        MediumSeverity        = 0
+        LowSeverity           = 0
+        FalsePositive         = 0
+        PolicyOverride        = 0
+    }
+
+    foreach ($incident in $incidents) {
+        $stats.TotalIncidents++
+
+        # Track severity
+        switch ($incident.Severity) {
+            "High" { $stats.HighSeverity++ }
+            "Medium" { $stats.MediumSeverity++ }
+            "Low" { $stats.LowSeverity++ }
+        }
+
+        if ($incident.Status -eq "FalsePositive") { $stats.FalsePositive++ }
+        if ($incident.Status -eq "Override") { $stats.PolicyOverride++ }
+
+        $report += [PSCustomObject]@{
+            IncidentId      = $incident.IncidentId
+            CreatedTime     = $incident.CreationDate
+            PolicyName      = $incident.PolicyName
+            RuleName        = $incident.RuleName
+            Severity        = $incident.Severity
+            Status          = $incident.Status
+            UserPrincipalName = $incident.UserPrincipalName
+            Department      = if ($incident.Department) { $incident.Department } else { "Unknown" }
+            Location        = $incident.Location
+            Operation       = $incident.Operation
+            ObjectId        = $incident.ObjectId
+            SensitiveInfoTypes = ($incident.SensitiveInfoType -join "; ")
+            DetectedValues  = if ($incident.DetectedValues) { ($incident.DetectedValues -join "; ").Substring(0, [Math]::Min(200, ($incident.DetectedValues -join "; ").Length)) } else { "N/A" }
+            FalsePositive   = if ($incident.Status -eq "FalsePositive") { "Yes" } else { "No" }
+            PolicyOverride  = if ($incident.Status -eq "Override") { "Yes" } else { "No" }
+            OverrideJustification = if ($incident.OverrideJustification) { $incident.OverrideJustification } else { "N/A" }
+        }
+    }
+
+    # Analysis
+    $highSeverity = $report | Where-Object { $_.Severity -eq "High" }
+    $byPolicy = $report | Group-Object PolicyName | Sort-Object Count -Descending | Select-Object -First 5
+    $byDepartment = $report | Group-Object Department | Sort-Object Count -Descending | Select-Object -First 5
+
+    Write-Host ""
+    Write-Host "=== DLP Policy Incident Report ===" -Foreground Cyan
+    Write-Host "Date range:             $DaysBack days"
+    Write-Host "Total incidents:          $($stats.TotalIncidents)"
+    Write-Host "High severity:            $stats.HighSeverity"
+    Write-Host "Medium severity:          $stats.MediumSeverity"
+    Write-Host "Low severity:             $stats.LowSeverity"
+    Write-Host "False positives:          $($stats.FalsePositive)"
+    Write-Host "Policy overrides:         $($stats.PolicyOverride)"
+
+    if ($highSeverity.Count -gt 0) {
+        Write-Host ""
+        Write-Host "HIGH SEVERITY INCIDENTS:" -Foreground Red
+        $highSeverity | Select-Object CreatedTime, UserPrincipalName, PolicyName, SensitiveInfoTypes | Format-Table -AutoSize
+    }
+
+    Write-Host ""
+    Write-Host "Top DLP Policies Triggered:" -Foreground Cyan
+    $byPolicy | Select-Object Name, Count | Format-Table -AutoSize
+
+    Write-Host ""
+    Write-Host "Incidents by Department:" -Foreground Cyan
+    $byDepartment | Select-Object Name, Count | Format-Table -AutoSize
+
+    $report | Export-Csv -Path "./dlp-incidents-report.csv" -NoTypeInformation
+    Write-Host ""
+    Write-Host "Full report exported to ./dlp-incidents-report.csv" -Foreground Green
+}
+catch {
+    Write-Error "Failed to retrieve DLP incidents. Ensure you have the required permissions: $_ExceptionMessage"
+}`,
+    output: String.raw`Fetching DLP incidents from last 90 days...
+
+=== DLP Policy Incident Report ===
+Date range:             90 days
+Total incidents:          247
+High severity:            18
+Medium severity:          89
+Low severity:             140
+False positives:          23
+Policy overrides:         12
+
+HIGH SEVERITY INCIDENTS:
+CreatedTime          UserPrincipalName          PolicyName                SensitiveInfoTypes
+-----------          -----------------          ----------                ------------------
+5/28/2026 2:15 PM    executive@eddington.tech   Credit Card Data Export   Credit Card Number
+5/27/2026 11:03 AM   sales@eddington.tech       PII Email Disclosure      Social Security Number; US Person Name
+5/25/2026 9:47 AM    contractor@vendor.com      HIPAA Content Sharing     Medical Term; US Person Name
+
+Top DLP Policies Triggered:
+Name                                            Count
+----                                            -----
+Financial Data Protection                       68
+PII Email Filter                                52
+HIPAA Compliance - Healthcare Data              38
+GDPR - EU Personal Data                         45
+Confidential Document Label                     44
+
+Incidents by Department:
+Name             Count
+----             -----
+Sales            89
+Engineering      67
+HR               34
+Finance          31
+Legal            26
+
+Full report exported to ./dlp-incidents-report.csv`,
+    tags: ["Microsoft 365", "DLP", "Data Loss Prevention", "Compliance", "MIP"],
+    date: "2026-05-29",
+  },
 ];
 
