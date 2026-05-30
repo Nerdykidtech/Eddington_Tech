@@ -14,6 +14,38 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "marimo-cve-2026-39987-llm-agent-post-exploitation",
+    title: "Attackers Use LLM Agent for Post-Exploitation After Marimo CVE-2026-39987 Exploit",
+    date: "2026-05-30",
+    excerpt: "A threat actor used an LLM agent to conduct post-exploitation after compromising a Marimo notebook via CVE-2026-39987. The end-to-end attack chain lasted just over an hour, with the attacker exfiltrating a full PostgreSQL database in under two minutes.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/attackers-use-llm-agent-for-post.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `Sysdig caught an attack last month that I have been thinking about. On May 10, a threat actor compromised a publicly accessible Marimo notebook using CVE-2026-39987. This is a pre-auth RCE that affects all Marimo versions up through 0.20.4. Patches dropped in 0.23.0.
+
+The initial access is not the interesting part. The post-exploitation is.
+
+The attacker extracted cloud credentials from the compromised host, replayed them through a fanned-out egress pool, and hit AWS Secrets Manager. They retrieved an SSH private key and pivoted to a bastion server. Eight parallel SSH sessions later, they had exfiltrated the full schema and contents of an internal PostgreSQL database. Total time from initial compromise to data exfiltration: just over an hour. The database extraction took under two minutes.
+
+Sysdig identified four indicators that point to an LLM agent driving the attack.
+
+First, the attacker improvised a database dump without any prior knowledge of the schema. The database hostname was opaque, with no application identifier on disk and no pre-staged schema dump. Yet they landed on the credential table within minutes.
+
+Second, a Chinese-language comment leaked directly into the command stream: "看还能做什么" translates to "See what else we can do." This is the kind of artifact that shows up when an LLM agent is composing commands in real time.
+
+Third, every command was designed for machine consumption. Commands were separated by "---" delimiters. Output was bounded. The "less" command was disabled. stderr was discarded to minimize noise. These are choices you make when you are optimizing for tool parsing, not human readability.
+
+Fourth, value handoffs came from prior tool output. The attacker ran "ls -la ~/.ssh/id_ed25519*" to confirm the key existed before running "cat ~/.ssh/id_ed25519" to extract it. This is tool chaining. The output of one command becomes the input confirmation for the next.
+
+The attackers never saw this environment before they were inside it. They did not spend weeks crafting playbooks for this specific target. They landed on an internet-facing Marimo instance and an LLM agent composed the attack chain live. The constraint is inference budget, not engineering time.
+
+This is not the first CVE-2026-39987 exploitation. The vulnerability has been under active exploitation since disclosure. What makes this incident stand out is the post-exploitation tooling. The shift from human-driven reconnaissance to LLM-directed action is here.
+
+If you are running Marimo: check your version. 0.23.0 patches this. The vulnerability is pre-auth RCE. Anyone who can reach your Marimo instance can get code execution. The question is what happens next, and now we have an answer that involves autonomous tooling making real-time decisions about where to pivot and what to steal.`,
+  },
+  {
     slug: "forticlient-ems-cve-2026-35616-credential-stealer",
     title: "Threat Actors Exploit Critical FortiClient EMS Flaw to Deploy Credential Stealer",
     date: "2026-05-29",
