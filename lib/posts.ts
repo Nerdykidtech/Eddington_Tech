@@ -1003,6 +1003,28 @@ The larger problem is the patch gap. A critical SQL injection with a public expl
 
 If you're running Ghost CMS, this deserves immediate attention. Check your version. Check your articles. Update if you haven't already.`,
   },
+  {
+    slug: "pan-os-cve-2026-0257-auth-bypass-active-exploitation",
+    title: "PAN-OS CVE-2026-0257: Authentication Bypass Under Active Exploitation",
+    date: "2026-05-31",
+    excerpt: "Palo Alto Networks confirmed active exploitation of CVE-2026-0257, an authentication bypass in PAN-OS GlobalProtect. CISA added it to the KEV catalog with a June 1 remediation deadline for federal agencies.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    source: "The Hacker News|https://thehackernews.com/2026/05/pan-os-globalprotect-authentication.html",
+    image: "https://eddington.tech/og-image.png",
+    content: `CVE-2026-0257 is being exploited in the wild. Palo Alto Networks confirmed limited attacks against unpatched PAN-OS GlobalProtect gateways starting May 17.
+
+The vulnerability is an authentication bypass (CVSS 7.8) affecting firewalls with GlobalProtect portal or gateway deployed. If authentication override cookies are enabled and a specific certificate configuration exists, an attacker can establish a VPN connection without valid credentials.
+
+Rapid7 reported two exploitation waves so far. The first hit on May 17, followed by a second on May 21. Both are the same actor. In the second wave, attackers obtained VPN IP assignments in at least two cases, giving them internal network access. No follow-on activity has been observed yet.
+
+The fix is straightforward: patch to PAN-OS 10.1.13-h4, 10.2.8-h8, 11.0.6-h3, 11.1.5-h2, or 11.2.4-h3. If you cannot patch immediately, disable authentication override cookies or generate a new certificate dedicated to that feature.
+
+CISA added this to the KEV catalog on May 29 with a binding operational directive deadline of June 1 for federal agencies.
+
+This is the second time this year a major enterprise VPN vendor has had an auth bypass under active exploitation. The pattern is consistent: edge-facing appliances, certificate-based auth bypasses, rapid weaponization after disclosure. If you are running GlobalProtect with auth override enabled, assume your perimeter was tested between May 17 and now.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
