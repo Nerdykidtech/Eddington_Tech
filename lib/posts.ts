@@ -1704,6 +1704,34 @@ CISA added this to the KEV catalog on May 29 with a binding operational directiv
 
 This is the second time this year a major enterprise VPN vendor has had an auth bypass under active exploitation. The pattern is consistent: edge-facing appliances, certificate-based auth bypasses, rapid weaponization after disclosure. If you are running GlobalProtect with auth override enabled, assume your perimeter was tested between May 17 and now.`,
   },
+  {
+    slug: "openai-codex-tokens-stolen-codexui-npm-supply-chain",
+    title: "OpenAI Codex Tokens Stolen via npm Package with 29K Weekly Downloads",
+    date: "2026-06-01",
+    excerpt: "A 29K weekly-download npm package has been silently stealing OpenAI Codex authentication tokens for a month. The malicious code is only in the npm build—GitHub looks clean. Refresh tokens don't expire; stolen once, valid forever.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/openai-codex-authentication-tokens.html",
+    content: `A developer tool with 29,000 weekly npm downloads has been quietly stealing OpenAI Codex authentication tokens for the past month. The package "codexui-android" is functional—it's a remote web UI for Codex. Which is exactly why this works.
+
+The npm package is still live. It's been downloaded 29,000 times a week. The GitHub repository looks clean because it is. The malicious code only exists in the npm build. That's the delivery mechanism: a trusted-appearing package with a split personality between source and artifact.
+
+The attack works by reading ~/.codex/auth.json after you authenticate through the tool. The tokens—including refresh tokens that don't expire—get exfiltrated to sentry.anyclaw.store, a domain masquerading as Sentry. The refresh token is the problem: stolen once, valid forever, silent access to whatever your Codex account can do.
+
+This same mechanism is also packaged into two Android apps by "BrutalStrike" on the Play Store with 60,000 combined downloads. The apps run the npm package inside a Termux-derived Linux userland via PRoot. Same exfiltration endpoint, same silent credential theft.
+
+The timeline is instructive. The npm package was first published, waited a month to build trust and user base, then the token exfiltration was added in version 0.1.82. The domain anyclaw.store was registered two days after the first package version. This was planned.
+
+The response when researchers confronted the author was also telling: first "I lost access to my npm account," then edited to "currently investigating this issue." The X profile linked to the author lists anyclaw.store as a contact domain.
+
+If you installed codexui-android or either BrutalStrike app, revoke your Codex tokens immediately. Check ~/.codex/auth.json on any system where you used Codex through third-party tools. The tokens there are passwords—treat them like it.
+
+The broader point: supply chain attacks on dev tools are maturing. This isn't typosquatting. It's legitimate functionality with a side channel that only activates after you've built trust in the package. Your IDE extension can steal your cloud credentials. Your AI coding assistant can leak your auth tokens to an endpoint registered two days after the package first appeared.
+
+The npm registry doesn't distinguish between "package appears to do what it claims" and "package also exfiltrates credentials." Neither does the Play Store. That's the gap.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
