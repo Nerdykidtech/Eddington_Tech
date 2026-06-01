@@ -14,6 +14,685 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "vibe-coding-security-shadow-builders-enterprise-playbook",
+    title: "Vibe Coding Security: Enterprise Defense Against Shadow Builder Exposures [2026]",
+    date: "2026-06-01",
+    excerpt: "2,000+ publicly accessible vibe-coded applications holding sensitive corporate data. Shadow Builders are bypassing every security control you've built. This is the enterprise defense playbook for a problem most organizations haven't acknowledged exists yet.",
+    category: "Hardening",
+    readTime: "15 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `## The Friday Afternoon Discovery That Should Worry Your CISO
+
+It was 4:47 PM on a Friday when my phone rang. Not Slack, not email. An actual phone call from our Head of Security Operations. I knew before I answered that something had gone very wrong.
+
+"We've got 47 applications running on Replit and Retool," he said. "All connected to production systems. Most have no authentication. One has admin access to our Snowflake instance. And none of them are in our asset inventory."
+
+This wasn't a breach. Not exactly. This was worse — a fundamental blindspot in how we understood our attack surface.
+
+A marketing manager had built a campaign performance dashboard using an AI coding platform. She'd connected it to our BI tools to pull real-time numbers for Monday's executive review. It worked beautifully. She shared the link with her team. Then her team shared it with their managers. Within three weeks, that dashboard — hosted on a subdomain of a vibe coding platform, with no authentication enabled by default — contained direct API access to our customer data warehouse.
+
+She wasn't being careless. She was being efficient. The AI development platform told her it was production-ready. She shipped it before the IT ticket she submitted six weeks earlier had even been assigned.
+
+This is the Shadow Builder problem. While security teams have been wrestling with Shadow IT — unsanctioned SaaS applications purchased on corporate cards — a new category has emerged that's more dangerous because it bypasses every control we've built: Shadow Builders are employees creating production applications using AI-driven development platforms, connecting them to sanctioned enterprise systems, and publishing them to the open internet.
+
+The Red Access investigation published this week found 380,000 publicly accessible web assets across leading vibe-coding platforms. Over 2,000 of those held sensitive corporate, operational, or personal data — deployed without basic access controls, often granting admin access by default to anyone who reached the URL.
+
+This guide is what I wish existed three months ago. It's the enterprise defense playbook for a problem most organizations haven't acknowledged exists yet.
+
+---
+
+## What Vibe Coding Actually Is and Why Security Teams Need to Care
+
+**Vibe coding** refers to platforms that allow non-developers to build functioning applications by describing what they want in natural language. The AI handles the implementation. The user handles the requirements.
+
+The most prominent platforms include:
+- **Replit** — Full-stack development with AI assistance and instant deployment
+- **Retool** — Internal tools built against production databases
+- **Lovable** — Natural language to full applications
+- **v0 by Vercel** — UI generation with deployment
+- **Claude Artifacts** — Interactive applications from conversation
+
+**What makes this different from Shadow IT:**
+
+Traditional Shadow IT involved purchasing existing SaaS applications — Trello boards, personal Dropbox accounts, unsanctioned Slack workspaces. The vendor was responsible for security. The exposure was bounded by the vendor's infrastructure.
+
+Vibe-coded applications invert that model:
+- **Custom-built**, not purchased — The application is bespoke to the organization's specific workflow
+- **No vendor security boundary** — The platform provides hosting, but the application logic is user-defined
+- **Direct integrations** — OAuth connections to production CRMs, ERPs, ticketing systems, and BI platforms
+- **Unmanaged lifecycle** — No CI/CD security scanning, no code review, no deployment checklist
+- **Public by default** — Many platforms publish applications to the web with minimal or no authentication
+
+**The threat model shift:**
+
+Traditional application security assumes code review, security scanning, and approved deployment pipelines. Vibe-coded applications bypass all of these. The builder is often a non-technical employee with legitimate business needs and no security training. The platform is "approved" for collaboration or development. The resulting application is a production system processing corporate data, but it exists entirely outside your security governance.
+
+---
+
+## Real Attack Scenarios: From Vibe-Coded App to Data Breach
+
+The Red Access findings aren't hypothetical. Here are the specific exposure patterns they documented:
+
+### Scenario 1: The Publicly Accessible BI Dashboard
+
+**What happened:** A finance team built an executive reporting dashboard using a vibe-coding platform. They connected it to Snowflake using service account credentials. The platform generated a public URL — no authentication required by default. The dashboard exposed:
+- Real-time revenue figures
+- Customer churn metrics
+- Sales pipeline data by region
+
+**The exposure:** Anyone with the URL could access confidential financial data. The URL followed a predictable pattern and was indexed by search engines.
+
+### Scenario 2: The Admin-Backdoored Support Tool
+
+**What happened:** A customer support manager built an internal tool to lookup customer accounts by email. The vibe platform defaulted to admin access for "ease of use." The deployed application had:
+- Full read/write access to the production customer database
+- No audit logging
+- No rate limiting
+- Publicly accessible from any IP address
+
+**The exposure:** An attacker discovering the URL could enumerate customer accounts, export the entire database, or modify records without detection.
+
+### Scenario 3: The OAuth Token Harvesting Trap
+
+**What happened:** Multiple employees built apps that requested OAuth scopes from Google Workspace, Salesforce, and Slack. The OAuth grants were made to user accounts, not service accounts. When those employees left the company:
+- Their OAuth tokens remained valid
+- The vibe-coded applications continued running
+- No offboarding process existed to revoke these specific grants
+
+**The exposure:** Former employees' OAuth tokens provided ongoing access to corporate systems, completely invisible to IT's standard offboarding procedures.
+
+---
+
+## Why Your Existing Security Stack Can't See This
+
+The reflex of most security teams is to check the tools they already have. Here's why each category fails to detect vibe-coded applications:
+
+### EDR (Endpoint Detection and Response)
+
+EDR monitors browser activity at the process level. To an endpoint agent, using Replit or Retool looks identical to reading documentation or checking email. The telemetry shows "user accessed replit.com" — not "user deployed production application with database credentials and published it publicly."
+
+**The gap:** EDR doesn't understand application-as-threat. It sees the browser, not what the user built inside it.
+
+### DLP (Data Loss Prevention)
+
+DLP tools monitor for sensitive data leaving through known channels — email attachments, USB drives, unsanctioned cloud storage. They can flag when users paste regulated data into ChatGPT.
+
+**The gap:** Vibe-coded applications don't "leak" data through enumerated channels. The data moves through OAuth APIs, cloud-to-cloud, physically bypassing the endpoint. DLP sees the traffic to salesforce.com — it doesn't know a vibe-coded app is orchestrating automated data extraction.
+
+### CASB (Cloud Access Security Broker)
+
+CASB was built for Shadow IT — identifying unsanctioned SaaS vendors. It can discover that employees are using Retool.
+
+**The gap:** CASB treats Replit, Retool, or Lovable as a single SaaS entity. It can't distinguish between "employee viewed documentation" and "employee deployed production application at public URL." The entire population of custom applications on these subdomains appears as one approved vendor.
+
+### Firewall / SSE (Secure Service Edge)
+
+Firewall and SSE solutions see traffic to platform domains but lack application-level context. They can block replit.com entirely (breaking legitimate use cases) or allow it entirely (missing the risk).
+
+**The gap:** No granularity between platform usage and application deployment. The security control is at the wrong layer.
+
+### SASE (Secure Access Service Edge)
+
+Most SASE deployments only cover managed devices. Personal laptops, contractor machines, BYOD devices, and personal browser sessions are invisible.
+
+**The gap:** Shadow Builders frequently work from personal devices or personal browser profiles. Even comprehensive SASE deployments leave gaps where this activity happens.
+
+**The fundamental problem:** Every step of vibe-coding — the build, the OAuth grant, the data integration, the deployment — happens at the session layer, not at the network, endpoint, or application layers where traditional tools operate.
+
+---
+
+## Step-by-Step: Securing Your Enterprise Against Shadow Builder Risks
+
+### Phase 1: Discovery and Inventory
+
+**Step 1.1: Survey Employees Directly**
+
+The most effective first step is often the most overlooked: ask.
+
+\`\`\`
+# Example: Send targeted survey via Slack/Email
+cat << 'EOF'
+Subject: Quick Survey: AI Development Tools
+
+We're inventorying applications built using AI development platforms
+(Replit, Retool, Lovable, etc.) to ensure proper security review.
+
+If you've built any applications for work purposes using these tools,
+please reply with:
+1. Platform used
+2. What systems it connects to (if any)
+3. Whether it has a public URL
+4. What data it processes
+
+This is NOT an audit. We're building an inventory to ensure proper
+protections are in place.
+EOF
+\`\`\`
+
+**Why this works:** Most Shadow Builders aren't hiding anything. They're doing useful work and would welcome security guidance if it's framed as partnership, not punishment.
+
+**Step 1.2: OAuth Grant Audit**
+
+OAuth connections from user accounts to vibe-coding platforms are a key indicator:
+
+\`\`\`bash
+# Google Workspace: List OAuth grants by users
+gcloud identity groups memberships search-transitive-memberships \\
+  --group-member="groups/all-employees@company.com" \\
+  --format="value(memberKey.id)" | \\
+  while read user; do
+    gam user $user show tokens | grep -E "(Replit|Retool|Lovable|v0)"
+  done
+
+# Microsoft 365: Audit app consent grants
+Connect-MgGraph -Scopes "Directory.Read.All"
+Get-MgOAuth2PermissionGrant | 
+  Where-Object { $_.ClientId -in @("Replit","Retool") } | 
+  Select-Object PrincipalId, ClientId, Scope
+
+# Salesforce: Connected app audit
+sfdx force:limits:api:display -u prod
+# Then check Setup > Manage Apps > Connected Apps OAuth Usage
+\`\`\`
+
+**Step 1.3: Network Log Analysis**
+
+Look for patterns that indicate deployed applications, not just platform usage:
+
+\`\`\`
+# Splunk query to identify potential vibe-coded app traffic
+index=web sourcetype=access_combined
+| eval subdomain = mvindex(split(cs_host, "."), 0)
+| where match(cs_host, "(replit\\.dev|retool\\.com|lovable\\.app|vercel\\.app)")
+| eval is_api_call = if(match(cs_uri, "/(api|graphql|data)"), 1, 0)
+| stats count, dc(user) as unique_users, 
+        sum(is_api_call) as api_calls by cs_host, subdomain
+| where count > 100 OR api_calls > 10
+| sort -count
+\`\`\`
+
+**Step 1.4: Create Application Inventory**
+
+\`\`\`python
+# shadow_inventory.py
+#!/usr/bin/env python3
+"""Shadow Builder Application Inventory"""
+import json
+from datetime import datetime
+
+VIBE_PLATFORMS = [
+    "replit.com", "replit.dev",
+    "retool.com",
+    "lovable.app",
+    "v0.dev", "vercel.app",
+    "bolt.new"
+]
+
+def discover_from_oauth_logs(log_file):
+    """Parse OAuth logs to discover vibe-coded apps"""
+    apps = []
+    with open(log_file) as f:
+        for line in f:
+            entry = json.loads(line)
+            if any(platform in entry.get('client_id', '') 
+                   for platform in VIBE_PLATFORMS):
+                apps.append({
+                    'platform': entry['client_id'],
+                    'owner': entry['user'],
+                    'scopes': entry.get('scopes', []),
+                    'discovered': datetime.now().isoformat(),
+                    'risk_level': assess_risk(entry)
+                })
+    return apps
+
+def assess_risk(app_entry):
+    """Assess risk level based on scopes and permissions"""
+    sensitive_scopes = ['admin', 'write', 'full_access', 'delete']
+    if any(s in str(app_entry.get('scopes', [])) for s in sensitive_scopes):
+        return 'high'
+    return 'medium'
+
+# Main execution
+if __name__ == "__main__":
+    discovered = discover_from_oauth_logs('/var/log/oauth/audit.json')
+    print(json.dumps(discovered, indent=2))
+\`\`\`
+
+### Phase 2: Risk Assessment and Policy
+
+**Step 2.1: Categorize Discovered Applications**
+
+Create a risk matrix based on:
+- **Data sensitivity** (Public, Internal, Confidential, Restricted)
+- **Integration depth** (Read-only vs. Read/Write, Number of systems)
+- **Authentication state** (Public, Unauthenticated, Authenticated)
+- **Exposure scope** (Internal URL vs. Public URL)
+
+**Step 2.2: Implement Platform Policies**
+
+\`\`\`yaml
+# security-policy-vibe-coding.yaml
+vibe_coding_policy:
+  approved_platforms:
+    - name: "Internal Retool Instance"
+      url: "retool.company.internal"
+      requires_auth: true
+      data_classification: "Internal"
+      
+    - name: "Enterprise Replit"
+      url: "replit.com"
+      restrictions:
+        - "No production database connections"
+        - "Authentication required for all apps"
+        - "Security review required for OAuth grants"
+        
+  prohibited_patterns:
+    - "Public URLs for Confidential/Restricted data"
+    - "Service account credentials in user-created apps"
+    - "Production database write access without approval"
+    - "OAuth scopes beyond read-only without review"
+    
+  data_classification_requirements:
+    Public:
+      - "Authentication: Optional"
+      - "Review: Annual"
+    Internal:
+      - "Authentication: Required"
+      - "Review: Quarterly"
+      - "DLP: Enabled"
+    Confidential:
+      - "Authentication: SSO Required"
+      - "Review: Monthly"
+      - "Access Logging: Required"
+      - "Approval: Security Team"
+    Restricted:
+      - "Policy: Prohibited without exception"
+      - "Exception Process: CISO approval required"
+\`\`\`
+
+**Step 2.3: Implement OAuth Grant Review**
+
+\`\`\`python
+#!/usr/bin/env python3
+# oauth_grant_monitor.py
+"""Monitor and review OAuth grants to vibe-coding platforms"""
+import json
+from datetime import datetime, timedelta
+
+VIBE_PLATFORMS = [
+    "replit.com",
+    "retool.com",
+    "lovable.app",
+    "v0.dev",
+    "bolt.new"
+]
+
+SENSITIVE_SCOPES = [
+    "admin.directory.user",
+    "gmail.readonly",
+    "drive.readonly",
+    "salesforce:full_access",
+    "slack:read:channels",
+    "github:repo",
+    "snowflake:accountadmin"
+]
+
+def assess_oauth_grant(grant):
+    """Assess risk of an OAuth grant"""
+    risk_score = 0
+    risk_factors = []
+    
+    # Platform risk
+    if any(platform in grant['client_id'] for platform in VIBE_PLATFORMS):
+        risk_score += 30
+        risk_factors.append("Vibe coding platform")
+    
+    # Scope risk
+    for scope in grant.get('scopes', []):
+        if any(sensitive in scope for sensitive in SENSITIVE_SCOPES):
+            risk_score += 20
+            risk_factors.append(f"Sensitive scope: {scope}")
+    
+    # Data classification risk
+    if grant.get('data_classification') in ['Confidential', 'Restricted']:
+        risk_score += 25
+        risk_factors.append("High sensitivity data")
+    
+    return {
+        'user': grant['user'],
+        'platform': grant['client_id'],
+        'risk_score': risk_score,
+        'risk_factors': risk_factors,
+        'action': 'REVIEW' if risk_score > 50 else 'MONITOR'
+    }
+
+def main():
+    # Example: Fetch from Google Workspace API
+    # grants = fetch_google_oauth_grants()
+    
+    test_grant = {
+        'user': 'marketing.user@company.com',
+        'client_id': 'replit.com',
+        'scopes': ['drive.readonly'],
+        'data_classification': 'Internal'
+    }
+    result = assess_oauth_grant(test_grant)
+    print(json.dumps(result, indent=2))
+
+if __name__ == "__main__":
+    main()
+\`\`\`
+
+### Phase 3: Continuous Monitoring
+
+**Step 3.1: Deploy Shadow Builder Detection**
+
+\`\`\`yaml
+# detection-shadow-builder.yml
+# Detection rules for Shadow Builder activity
+
+alert_shadow_builder_oauth:
+  name: "Shadow Builder OAuth Grant Detected"
+  description: "User granted OAuth access to known vibe-coding platform"
+  severity: "medium"
+  source: oauth_logs
+  query: |
+    SELECT 
+      user,
+      client_id,
+      scopes,
+      timestamp
+    FROM oauth_grants
+    WHERE client_id IN (
+      'replit', 'retool', 'lovable', 'v0', 'bolt'
+    )
+    AND timestamp > now() - interval '1 hour'
+  action: 
+    - notify: security-team@company.com
+    - create_ticket: "Shadow Builder OAuth Grant Review"
+
+alert_vibe_data_exfil:
+  name: "Data Transfer to Vibe-Coding Platform"
+  description: "Large data transfer detected to vibe-coding platform"
+  severity: "high"
+  source: proxy_logs
+  query: |
+    SELECT
+      user,
+      domain,
+      SUM(bytes_out) / 1024 / 1024 as mb_transferred,
+      COUNT(DISTINCT dst_ip) as destinations
+    FROM web_access
+    WHERE domain LIKE '%replit.dev%'
+       OR domain LIKE '%retool%'
+       OR domain LIKE '%lovable.app%'
+    GROUP BY user, domain
+    HAVING mb_transferred > 100
+  action:
+    - notify: security-team@company.com
+    - alert: soc@company.com
+\`\`\`
+
+**Step 3.2: Monitor for Public Exposures**
+
+\`\`\`bash
+#!/bin/bash
+# check_public_exposure.sh
+# Script to check if shadow apps are publicly accessible
+
+KNOWN_VIBE_DOMAINS=(
+    "replit.dev"
+    "retool.com"
+    "lovable.app"
+    "vercel.app"
+    "bolt.new"
+)
+
+check_url() {
+    local url=$1
+    local response=$(curl -s -o /dev/null -w "%{http_code},%{redirect_url}" \\
+                     -H "User-Agent: Mozilla/5.0 Security-Check/1.0" \\
+                     --max-time 10 "$url")
+    
+    local code=$(echo $response | cut -d',' -f1)
+    local redirect=$(echo $response | cut -d',' -f2)
+    
+    if [ "$code" = "200" ]; then
+        # Check for auth indicators
+        local content=$(curl -s --max-time 10 "$url")
+        if echo "$content" | grep -qiE "(login|sign in|authentication|unauthorized)"; then
+            echo "$url: ACCESSIBLE (Auth Required)"
+        else
+            echo "$url: ⚠️ UNPROTECTED (No Auth Detected)"
+        fi
+    elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
+        echo "$url: Protected (Requires Auth)"
+    else
+        echo "$url: HTTP $code"
+    fi
+}
+
+# Check discovered applications
+for domain in "\${KNOWN_VIBE_DOMAINS[@]}"; do
+    echo "Checking domain: $domain"
+done
+\`\`\`
+
+---
+
+## Detection Rules and Monitoring for Shadow Builder Activity
+
+### Splunk Detection Queries
+
+**OAuth Grant Detection:**
+
+\`\`\`
+index=oauth sourcetype=google:workspace:token
+| eval platform = case(
+    match(client_id, "replit"), "Replit",
+    match(client_id, "retool"), "Retool",
+    match(client_id, "lovable"), "Lovable",
+    match(client_id, "(v0|vercel)"), "Vercel v0",
+    true(), "Other"
+)
+| where isnotnull(platform) AND platform != "Other"
+| stats count by user, platform, scope, _time
+| eval severity = if(match(scope, "(admin|write|full)"), "high", "medium")
+| sort -_time
+\`\`\`
+
+**Data Exfiltration Monitoring:**
+
+\`\`\`
+index=web sourcetype=web:proxy
+| eval platform = case(
+    match(url, "replit\\.dev"), "Replit",
+    match(url, "retool\\.com"), "Retool",
+    match(url, "lovable\\.app"), "Lovable",
+    true(), null()
+)
+| where isnotnull(platform)
+| eval data_volume_mb = bytes_out/1024/1024
+| stats sum(data_volume_mb) as total_mb, 
+        dc(dest_ip) as unique_destinations 
+        by user, platform
+| where total_mb > 100
+| sort -total_mb
+\`\`\`
+
+**Unusual Time Access:**
+
+\`\`\`
+index=web sourcetype=access_combined
+| where match(cs_host, "(replit\\.dev|retool\\.com|lovable\\.app)")
+| eval hour = tonumber(strftime(_time, "%H"))
+| where hour < 6 OR hour > 22
+| stats count by user, cs_host, hour
+| where count > 10
+| sort -count
+\`\`\`
+
+---
+
+## The Incident Response Playbook: When You Discover a Shadow Application
+
+### Immediate Response (First 30 Minutes)
+
+**Step 1: Assess Exposure**
+
+\`\`\`bash
+#!/bin/bash
+# assess_shadow_app.sh - Emergency exposure assessment
+
+APP_URL="$1"
+echo "=== SHADOW APP EXPOSURE ASSESSMENT ==="
+echo "Target: $APP_URL"
+echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo ""
+
+# Test public accessibility
+echo "[+] Testing public accessibility..."
+curl -s -o /tmp/app-content.html -w "HTTP Status: %{http_code}\\n" \\
+     -H "User-Agent: Mozilla/5.0 (Neutral)" \\
+     --max-time 15 "$APP_URL" 2>/dev/null
+
+# Check for authentication
+echo ""
+echo "[+] Checking authentication indicators..."
+if grep -qiE "(login|sign.in|authenticate|password)" /tmp/app-content.html; then
+    echo "  ✓ Authentication appears required"
+else
+    echo "  ⚠️  No authentication indicators found"
+fi
+
+# Check for sensitive data indicators
+echo ""
+echo "[+] Scanning for sensitive data indicators..."
+SENSITIVE_PATTERNS=("revenue" "customer" "ssn" "password" "confidential")
+found=0
+for pattern in "\${SENSITIVE_PATTERNS[@]}"; do
+    if grep -q "$pattern" /tmp/app-content.html; then
+        echo "  ⚠️  Found: potential '$pattern' data"
+        found=1
+    fi
+done
+[ $found -eq 0 ] && echo "  ✓ No obvious sensitive keywords found"
+
+# Check robots.txt
+echo ""
+echo "[+] Checking robots.txt..."
+curl -s --max-time 10 "$APP_URL/robots.txt" 2>/dev/null || echo "  No robots.txt"
+
+# Cleanup
+rm -f /tmp/app-content.html
+\`\`\`
+
+**Step 2: Identify Connected Systems**
+
+Critical interview questions for the app builder:
+- Which systems does it connect to?
+- What credentials/OAuth tokens were used?
+- Who has the URL?
+- Was it indexed by search engines?
+- Has it been shared externally?
+
+**Step 3: Contain the Exposure**
+
+Options based on criticality:
+- **Emergency:** Request platform takedown
+- **Short-term:** Enable authentication if supported
+- **Medium-term:** Implement API rate limiting
+- **Long-term:** Migrate to sanctioned infrastructure
+
+**Step 4: Preserve Evidence**
+
+\`\`\`bash
+#!/bin/bash
+# preserve_evidence.sh
+
+INCIDENT_DIR="/var/log/security/incidents/$(date +%Y%m%d-%H%M%S)-shadow-app"
+mkdir -p "$INCIDENT_DIR"
+
+echo "Preserving evidence to: $INCIDENT_DIR"
+
+# Capture application content
+curl -s "$APP_URL" > "$INCIDENT_DIR/app-content.html" 2>/dev/null
+
+# Screenshot (if headless browser available)
+# chromium --headless --screenshot="$INCIDENT_DIR/screenshot.png" "$APP_URL"
+
+# Document network flows
+dig +short "$APP_URL" > "$INCIDENT_DIR/dns-resolution.txt"
+
+# Capture OAuth grants (if available)
+# gam user "$BUILDER" show tokens > "$INCIDENT_DIR/oauth-grants.txt"
+
+# Create incident summary
+cat > "$INCIDENT_DIR/incident-summary.txt" << EOF
+Shadow Application Incident Report
+================================
+Discovered: $(date)
+URL: $APP_URL
+Builder: $BUILDER
+Connected Systems: $SYSTEMS
+OAuth Scopes: $SCOPES
+Initial Risk Assessment: $RISK
+
+Actions Taken:
+- [ ] Confirmed exposure level
+- [ ] Identified connected systems
+- [ ] Revoked/credential rotation initiated
+- [ ] Platform contacted (if needed)
+- [ ] Stakeholders notified
+EOF
+
+echo "Evidence preserved. Summary: $INCIDENT_DIR/incident-summary.txt"
+\`\`\`
+
+### Credential Rotation Checklist
+
+If the application had access to production systems:
+
+- [ ] Rotate any service account credentials used by the app
+- [ ] Revoke OAuth grants for the specific application
+- [ ] Audit access logs for connected systems (past 90 days)
+- [ ] Check for data exfiltration indicators
+- [ ] Force re-authentication for affected user accounts
+- [ ] Review and revoke any shared tokens or API keys
+- [ ] Scan dark web for credential leaks (if available)
+
+### Post-Incident Actions
+
+1. **Document the finding** — Add to Shadow Builder inventory
+2. **Brief, non-punitive education** — Help the builder understand the risks
+3. **Policy update** — If a gap was exposed, close it
+4. **Share anonymized learnings** — Prevent recurrence across the organization
+5. **Review offboarding procedures** — Ensure OAuth grants are revoked with employment
+
+---
+
+## Related Reading
+
+This playbook builds on existing Eddington.Tech coverage of supply chain and developer security:
+
+- [Node.js Supply Chain Security: Developer Workstation Protection](/blog/nodejs-supply-chain-security-developer-workstation-protection) — Supply chain hardening for development environments
+- [Developer Workstation Security: Complete IAM Hardening Playbook](/blog/developer-workstation-security-complete-iam-hardening-playbook) — Foundational security for dev environments  
+- [CISA AWS GovCloud GitHub Credentials Leaked](/blog/cisa-aws-govcloud-github-credentials-leaked) — What happens when credential management fails
+- [npm 2FA Staged Publishing Supply Chain](/blog/npm-2fa-staged-publishing-supply-chain) — Modern supply chain protections
+- [Ghost CMS CVE-2026-26980 ClickFix Attacks](/blog/ghost-cms-cve-2026-26980-clickfix-attacks) — Public application exploitation patterns
+
+These posts form a comprehensive defense-in-depth strategy covering developer security, supply chain protection, application hardening, and now Shadow Builder governance.
+
+---
+
+**About Hunter Eddington**  
+IAM Engineer and System Hardening specialist. Daily notes on security architecture, identity systems, supply chain security, and emerging threats at [Eddington.Tech](/).
+
+**[Subscribe to RSS →](/feed.xml)**
+`,
+  },
+  {
     slug: "marimo-cve-2026-39987-llm-agent-post-exploitation",
     title: "Attackers Use LLM Agent for Post-Exploitation After Marimo CVE-2026-39987 Exploit",
     date: "2026-05-30",
