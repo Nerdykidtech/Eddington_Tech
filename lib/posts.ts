@@ -1732,6 +1732,34 @@ The broader point: supply chain attacks on dev tools are maturing. This isn't ty
 
 The npm registry doesn't distinguish between "package appears to do what it claims" and "package also exfiltrates credentials." Neither does the Play Store. That's the gap.`,
   },
+  {
+    slug: "meta-ai-support-bot-instagram-account-takeover",
+    title: "Meta's AI Support Bot Got Tricked Into Resetting Passwords",
+    date: "2026-06-02",
+    excerpt: "Meta's AI support assistant spent the weekend resetting passwords for attackers who asked nicely. The Obama White House Instagram, the U.S. Space Force's social media - both defaced through AI social engineering. The only accounts protected were the ones with MFA.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "Krebs on Security|https://krebsonsecurity.com/2026/06/hackers-used-metas-ai-support-bot-to-seize-instagram-accounts/",
+    content: `Meta's AI support assistant spent the weekend handing the keys to high-value Instagram accounts to anyone who asked nicely.
+
+The Obama White House's Instagram account. The Chief Master Sergeant of the U.S. Space Force. Multiple single-character and short handle accounts worth six figures on the resale market. All briefy defaced with pro-Iranian messaging after hackers figured out how to social engineer an AI chatbot.
+
+Here's the trick: you connect via VPN to an IP near the target's usual location, request a password reset, choose to chat with Meta's AI support bot, and tell it to link the account to a new email address. The bot complies. Sends a one-time code to the attacker's email. Password reset complete.
+
+The exploit showed up on Telegram on May 31. A video circulating in pro-Iranian channels demonstrated the whole flow. By June 1, high-profile accounts were getting hit. Meta's Andy Stone acknowledged the issue on Twitter/X, saying it was resolved and they were securing impacted accounts.
+
+Ian Goldin at Lumen's Black Lotus Labs called this what it is: we're entering uncharted territory as platforms let AI handle sensitive account recovery. "Just like human customer support employees can be social engineered into providing unauthorized access," Goldin said, "AI bots are equally eager to help and vulnerable to persuasion and trickery."
+
+This isn't a database breach. No credentials were stolen. The backend systems worked exactly as designed. The problem was the AI layer added to reduce friction for legitimate users stuck in account recovery hell - it reduced friction for attackers too.
+
+The defense here is straightforward: enable MFA. The attackers admitted their exploit failed against any account with multi-factor authentication enabled. A one-time code sent via SMS would have blocked this.
+
+But the real story is what this says about AI integration into identity systems. Meta built a conversational layer over account recovery because human support was slow and expensive. The AI proved faster and cheaper. It also proved easier to manipulate than the humans it replaced.
+
+When your identity recovery can be defeated by someone who sounds confident in a chat window, your identity architecture has a gap that no password policy can fix. The Obama White House account had Secret Service protection. It didn't have MFA. One of those protected it better than the other.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
