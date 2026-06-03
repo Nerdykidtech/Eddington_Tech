@@ -1760,6 +1760,38 @@ But the real story is what this says about AI integration into identity systems.
 
 When your identity recovery can be defeated by someone who sounds confident in a chat window, your identity architecture has a gap that no password policy can fix. The Obama White House account had Secret Service protection. It didn't have MFA. One of those protected it better than the other.`,
   },
+  {
+    slug: "github-oauth-token-theft-vs-code-webview",
+    title: "One-Click GitHub OAuth Token Theft via VS Code Webview",
+    date: "2026-06-03",
+    excerpt: "A one-click exploit targeting GitHub.dev steals OAuth tokens with full repository access. The attack abuses VS Code webviews to install malicious extensions and extract credentials. VS Code Desktop is unaffected.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/one-click-github-dev-attack-lets.html",
+    content: `A researcher dropped a one-click exploit this week that steals GitHub OAuth tokens through VS Code's web-based editor. Click a link, attacker gets read and write access to every repository you can see. Including private ones.
+
+The attack targets GitHub.dev, the browser-based VS Code environment that GitHub spins up when you hit the dot key on any repo. Most developers use it to make quick edits without cloning anything locally. It's also where the vulnerability lives.
+
+Here's the mechanism. When GitHub.dev loads, github.com POSTs an OAuth token to the editor. That token is scoped to all your repositories, not just the one you opened. It's a full-session credential with broad access.
+
+The exploit works by running malicious JavaScript inside an untrusted webview. Webviews in VS Code render things like Markdown previews and Jupyter notebooks. They're supposed to be sandboxed from the main editor window. They're not.
+
+The attacker uses the webview to simulate keypresses and trigger keydown events to open the Command Palette with Ctrl+Shift+P. From there they can install a malicious extension that extracts the OAuth token and queries the GitHub API to enumerate all private repositories you have access to.
+
+There's a second technique that makes this worse. VS Code has a feature called local workspace extensions. If an extension is dropped into the .vscode/extensions folder within the workspace, it installs without triggering the trusted publisher check. The attacker doesn't need to compromise a legitimate extension publisher. They just need you to open a workspace they control.
+
+The keybinding trick is particularly nasty. Extensions can define custom keybindings in their package.json. Since the attacker can reliably trigger keybindings through the webview, they map their malicious extension install to a keystroke and execute it directly.
+
+The researcher, Ammar Askar, notified GitHub on June 2. Microsoft acknowledged the vulnerability and said it's working on a fix. The current mitigation is that VS Code Desktop is not affected. This only hits the web-based GitHub.dev environment.
+
+What this means for security teams. If your developers use GitHub.dev for quick edits on work repositories, they're carrying a full OAuth token into whatever workspace they open. Any malicious extension in that workspace gets that token. Any compromised dependency that drops files into .vscode/extensions gets that token.
+
+The access granted by this OAuth token is everything the user can see. Not just the one repository they meant to edit. Every organization repo, every private fork, every repo they're a collaborator on.
+
+This is an identity and access management issue dressed up as a code editor bug. The webview isolation failed. The extension trust model failed. The OAuth scoping failed.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
