@@ -1792,6 +1792,44 @@ The access granted by this OAuth token is everything the user can see. Not just 
 
 This is an identity and access management issue dressed up as a code editor bug. The webview isolation failed. The extension trust model failed. The OAuth scoping failed.`,
   },
+  {
+    slug: "microsoft-365-android-flagleft-token-theft",
+    title: "Microsoft 365 Android Apps: A Debug Flag That Gave Away Your Identity",
+    date: "2026-06-04",
+    excerpt: "Microsoft 365 Android apps shipped with setIsDebugMode(true) in production, letting any app on your phone steal account tokens. Six apps. Billions of downloads. One line of code.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/microsoft-365-android-apps-let-any-app.html",
+    content: `I have a rule: never attribute to malice what you can attribute to a debug flag someone forgot to turn off.
+
+Microsoft just proved that rule with style.
+
+Six Microsoft 365 Android apps shipped with debug mode enabled in production builds. Word, PowerPoint, Excel, Microsoft 365 Copilot, Loop, and OneNote. We're talking billions of installs here. The shared Microsoft SDK had one line that should never have made it past QA: setIsDebugMode(true).
+
+The result? Any other app on your phone could walk up and ask for your account token. And get it. No permission prompt. No password re-entry. Just a token dropped into the requesting app's lap.
+
+Once they had that token, they could read your email, browse your files, check your calendar, and send messages as you. The traffic would look completely routine in logs because it was a legitimate Microsoft authentication flow.
+
+The bug, dubbed FlagLeft by researchers at Enclave, is about as simple as software flaws get. Microsoft's own documentation says setIsDebugMode is for internal testing only. It disables the token verification that checks whether an app is actually part of the Microsoft family before handing over credentials.
+
+Teams had the flag set to false. The other six apps didn't. Which suggests this wasn't a design decision; it was a mistake.
+
+Microsoft issued four CVEs on May 12: CVE-2026-41100 for Copilot (CVSS 4.4), CVE-2026-41101 for Word (CVSS 7.1), CVE-2026-41102 for PowerPoint (CVSS 7.1), and CVE-2026-42832 for Excel (CVSS 7.7). Loop and OneNote were also patched but didn't get separate CVEs in the May batch. The fixed Word build for Android is 16.0.19822.20190.
+
+Here's the part that should worry you: FOCI tokens, the family refresh tokens Microsoft uses for single sign-on, don't expire when you patch the app. An attacker who grabbed your token before the fix still has it. The app update closes the hole going forward, but existing tokens stay valid.
+
+If you manage Android fleets, push the updates through MDM and verify devices are off builds earlier than 16.0.19822.20190. For accounts on devices that ran vulnerable builds alongside untrusted apps, revoke refresh tokens and force a fresh sign-in.
+
+I keep thinking about how this happened. Somewhere there's a build script with a comment that says "TODO: disable debug mode before release." Someone was busy. Someone was under pressure. Someone shipped it anyway.
+
+This is why I don't trust mobile SSO implementations. The convenience of not entering your password means a token floating around in memory that any sufficiently motivated app can grab.
+
+Teams got this right. The other six didn't. That's the kind of inconsistency that keeps security people employed and keeps everyone else at risk.
+
+Update your apps. Then revoke those tokens anyway.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
