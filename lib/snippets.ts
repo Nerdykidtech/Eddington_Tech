@@ -1469,5 +1469,521 @@ Full report exported to ./dlp-incidents-report.csv`,
     tags: ["Microsoft 365", "DLP", "Data Loss Prevention", "Compliance", "MIP"],
     date: "2026-05-29",
   },
+  {
+    id: "pim-activation-logs",
+    title: "Export PIM Activation Logs for Privileged Roles",
+    description: "Retrieve Privileged Identity Management (PIM) activation history for privileged roles to audit when elevated access was granted, by whom, and for what justification. Critical for compliance and detecting privilege abuse.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-MgGraph -Scopes "PrivilegedAccess.Read.AzureAD", "PrivilegedAssignmentSchedule.Read.AzureAD", "RoleManagement.Read.All"
+
+$DaysBack = 30
+$StartDate = (Get-Date).AddDays(-$DaysBack)
+
+$PrivilegedRoles = @(
+    "62e90394-69f5-41b7-a0df-2af5e1c63b2e",  # Global Administrator
+    "e8571ebb-8a01-4c96-b34a-4e2e30b1d2ed",  # Privileged Role Administrator
+    "3f2d1533-7b1c-47c8-9f5f-a2470f12c11a",  # User Administrator
+    "c6f4e8e3-6c68-4a8f-a5f1-6d9b6f3d2c1e",  # Security Administrator
+    "1f8a8e3d-5b4c-4a7f-9e2d-1c3b5a8d4f7e"   # Exchange Administrator
+)
+
+Write-Host "Fetching PIM activations from last $DaysBack days..." -Foreground Cyan
+
+$report = @()
+$stats = @{
+    TotalActivations     = 0
+    PendingActivations   = 0
+    CompletedActivations = 0
+    CanceledActivations  = 0
+    ExternalActivations  = 0
+}
+
+foreach ($roleId in $PrivilegedRoles) {
+    try {
+        $roleActivations = Get-MgRoleManagementDirectoryRoleActivation -Filter "roleDefinition/id eq '$roleId'" -All -ErrorAction SilentlyContinue
+        
+        $roleDefinition = Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $roleId -ErrorAction SilentlyContinue
+        $roleName = if ($roleDefinition) { $roleDefinition.DisplayName } else { $roleId }
+        
+        foreach ($activation in $roleActivations) {
+            if ($activation.CreatedDateTime -gt $StartDate) {
+                $stats.TotalActivations++
+                
+                $status = $activation.Status
+                if ($status -eq "Pending") { $stats.PendingActivations++ }
+                if ($status -eq "Active" -or $status -eq "Completed") { $stats.CompletedActivations++ }
+                if ($status -eq "Canceled") { $stats.CanceledActivations++ }
+                
+                $principal = $activation.Principal
+                $isExternal = $principal -and ($principal.Email -like "*#EXT#*" -or $principal.UserPrincipalName -notmatch "@(eddington\.tech|eddington\.com)$")
+                if ($isExternal) { $stats.ExternalActivations++ }
+                
+                $activatedDuration = $null
+                if ($activation.ActivatedDateTime -and $activation.EndDateTime) {
+                    $activatedDuration = ($activation.EndDateTime - $activation.ActivatedDateTime).TotalMinutes
+                }
+                
+                $report += [PSCustomObject]@{
+                    RoleName          = $roleName
+                    RoleId            = $roleId
+                    ActivatedBy       = if ($principal) { $principal.DisplayName } else { $activation.PrincipalId }
+                    UPN               = if ($principal) { $principal.UserPrincipalName } else { "N/A" }
+                    IsExternal        = if ($isExternal) { "Yes" } else { "No" }
+                    RequestedTime     = $activation.CreatedDateTime
+                    ActivatedTime     = $activation.ActivatedDateTime
+                    EndTime           = $activation.EndDateTime
+                    DurationMinutes   = [math]::Round($activatedDuration, 2)
+                    Status            = $status
+                    Justification     = if ($activation.Justification) { $activation.Justification } else { "Not provided" }
+                    ApprovalRequired  = $activation.IsApprovalRequired
+                    ApprovedBy        = if ($activation.ApprovalInfo) { $activation.ApprovalInfo.Approver.UserPrincipalName } else { "N/A" }
+                    TicketNumber      = if ($activation.TicketNumber) { $activation.TicketNumber } else { "N/A" }
+                }
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to fetch activations for role $roleId : $_ExceptionMessage"
+    }
+}
+
+$noJustification = $report | Where-Object { $_.Justification -eq "Not provided" }
+$longDuration = $report | Where-Object { $_.DurationMinutes -gt 480 }  # More than 8 hours
+$externalActivators = $report | Where-Object { $_.IsExternal -eq "Yes" }
+
+Write-Host ""
+Write-Host "=== PIM Activation Audit Report ===" -Foreground Cyan
+Write-Host "Date range:            $DaysBack days"
+Write-Host "Total activations:     $($stats.TotalActivations)"
+Write-Host "Completed:             $($stats.CompletedActivations)"
+Write-Host "Pending:               $($stats.PendingActivations)"
+Write-Host "Canceled:              $($stats.CanceledActivations)"
+Write-Host "External activators:   $($stats.ExternalActivations)" -Foreground Yellow
+Write-Host "Missing justification: $($noJustification.Count)" -Foreground Red
+Write-Host "Long duration (>8h):   $($longDuration.Count)" -Foreground Yellow
+
+if ($externalActivators.Count -gt 0) {
+    Write-Host ""
+    Write-Host "EXTERNAL/GUEST ACTIVATIONS:" -Foreground Yellow
+    $externalActivators | Select-Object ActivatedBy, UPN, RoleName, Justification | Format-Table -AutoSize
+}
+
+if ($noJustification.Count -gt 0) {
+    Write-Host ""
+    Write-Host "ACTIVATIONS WITHOUT JUSTIFICATION:" -Foreground Red
+    $noJustification | Select-Object ActivatedBy, RoleName, RequestedTime, Status | Format-Table -AutoSize
+}
+
+$byRole = $report | Group-Object RoleName | Sort-Object Count -Descending
+Write-Host ""
+Write-Host "Activations by Role:" -Foreground Cyan
+$byRole | Select-Object Name, Count | Format-Table -AutoSize
+
+$report | Export-Csv -Path "./pim-activation-logs.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./pim-activation-logs.csv"`,
+    output: String.raw`Fetching PIM activations from last 30 days...
+
+=== PIM Activation Audit Report ===
+Date range:            30 days
+Total activations:     156
+Completed:             142
+Pending:               8
+Canceled:              6
+External activators:   12
+Missing justification: 23
+Long duration (>8h):   18
+
+EXTERNAL/GUEST ACTIVATIONS:
+ActivatedBy              UPN                           RoleName                Justification
+-----------              ---                           --------                -------------
+John Consultant          john@vendor.com#EXT#          Security Administrator  Emergency access
+External Auditor         auditor@firm.com#EXT#         Global Administrator    Quarterly audit
+Temp Contractor          temp@partner.com#EXT#         User Administrator      Not provided
+
+ACTIVATIONS WITHOUT JUSTIFICATION:
+ActivatedBy              RoleName                          RequestedTime          Status
+-----------              --------                          -----------          ------
+admin@eddington.tech     Global Administrator              5/28/2026 2:30 PM      Completed
+backup-svc@eddington.tech Security Administrator            5/27/2026 11:45 AM     Completed
+legacy-admin@eddington.tech Global Administrator            5/25/2026 9:00 AM      Completed
+
+Activations by Role:
+Name                               Count
+----                               -----
+Security Administrator             67
+Global Administrator               45
+Exchange Administrator             28
+Privileged Role Administrator      16
+
+Full report exported to ./pim-activation-logs.csv`,
+    tags: ["Entra ID", "PIM", "Privileged Identity Management", "Privilege Abuse", "Compliance"],
+    date: "2026-06-05",
+  },
+  {
+    id: "nsg-rule-security-analyzer",
+    title: "Azure NSG Rule Security Analyzer",
+    description: "Analyze Network Security Group (NSG) rules across all subscriptions to identify overly permissive rules, wide-open ports, wildcard sources, and security gaps that could expose resources to attacks.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+
+$Subscriptions = Get-AzSubscription | Where-Object { $_.State -eq 'Enabled' }
+
+$CriticalPorts = @(22, 3389, 1433, 3306, 5432, 3307, 3387, 5985, 5986)  # SSH, RDP, DB ports, WinRM
+$AllProtocols = "*"
+$HighRiskSources = @("*", "0.0.0.0/0", "Internet", "0.0.0.0")
+
+$report = @()
+$stats = @{
+    TotalNSGs          = 0
+    TotalRules         = 0
+    HighRiskRules      = 0
+    MediumRiskRules    = 0
+    OpenManagementPort = 0
+    WideOpenIngress    = 0
+}
+
+Write-Host "Scanning NSGs across $($Subscriptions.Count) subscriptions..." -Foreground Cyan
+
+foreach ($sub in $Subscriptions) {
+    Write-Host "Processing: $($sub.Name)" -Foreground Gray
+    Select-AzSubscription -SubscriptionId $sub.Id | Out-Null
+    
+    try {
+        $nsgs = Get-AzNetworkSecurityGroup -ErrorAction SilentlyContinue
+        
+        foreach ($nsg in $nsgs) {
+            $stats.TotalNSGs++
+            
+            # Analyze security rules
+            foreach ($rule in $nsg.SecurityRules) {
+                if ($rule.Direction -ne "Inbound") { continue }
+                
+                $stats.TotalRules++
+                $riskLevel = "Low"
+                $issues = @()
+                $explanation = ""
+                
+                # Check for wildcard source
+                $hasWildcardSource = $false
+                foreach ($prefix in $rule.SourceAddressPrefix) {
+                    if ($HighRiskSources -contains $prefix) {
+                        $hasWildcardSource = $true
+                        break
+                    }
+                }
+                
+                # Check for critical ports
+                $openCriticalPort = $false
+                foreach ($portRange in $rule.DestinationPortRange) {
+                    if ($portRange -eq "*" -or $portRange -eq $AllProtocols) {
+                        $openCriticalPort = $true
+                    } else {
+                        foreach ($port in $CriticalPorts) {
+                            if ($portRange -eq $port -or $portRange -like "*$port*") {
+                                $openCriticalPort = $true
+                            }
+                        }
+                    }
+                }
+                
+                # Risk scoring
+                if ($hasWildcardSource -and $rule.Access -eq "Allow") {
+                    if ($rule.DestinationPortRange -contains "*" -or ($rule.DestinationPortRange -join ",") -eq "*") {
+                        $riskLevel = "HIGH"
+                        $issues += "All ports open to Internet"
+                        $explanation = "Any source can reach any port on target VMs"
+                        $stats.WideOpenIngress++
+                    }
+                    elseif ($openCriticalPort) {
+                        $riskLevel = "HIGH"
+                        $issues += "Management port exposed to Internet"
+                        $explanation = "SSH/RDP/DB ports accessible from any source"
+                        $stats.OpenManagementPort++
+                    }
+                    else {
+                        $riskLevel = "MEDIUM"
+                        $issues += "Broad port range allowed from Internet"
+                    }
+                    
+                    $stats.HighRiskRules++
+                }
+                elseif ($hasWildcardSource -and $rule.Access -eq "Deny") {
+                    # This is actually good, a catch-all deny
+                    continue
+                }
+                
+                if ($riskLevel -ne "Low") {
+                    $report += [PSCustomObject]@{
+                        SubscriptionId      = $sub.Id
+                        SubscriptionName    = $sub.Name
+                        NSGName             = $nsg.Name
+                        ResourceGroup       = $nsg.ResourceGroupName
+                        RuleName            = $rule.Name
+                        Priority            = $rule.Priority
+                        Direction           = $rule.Direction
+                        Access              = $rule.Access
+                        Protocol            = $rule.Protocol
+                        SourceAddress       = ($rule.SourceAddressPrefix -join "; ")
+                        SourcePort          = ($rule.SourcePortRange -join "; ")
+                        DestinationAddress  = ($rule.DestinationAddressPrefix -join "; ")
+                        DestinationPort     = ($rule.DestinationPortRange -join "; ")
+                        RiskLevel           = $riskLevel
+                        Issues              = ($issues -join "; ")
+                        Explanation         = $explanation
+                    }
+                }
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to scan NSGs in $($sub.Name): $_ExceptionMessage"
+    }
+}
+
+$criticalRules = $report | Where-Object { $_.RiskLevel -eq "HIGH" -and $_.Issues -like "*management port*" }
+$allHighRisk = $report | Where-Object { $_.RiskLevel -eq "HIGH" }
+
+Write-Host ""
+Write-Host "=== NSG Rule Security Analysis ===" -Foreground Cyan
+Write-Host "Subscriptions scanned:     $($Subscriptions.Count)"
+Write-Host "NSGs analyzed:           $($stats.TotalNSGs)"
+Write-Host "Total inbound rules:       $($stats.TotalRules)"
+Write-Host "High risk rules:         $($stats.HighRiskRules)" -Foreground Red
+Write-Host "Medium risk rules:       $($stats.MediumRiskRules)" -Foreground Yellow
+Write-Host "Open management ports:   $($stats.OpenManagementPort)" -Foreground Red
+Write-Host "Wide open ingress:       $($stats.WideOpenIngress)" -Foreground Red
+
+if ($criticalRules.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL: Management ports exposed to Internet!" -Foreground Red
+    $criticalRules | Select-Object NSGName, RuleName, DestinationPort, SourceAddress | Format-Table -AutoSize
+}
+
+if ($allHighRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "All HIGH Risk Rules:" -Foreground Yellow
+    $allHighRisk | Select-Object NSGName, RuleName, RiskLevel, Issues | Format-Table -AutoSize
+}
+
+$byNSG = $report | Group-Object NSGName | Sort-Object Count -Descending | Select-Object -First 10
+Write-Host ""
+Write-Host "Top NSGs by Risk Score:" -Foreground Cyan
+$byNSG | Select-Object Name, Count | Format-Table -AutoSize
+
+$report | Export-Csv -Path "./nsg-rule-security-analysis.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./nsg-rule-security-analysis.csv"`,
+    output: String.raw`Scanning NSGs across 4 subscriptions...
+Processing: Eddington Production
+Processing: Eddington Staging
+Processing: Eddington Dev
+Processing: Eddington Shared Services
+
+=== NSG Rule Security Analysis ===
+Subscriptions scanned:     4
+NSGs analyzed:             23
+Total inbound rules:       412
+High risk rules:           18
+Medium risk rules:         34
+Open management ports:     12
+Wide open ingress:         4
+
+CRITICAL: Management ports exposed to Internet!
+NSGName            RuleName           DestinationPort  SourceAddress
+-------            --------           ---------------  -------------
+nsg-web-vm         AllowRDP           3389             *
+nsg-admin-jump     AllowSSH           22               *
+nsg-sqlservers     AllowSQL           1433             0.0.0.0/0
+nsg-legacy-app     AllowRemoteAdmin   3389             *
+
+All HIGH Risk Rules:
+NSGName            RuleName           RiskLevel  Issues
+-------            --------           ---------  ------
+nsg-web-vm         AllowRDP           HIGH       Management port exposed to Internet
+nsg-legacy-app     AllowAllInbound    HIGH       All ports open to Internet
+nsg-staging        AllowAll           HIGH       All ports open to Internet
+nsg-dev            AllowSSH           HIGH       Management port exposed to Internet
+
+Top NSGs by Risk Score:
+Name                           Count
+----                           -----
+nsg-legacy-app                 6
+nsg-web-vm                     4
+nsg-staging                    3
+nsg-dev                        3
+
+Full report exported to ./nsg-rule-security-analysis.csv`,
+    tags: ["Azure", "NSG", "Network Security", "Firewall", "Cloud Security"],
+    date: "2026-06-05",
+  },
+  {
+    id: "entra-access-reviews",
+    title: "Export Entra ID Access Reviews Status",
+    description: "Export all access reviews in Entra ID with their completion status, reviewer decisions, and pending reviews. Identifies stale access that hasn't been reviewed and reviews that are overdue.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-MgGraph -Scopes "AccessReview.Read.All", "Directory.Read.All", "Group.Read.All"
+
+$DaysBack = 90
+$StartDate = (Get-Date).AddDays(-$DaysBack)
+
+Write-Host "Fetching access reviews from last $DaysBack days..." -Foreground Cyan
+
+$report = @()
+$stats = @{
+    TotalReviews       = 0
+    CompletedReviews   = 0
+    ActiveReviews      = 0
+    NotStartedReviews  = 0
+    AutoAppliedReviews = 0
+    OverdueReviews     = 0
+}
+
+try {
+    $reviews = Get-MgIdentityGovernanceAccessReviewDefinition -All -ErrorAction SilentlyContinue
+    
+    foreach ($review in $reviews) {
+        if ($review.CreatedDateTime -lt $StartDate) { continue }
+        
+        $instances = Get-MgIdentityGovernanceAccessReviewDefinitionInstance -AccessReviewScheduleDefinitionId $review.Id -All -ErrorAction SilentlyContinue
+        
+        foreach ($instance in $instances) {
+            $stats.TotalReviews++
+            
+            $status = $instance.Status
+            if ($status -eq "Completed") { $stats.CompletedReviews++ }
+            if ($status -eq "InProgress") { $stats.ActiveReviews++ }
+            if ($status -eq "NotStarted") { $stats.NotStartedReviews++ }
+            if ($status -eq "Applied") { $stats.AutoAppliedReviews++ }
+            
+            # Check if overdue
+            $isOverdue = $false
+            if ($instance.EndDateTime -and $instance.EndDateTime -lt (Get-Date) -and $status -ne "Completed") {
+                $isOverdue = $true
+                $stats.OverdueReviews++
+            }
+            
+            # Get decisions for this instance
+            $decisions = Get-MgIdentityGovernanceAccessReviewInstanceDecision -AccessReviewInstanceId $instance.Id -ErrorAction SilentlyContinue
+            
+            $approvedCount = ($decisions | Where-Object { $_.Decision -eq "Approve" }).Count
+            $deniedCount = ($decisions | Where-Object { $_.Decision -eq "Deny" }).Count
+            $notReviewedCount = ($decisions | Where-Object { $_.Decision -eq "NotReviewed" }).Count
+            
+            # Get target info
+            $targetType = "Unknown"
+            $targetName = "Unknown"
+            if ($review.Scope.AdditionalProperties.'@odata.type' -eq "#microsoft.graph.groupAccessReviewScope") {
+                $targetType = "Group"
+                $group = Get-MgGroup -GroupId $review.Scope.AdditionalProperties.groupId -ErrorAction SilentlyContinue
+                $targetName = if ($group) { $group.DisplayName } else { $review.Scope.AdditionalProperties.groupId }
+            }
+            elseif ($review.Scope.AdditionalProperties.'@odata.type' -eq "#microsoft.graph.servicePrincipalAccessReviewScope") {
+                $targetType = "Service Principal"
+            }
+            elseif ($review.Scope.AdditionalProperties.roleDefinitionId) {
+                $targetType = "Azure AD Role"
+                $role = Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $review.Scope.AdditionalProperties.roleDefinitionId -ErrorAction SilentlyContinue
+                $targetName = if ($role) { $role.DisplayName } else { $review.Scope.AdditionalProperties.roleDefinitionId }
+            }
+            
+            $report += [PSCustomObject]@{
+                ReviewName          = $review.DisplayName
+                ReviewId            = $review.Id
+                InstanceId          = $instance.Id
+                TargetType          = $targetType
+                TargetName          = $targetName
+                Status              = $status
+                IsOverdue           = if ($isOverdue) { "Yes" } else { "No" }
+                StartDate           = $instance.StartDateTime
+                EndDate             = $instance.EndDateTime
+                DaysUntilExpiry     = if ($instance.EndDateTime) { ($instance.EndDateTime - (Get-Date)).Days } else { "N/A" }
+                TotalDecisions      = $decisions.Count
+                Approved            = $approvedCount
+                Denied              = $deniedCount
+                NotReviewed         = $notReviewedCount
+                Reviewers           = ($instance.Reviewers | ForEach-Object { $_.Query } -join "; ")
+                AutoApplyResults    = if ($review.Settings.AutoApplyDecisionsEnabled) { "Yes" } else { "No" }
+                DefaultDecision     = $review.Settings.DefaultDecision
+                RecurrenceType      = if ($review.Settings.Recurrence.Pattern) { $review.Settings.Recurrence.Pattern.Type } else { "One-time" }
+            }
+        }
+    }
+    
+    $overdueItems = $report | Where-Object { $_.IsOverdue -eq "Yes" }
+    $activeReviews = $report | Where-Object { $_.Status -eq "InProgress" }
+    $highDenialRate = $report | Where-Object { ($_.Denied / ($_.TotalDecisions + 1)) -gt 0.3 -and $_.TotalDecisions -gt 5 }
+    
+    Write-Host ""
+    Write-Host "=== Entra ID Access Reviews Report ===" -Foreground Cyan
+    Write-Host "Date range:              $DaysBack days"
+    Write-Host "Total reviews:           $($stats.TotalReviews)"
+    Write-Host "Completed:               $($stats.CompletedReviews)"
+    Write-Host "Active/InProgress:       $($stats.ActiveReviews)"
+    Write-Host "Not Started:             $($stats.NotStartedReviews)"
+    Write-Host "Auto-applied:            $($stats.AutoAppliedReviews)"
+    Write-Host "Overdue reviews:         $($stats.OverdueReviews)" -Foreground Red
+    
+    if ($overdueItems.Count -gt 0) {
+        Write-Host ""
+        Write-Host "OVERDUE REVIEWS:" -Foreground Red
+        $overdueItems | Select-Object ReviewName, TargetName, EndDate, DaysUntilExpiry | Format-Table -AutoSize
+    }
+    
+    if ($activeReviews.Count -gt 0) {
+        Write-Host ""
+        Write-Host "ACTIVE REVIEWS (Pending Decisions):" -Foreground Yellow
+        $activeReviews | Select-Object ReviewName, TargetName, StartDate, EndDate, DaysUntilExpiry | Format-Table -AutoSize
+    }
+    
+    $byTargetType = $report | Group-Object TargetType
+    Write-Host ""
+    Write-Host "Reviews by Target Type:" -Foreground Cyan
+    $byTargetType | Select-Object Name, Count | Format-Table -AutoSize
+    
+    $report | Export-Csv -Path "./entra-access-reviews.csv" -NoTypeInformation
+    Write-Host ""
+    Write-Host "Full report exported to ./entra-access-reviews.csv" -Foreground Green
+}
+catch {
+    Write-Error "Failed to retrieve access reviews. Ensure you have Identity Governance permissions: $_ExceptionMessage"
+}`,
+    output: String.raw`Fetching access reviews from last 90 days...
+
+=== Entra ID Access Reviews Report ===
+Date range:              90 days
+Total reviews:           24
+Completed:               18
+Active/InProgress:       4
+Not Started:             1
+Auto-applied:            1
+Overdue reviews:         2
+
+OVERDUE REVIEWS:
+ReviewName                       TargetName                    EndDate               DaysUntilExpiry
+----------                       ----------                    -------               ---------------
+Quarterly Admin Access Review    Global Administrators         5/15/2026 12:00 AM                -21
+External Guest Review            External Access Group         5/20/2026 12:00 AM                -16
+
+ACTIVE REVIEWS (Pending Decisions):
+ReviewName                       TargetName                    StartDate              EndDate                DaysUntilExpiry
+----------                       ----------                    ---------              -------                ---------------
+Monthly Privileged Role Review   Privileged Role Admins       5/25/2026 12:00 AM     6/25/2026 12:00 AM                  20
+Service Principal Access Review  Service Principals          5/28/2026 12:00 AM     6/28/2026 12:00 AM                  23
+
+Reviews by Target Type:
+Name          Count
+----          -----
+Group         15
+Azure AD Role 6
+Service Principal 3
+
+Full report exported to ./entra-access-reviews.csv`,
+    tags: ["Entra ID", "Access Reviews", "Identity Governance", "Compliance", "Lifecycle Management"],
+    date: "2026-06-05",
+  },
 ];
 
