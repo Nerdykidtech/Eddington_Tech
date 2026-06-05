@@ -1830,6 +1830,32 @@ Teams got this right. The other six didn't. That's the kind of inconsistency tha
 
 Update your apps. Then revoke those tokens anyway.`,
   },
+  {
+    slug: "claude-code-github-action-flaw-hijack",
+    title: "Claude Code GitHub Action Flaw Let One Malicious Issue Hijack Repositories",
+    date: "2026-06-05",
+    excerpt: "A security flaw in Anthropic's Claude Code GitHub Action allowed attackers to take over vulnerable public repositories with nothing more than a single malicious issue. Because Anthropic's own action repo used the same vulnerable workflow, a successful attack could have pushed malicious code into the action itself.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/claude-code-github-action-flaw-let-one.html",
+    content: `A security researcher found a flaw in Anthropic's Claude Code GitHub Action that let an attacker take over vulnerable public repositories running it, with nothing more than a single opened GitHub issue.
+
+Because Anthropic's own action repo used the same workflow, a working attack could have pushed malicious code into the action itself and onto the projects downstream that pull it.
+
+RyotaK of GMO Cybersecurity discovered the vulnerability. The flaw, now patched, allowed arbitrary code execution within the CI/CD environment of affected repositories. The attack vector was remarkably simple: open an issue in a repository using the vulnerable action, and the action would execute attacker-controlled code.
+
+The implications are significant. GitHub Actions are widely used for CI/CD automation, code scanning, and deployment workflows. A compromise of an action flow doesn't just affect one repository. It affects every repository using that action, every fork, every pull request that triggers the workflow.
+
+This is a supply chain attack waiting to happen. The vulnerability sits at the intersection of three things we've seen exploited repeatedly: CI/CD pipelines, third-party actions, and the implicit trust that projects place in their automation workflows.
+
+The researcher reported the flaw through Anthropic's bug bounty program. Anthropic patched the action and rotated credentials. If you're using the Claude Code action in your repositories, verify you're running the patched version.
+
+This pattern is becoming common enough that it needs a name. The "action injection" vulnerability, maybe. The mechanism is consistent: user input (issue titles, comments, pull request bodies) flows into workflow execution contexts without proper sanitization, and suddenly your CI/CD is running attacker code.
+
+Supply chain security for CI/CD isn't about checking boxes. It's about understanding that every action you import, every workflow you trigger, is code execution. Treat it accordingly.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
