@@ -1856,6 +1856,28 @@ This pattern is becoming common enough that it needs a name. The "action injecti
 
 Supply chain security for CI/CD isn't about checking boxes. It's about understanding that every action you import, every workflow you trigger, is code execution. Treat it accordingly.`,
   },
+  {
+    slug: "cisa-kev-magento-cve-2026-45247-mirasvit-rce",
+    title: "CISA Adds Exploited Magento RCE Flaw CVE-2026-45247 to KEV Catalog",
+    date: "2026-06-06",
+    excerpt: "CISA added Mirasvit Cache Warmer deserialization flaw CVE-2026-45247 (CVSS 9.8) to the KEV catalog. Federal patch deadline is June 24. Active exploitation confirmed.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/cisa-adds-exploited-magento-rce-flaw.html",
+    content: `The U.S. Cybersecurity and Infrastructure Security Agency added a critical deserialization flaw in Mirasvit Cache Warmer to its Known Exploited Vulnerabilities catalog this week.
+
+The extension is a popular Magento full-page cache optimizer. If you're running Magento with this plugin, you are in scope.
+
+CVE-2026-45247 carries a CVSS score of 9.8. Deserialization of untrusted data. Remote code execution. Actively exploited.
+
+CISA gives federal agencies until June 24 to patch or pull the systems offline. That three-week window is standard for KEV-catalogued flaws with active exploitation. The private sector should treat that as a maximum, not a recommendation.
+
+I do not have technical details on the exploitation chain beyond the vulnerability type. Deserialization bugs in Magento extensions are not new. They typically allow an attacker to inject malicious objects that execute during unserialization, leading to full server compromise. The 9.8 CVSS confirms this is wormable or close to it.
+
+If you are running Mirasvit Cache Warmer, verify your version against the vendor's advisory. Patch. If you cannot patch immediately, consider disabling the extension or restricting access to the admin panel at the network layer.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
