@@ -1878,6 +1878,34 @@ I do not have technical details on the exploitation chain beyond the vulnerabili
 
 If you are running Mirasvit Cache Warmer, verify your version against the vendor's advisory. Patch. If you cannot patch immediately, consider disabling the extension or restricting access to the admin panel at the network layer.`,
   },
+  {
+    slug: "miasma-worm-73-microsoft-github-repositories",
+    title: "Miasma Worm Takes Down 73 Microsoft GitHub Repositories",
+    date: "2026-06-07",
+    excerpt: "The Miasma self-replicating supply chain worm campaign just hit 73 Microsoft GitHub repositories across Azure, Azure-Samples, Microsoft, and MicrosoftDocs organizations. Same threat actors from May's PyPI compromise likely still held valid credentials.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/miasma-worm-hits-73-microsoft-github.html",
+    content: `Microsoft's GitHub repositories just became the latest casualty in the Miasma supply chain worm campaign. 73 repositories across four Microsoft organizations — Azure, Azure-Samples, Microsoft, and MicrosoftDocs — are now disabled.
+
+Try to visit azure-functions-host right now and you'll get a message from GitHub: "Access to this repository has been disabled by GitHub Staff due to a violation of GitHub's terms of service."
+
+The attack is a re-compromise. Last month, the same threat actors hit the durabletask PyPI package using TeamPCP credentials. This time they came back for the GitHub repos hosting the .NET, Go, Java, JavaScript, MSSQL, and Netherite implementations of the same project. As security researcher Paul McCarty noted: "Whoever held those credentials in May plausibly never fully lost them."
+
+Miasma is a variant of the Mini Shai-Hulud worm that went public in mid-May. The infection method is simple and brutal: steal maintainer credentials, publish poisoned packages, harvest credentials from anyone who installs them, then repeat. The worm operates entirely within legitimate channels — from GitHub's perspective, every malicious commit looks like a standard maintainer action.
+
+The attackers created public repositories with descriptions like "Miasma: The Spreading Blight" and "Hades - The End for the Damned" — over 80 repositories across GitHub now use these naming patterns. But the real damage comes from direct repository compromises where the attackers skipped npm entirely and pushed malicious code straight to source repositories.
+
+According to SafeDep's analysis, one compromised repository had a 4.3 MB payload runner planted through a direct commit. The dropper executed through five developer tools: Claude Code, Gemini CLI, Cursor, VS Code, and npm test scripts. Any developer cloning the repo and opening it in an AI coding agent triggered execution.
+
+This is credential theft at scale, weaponized through the trust model that open-source ecosystems depend on. GitHub can detect repository takedowns. They cannot detect a maintainer account compromise until after the malicious commits are already in the tree.
+
+The FalconFeeds.io assessment is accurate: "The worm's genius and the reason conventional defences largely failed is that it operates entirely within legitimate channels. It does not exploit a vulnerability in npm or GitHub. It exploits the trust model those platforms are built on."
+
+For development teams, this means repository provenance is no longer sufficient. Trust the code, verify the maintainer, rotate credentials after any hint of compromise — and understand that a credential stolen once can resurface months later in an entirely different attack chain.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
