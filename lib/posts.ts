@@ -1936,6 +1936,32 @@ The FalconFeeds.io assessment is accurate: "The worm's genius and the reason con
 
 For development teams, this means repository provenance is no longer sufficient. Trust the code, verify the maintainer, rotate credentials after any hint of compromise — and understand that a credential stolen once can resurface months later in an entirely different attack chain.`,
   },
+  {
+    slug: "282-ios-ai-apps-leaking-llm-api-keys",
+    title: "282 iOS AI Apps Are Handing Out Free API Keys to Anyone Watching",
+    date: "2026-07-01",
+    excerpt: "Researchers tested 444 AI chatbot apps for iPhone. 282 of them, nearly two-thirds, leaked paid AI access through network traffic. Some tokens were valid until the year 2125.",
+    category: "iOS Security",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/282-ios-apps-found-leaking-llm-api-keys.html",
+    content: `Researchers at Wake Forest University tested 444 AI chatbot apps from the iOS App Store. They found that 282 of them, nearly two-thirds, exposed paid AI access through their network traffic. The research is the first in-depth study of this problem on iOS, and the numbers are striking.
+
+The team built a tool called LLMKeyLens that watches an app's traffic and pulls out credentials as they pass by. No jailbreaking, no cracking the app open. Just watching what the app sends.
+
+The leaks fell into three categories. Fifty-four apps sent plaintext API keys in the open, readable from a single captured request. Ninety-two routed requests through a backend server that answered anyone, with no check on who was asking. One hundred thirty-six used temporary access tokens instead of raw keys, but those tokens leaked in the same traffic and were usually still valid when captured. For twenty-eight of the plaintext-key apps, the same request also exposed the app's hidden system prompt.
+
+The affected apps span at least ten AI providers, with OpenAI the most common. Productivity apps were the biggest group; health and fitness had the highest leak rate. Notably, finance and medical apps leaked nothing. Most were small, but one had over two million user ratings.
+
+This is not theoretical. Stolen AI keys feed a practice called LLMjacking, where attackers use other people's keys to get free model access. Sysdig calculated a worst-case scenario of more than $46,000 per day in charges on a stolen key.
+
+The researchers notified all 282 developers and waited three months. Only twenty-eight percent had clearly fixed it. Another twenty-three percent were still wide open. The rest had gone offline or returned errors.
+
+The token apps were often the worst. One popular app set its access token to expire in the year 2125. Another's one-hour token still worked 128 days after expiration.
+
+The fix is old advice that few followed. Do not put the key in the app. Route AI calls through your own server, make that server check who is calling, and revoke any key that has already leaked.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
