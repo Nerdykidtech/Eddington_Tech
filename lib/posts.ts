@@ -14,6 +14,36 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "rustduck-botnet-iot-ddos-hardening",
+    title: "RustDuck Botnet Rebuilds in Rust to Hijack Routers and IoT for DDoS",
+    date: "2026-06-30",
+    excerpt: "A Rust-rewritten botnet is hijacking routers, IP cameras, and Android boxes for DDoS attacks. RustDuck uses CVE-2017-17215, CVE-2025-29635, and other old vulnerabilities that should have been patched years ago.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/06/rustduck-botnet-rebuilds-in-rust-to.html",
+    content: `QiAnXin's XLab has been tracking RustDuck since February. It is a botnet being actively rewritten from C into Rust, and that matters more than it might sound.
+
+Rust binaries are harder to reverse-engineer than C. The malware authors know this. The Rust rewrite is not about performance. It is about making analysis take longer, giving them more runway before defenders catch up.
+
+RustDuck spreads through the usual paths: weak passwords on Telnet and SSH, unpatched device bugs, and exposed web software. The CVE list reads like a greatest-hits of forgotten vulnerabilities: CVE-2017-17215 in Huawei HG532 routers, CVE-2025-29635 in discontinued D-Link DIR-823X routers, CVE-2024-1781 in Totolink X6000R, and CVE-2018-8007 in Apache CouchDB. CISA added the D-Link flaw to the KEV catalog in April. Patches for the rest have existed for years.
+
+The payload is a two-stage dropper. A small loader decrypts a heavier Rust core. That core includes anti-analysis checks that actually work: it looks for Wireshark, debuggers, honeypot fingerprints, and VM hardware. Score too high on the risk check and it wipes its traces and exits.
+
+The C2 communications are locked down with ChaCha20-Poly1305 for handshake, AES-GCM for data, HKDF-SHA256 key derivation, and Curve25519 key exchange. Keys rotate every ten minutes. The traffic is shaped to look like ordinary encrypted web sessions.
+
+Once a device checks in, the operators can start or stop DDoS attacks, report status, rotate C2 servers, or upgrade the malware. Control addresses use free dynamic DNS services like duckdns.org.
+
+The busiest delivery address, 176.65.139[.]204, sits in the same address block as a separate Android Debug Bridge botnet reported this spring. Could be coincidence. Could be shared bulletproof hosting. XLab is not calling it a direct link, but the overlap is worth noting.
+
+RustDuck is not the first botnet to reach for Rust. Fortinet documented RustoBot in April 2025 doing much the same thing. The pattern is clear: botnet authors are adopting modern languages for the same reasons legitimate developers do, plus the anti-analysis benefits.
+
+The fix here is not new. Get remote management off the public internet. Turn off Telnet, SSH, and Android Debug Bridge where they are not needed. Never leave them exposed with default passwords. Patch what you can. Replace what you cannot. The D-Link DIR-823X is past end-of-life. CISA says pull it from service. The Totolink maker never answered the disclosure.
+
+RustDuck is small now, but the engineering is serious. The techniques it is testing, the Rust rewrite and the anti-analysis routine, are what other crews will borrow next.`,
+  },
+  {
     slug: "vibe-coding-security-shadow-builders-enterprise-playbook",
     title: "Vibe Coding Security: Enterprise Defense Against Shadow Builder Exposures [2026]",
     date: "2026-06-01",
