@@ -1962,6 +1962,44 @@ The token apps were often the worst. One popular app set its access token to exp
 
 The fix is old advice that few followed. Do not put the key in the app. Route AI calls through your own server, make that server check who is calling, and revoke any key that has already leaked.`,
   },
+  {
+    slug: "toddycat-umbrij-oauth-gmail-apt",
+    title: "ToddyCat's Umbrij Malware Abuses OAuth to Hijack Corporate Gmail",
+    date: "2026-07-02",
+    excerpt: "The ToddyCat APT has a new tool called Umbrij that hijacks Gmail sessions via OAuth abuse. It uses headless Chrome, remote debugging ports, and DLL side-loading to steal authorization codes and access corporate email via Google's API.",
+    category: "IAM",
+    readTime: "5 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/toddycat-linked-umbrij-malware-abuses.html",
+    content: `ToddyCat has been busy. Kaspersky caught them with a new tool called Umbrij that targets corporate Gmail accounts by abusing OAuth flows and headless Chrome browsers.
+
+The technique is clever. Umbrij looks for active Gmail sessions in Chrome or Edge, then launches the browser in headless mode with remote debugging enabled. It connects to the browser's management console via Puppeteer, navigates to Google's OAuth authorization endpoint, and tricks the user into granting permissions to what looks like a legitimate Google Workspace migration tool.
+
+Kaspersky calls this Shadow Token via Remote Debug. The malware gets an authorization code, exchanges it for an access token, and uses the Google API to read corporate email. All without needing credentials. All without MFA getting in the way.
+
+The delivery method is classic DLL side-loading. Umbrij comes packaged with legitimate signed executables from Bitdefender, Microsoft Visual Studio, and the old Google Desktop Search. Drop the malware DLL next to one of those EXEs, run it, and the signed binary loads the malicious code. Three different loaders have been identified so far.
+
+Once Umbrij runs, it hunts for browser profiles containing Gmail sessions. It copies those profiles to a BackupFiles folder under LocalAppData, launches Chrome or Edge with the copied profile, and uses the existing cookies to maintain the authenticated session. The remote debugging port gives the Puppeteer controller full access to manipulate the browser.
+
+The OAuth flow is where this gets interesting. Umbrij navigates to accounts.google.com and requests authorization for an app called "Google Workspace Migration for Microsoft Outlook." This is a real Google tool, which is why the request looks legitimate. The permissions requested include full Gmail, Drive, Contacts, Calendar, and Tasks access.
+
+The malware uses JavaScript to emulate clicks, selecting the appropriate Google account and granting the permissions automatically. Once authorized, it captures the authorization code from the redirect and logs it to a file for exfiltration.
+
+ToddyCat has been active since at least 2020, targeting organizations across Europe and Asia. Last November Kaspersky documented their TCSectorCopy tool for stealing Outlook data. Umbrij shows they have expanded their toolkit specifically to target webmail and API-based access.
+
+The defense here is not about blocking the malware. That is standard endpoint detection work. The defense is about monitoring OAuth grants and knowing what applications have access to your Google Workspace environment.
+
+Google provides a connections page at myaccount.google.com/connections where users can see authorized apps. Look for "Google Workspace Migration for Microsoft Outlook" or "Google Workspace Sync for Microsoft Outlook." If those apps are authorized and you are not actually using them for migration, revoke the access immediately.
+
+The broader lesson is about OAuth token theft. Attackers do not need your password anymore. They do not need to bypass MFA. They just need to trick you into granting permissions to a malicious application while you are already logged in. The token they get is as good as your password, and it bypasses every authentication control you have built.
+
+If you manage Google Workspace environments, audit third-party app permissions regularly. Look for apps requesting broad email or drive access. Question whether those permissions are necessary. And consider restricting which applications users can authorize with their corporate accounts.
+
+Umbrij is sophisticated. The OAuth abuse, the headless browser manipulation, the DLL side-loading for execution. ToddyCat is not a script kiddie operation. They have the resources to develop custom tooling and the patience to deploy it carefully.
+
+Kaspersky found this during threat hunting, not incident response. That suggests ToddyCat has been running this campaign quietly for some time. If you are a target, you might not know it yet.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
