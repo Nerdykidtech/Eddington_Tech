@@ -2000,6 +2000,38 @@ Umbrij is sophisticated. The OAuth abuse, the headless browser manipulation, the
 
 Kaspersky found this during threat hunting, not incident response. That suggests ToddyCat has been running this campaign quietly for some time. If you are a target, you might not know it yet.`,
   },
+  {
+    slug: "identity-lifecycle-management-ai-agents",
+    title: "Identity Lifecycle Management Wasn't Built for AI Agents",
+    date: "2026-07-03",
+    excerpt: "Traditional identity governance was designed around humans with employment records, managers, and departure dates. AI agents have none of those. As autonomous principals proliferate across enterprise environments, the governance model built for humans develops structural blind spots.",
+    category: "IAM",
+    readTime: "6 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/identity-lifecycle-management.html",
+    content: `Your identity governance platform was built for people. It assumes every identity has an HR record, a manager, and a termination date. AI agents break every one of those assumptions.
+
+The joiner-mover-leaver model works because human employment generates structured events. New hire? The HR system triggers provisioning. Transfer? Entitlements recalculate automatically. Termination? Deprovisioning fires across every connected system. The entire architecture assumes a person with an organizational status that changes through documented events.
+
+AI agents arrive differently. A developer commits a configuration file. Terraform applies. An orchestration layer spins up a new execution context. None of these touch your IGA platform. The agent lands in production with whatever permissions the developer scoped at creation time, or whatever the platform granted by default. No approval chain. No governance record. No owner attached.
+
+The problem gets worse as agents operate. A human's job function is relatively predictable. A database administrator needs specific permissions. A finance analyst needs access to a defined set of systems. Role-based access control works because entitlement sets map to stable functions.
+
+AI agents do not operate within fixed boundaries. An agent built to summarize documents may end up querying APIs it was not provisioned for, writing to storage outside its scope, or chaining actions across multiple systems to complete a task. The access surface expands at runtime, driven by the agent's behavior rather than any policy decision.
+
+Traditional IGA has no mechanism for this. It sees a service account with an API key. It checks credential age. It notes whether the account appeared in the last access review. What it misses is that this account is actively making authorization decisions, traversing application boundaries, and operating with autonomy no static service account possesses.
+
+The certification problem is equally broken. Access reviews route to managers based on organizational relationships. Agent identities carry no manager attribute. No human owner in the IGA platform. When campaigns do reach them, reviewers attest to what was provisioned at creation, not what the agent has accumulated through iterative deployment changes. The attestation is formally complete and operationally meaningless.
+
+Offboarding might be the worst gap. When a human leaves, HR triggers deterministic deprovisioning. When an agent is retired, nothing fires. The development team decommissions the compute environment. The service account persists in Active Directory. The API key remains valid in the secrets manager. The OAuth grant stays active on the authorization server. None of these systems received a revocation instruction because none monitored the agent's operational status.
+
+A long-lived API key with production database access, attached to a workload that no longer runs, is an ungoverned access path with no owner, no review history, and no expiration. In environments running large numbers of agents across iterative deployment cycles, these credentials accumulate faster than any manual audit can track.
+
+Fixing this requires rebuilding governance logic around how agents actually work. Continuous discovery across cloud IAM, OAuth servers, Kubernetes, and secrets managers. Behavioral monitoring that tracks what each agent calls and flags divergence from provisioned scope. Deprecation workflows triggered by credential inactivity rather than HR events.
+
+The fundamental shift is conceptual. Identity lifecycle management was architected around a person with an employment record. AI agents are autonomous principals that proliferate through deployment pipelines. Your governance model needs to account for both, or you are leaving an expanding access surface completely unmonitored.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
