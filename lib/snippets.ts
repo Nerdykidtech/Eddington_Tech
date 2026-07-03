@@ -1985,5 +1985,362 @@ Full report exported to ./entra-access-reviews.csv`,
     tags: ["Entra ID", "Access Reviews", "Identity Governance", "Compliance", "Lifecycle Management"],
     date: "2026-06-05",
   },
+  {
+    id: "azure-rbac-permission-inventory",
+    title: "Azure RBAC Permission Inventory and Unused Role Finder",
+    description: "Export all Azure RBAC assignments across subscriptions and identify roles not used in 90+ days. Helps reduce attack surface by removing stale permissions.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+$thresholdDays = 90
+$unusedThreshold = (Get-Date).AddDays(-$thresholdDays)
+
+$subscriptions = Get-AzSubscription
+$allAssignments = @()
+
+foreach ($sub in $subscriptions) {
+    Set-AzContext -Subscription $sub.Id | Out-Null
+    Write-Host "Scanning subscription: $($sub.Name)" -Foreground Cyan
+    
+    $assignments = Get-AzRoleAssignment
+    
+    foreach ($assignment in $assignments) {
+        # Get role definition
+        $roleDef = Get-AzRoleDefinition -Id $assignment.RoleDefinitionId
+        
+        # Get last sign-in for users (simplified check)
+        $lastUsed = "N/A"
+        $status = "Unknown"
+        
+        if ($assignment.ObjectType -eq "User") {
+            try {
+                $signInLogs = Get-AzLog -ResourceId $assignment.Scope -StartTime $unusedThreshold -WarningAction SilentlyContinue
+                if ($signInLogs.Count -gt 0) {
+                    $lastUsed = $signInLogs[0].EventTimestamp
+                    $status = "Active"
+                } else {
+                    $status = "Potentially Unused"
+                }
+            }
+            catch {
+                $status = "Check Required"
+            }
+        } elseif ($assignment.ObjectType -eq "ServicePrincipal") {
+            try {
+                $spLogs = Get-AzLog -ResourceId $assignment.Scope -StartTime $unusedThreshold -Caller $assignment.ObjectId -WarningAction SilentlyContinue
+                if ($spLogs.Count -eq 0) {
+                    $status = "Potentially Unused"
+                } else {
+                    $status = "Active"
+                }
+            }
+            catch {
+                $status = "Check Required"
+            }
+        } else {
+            $status = "Group - Check Members"
+        }
+        
+        $allAssignments += [PSCustomObject]@{
+            Subscription    = $sub.Name
+            SubscriptionId  = $sub.Id
+            PrincipalName = $assignment.DisplayName
+            PrincipalType = $assignment.ObjectType
+            PrincipalId   = $assignment.ObjectId
+            RoleName      = $roleDef.Name
+            RoleId        = $assignment.RoleDefinitionId
+            Scope         = $assignment.Scope
+            AssignmentId  = $assignment.RoleAssignmentId
+            Status        = $status
+            LastChecked   = Get-Date -Format "yyyy-MM-dd"
+        }
+    }
+}
+
+$unused = $allAssignments | Where-Object { $_.Status -eq "Potentially Unused" }
+$highRisk = $allAssignments | Where-Object { 
+    $_.RoleName -match "Owner|Contributor|Admin" -and $_.Status -eq "Potentially Unused" 
+}
+
+Write-Host "" 
+Write-Host "=== Azure RBAC Permission Inventory ===" -Foreground Cyan
+Write-Host "Total assignments scanned: $($allAssignments.Count)"
+Write-Host "Potentially unused roles:  $($unused.Count)" -Foreground Yellow
+Write-Host "High-risk stale roles:     $($highRisk.Count)" -Foreground Red
+
+if ($highRisk.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH-RISK STALE PERMISSIONS:" -Foreground Red
+    $highRisk | Select-Object PrincipalName, RoleName, Scope | Format-Table
+}
+
+$allAssignments | Export-Csv -Path "./azure-rbac-inventory.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./azure-rbac-inventory.csv"`,
+    output: String.raw`Scanning subscription: Production
+Scanning subscription: Staging
+Scanning subscription: Development
+
+=== Azure RBAC Permission Inventory ===
+Total assignments scanned: 247
+Potentially unused roles:  38
+High-risk stale roles:     12
+
+HIGH-RISK STALE PERMISSIONS:
+PrincipalName            RoleName                Scope
+-----------              --------                -----
+old-admin@eddington.tech Owner                   /subscriptions/12345...
+decommissioned-sp        Contributor             /subscriptions/12345...
+legacy-pipeline-sp       Contributor             /subscriptions/67890...
+
+Full report exported to ./azure-rbac-inventory.csv`,
+    tags: ["Azure", "RBAC", "Access Review", "Permission Audit", "Zero Trust"],
+    date: "2026-07-03",
+  },
+  {
+    id: "entra-pim-activation-audit",
+    title: "Entra ID PIM Activation Audit Report",
+    description: "Audit Privileged Identity Management (PIM) activations from the last 30 days. Identifies who activated roles, for how long, and flags unusual patterns like off-hours activations.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-MgGraph -Scopes "AuditLog.Read.All", "RoleManagement.Read.All", "RoleManagementAlert.Read.All"
+
+$daysBack = 30
+$startDate = (Get-Date).AddDays(-$daysBack)
+
+Write-Host "Fetching PIM activations from last $daysBack days..." -Foreground Cyan
+
+# Get audit logs for PIM activations
+$filter = "activityDisplayName eq 'Add member to role (PIM activation completed)' and activityDateTime ge $startDate"
+$pimActivations = Get-MgAuditLogDirectoryAudit -Filter $filter -All
+
+$report = @()
+foreach ($activation in $pimActivations) {
+    $actor = $activation.InitiatedBy.User.UserPrincipalName
+    $targetUser = $activation.TargetResources | Where-Object { $_.Type -eq "User" } | Select-Object -ExpandProperty UserPrincipalName
+    $targetRole = $activation.TargetResources | Where-Object { $_.Type -eq "RoleDefinition" } | Select-Object -ExpandProperty DisplayName
+    $activationTime = [datetime]$activation.ActivityDateTime
+    
+    # Check for off-hours activation (before 7 AM or after 7 PM, weekends)
+    $hour = $activationTime.Hour
+    $dayOfWeek = $activationTime.DayOfWeek
+    $isWeekend = ($dayOfWeek -eq "Saturday" -or $dayOfWeek -eq "Sunday")
+    $isOffHours = ($hour -lt 7 -or $hour -gt 19) -or $isWeekend
+    
+    # Get duration from the activation request
+    $duration = "Unknown"
+    if ($activation.AdditionalDetails) {
+        $durationDetail = $activation.AdditionalDetails | Where-Object { $_.Key -eq "Duration" }
+        if ($durationDetail) {
+            $duration = $durationDetail.Value
+        }
+    }
+    
+    $report += [PSCustomObject]@{
+        ActivatedBy     = $actor
+        TargetUser      = $targetUser
+        RoleName        = $targetRole
+        ActivationTime  = $activationTime
+        DayOfWeek       = $dayOfWeek
+        HourOfDay       = $hour
+        Duration        = $duration
+        IsOffHours      = $isOffHours
+        RiskFlag        = if ($isOffHours) { "Off-hours activation" } else { "Normal" }
+        IPAddress       = $activation.Actor.IpAddress
+        Reason          = ($activation.AdditionalDetails | Where-Object { $_.Key -eq "Reason" } | Select-Object -ExpandProperty Value)
+    }
+}
+
+$offHoursActivations = $report | Where-Object { $_.IsOffHours -eq $true }
+$adminRoles = $report | Where-Object { $_.RoleName -match "Admin|Owner" }
+
+Write-Host ""
+Write-Host "=== PIM Activation Audit Report ===" -Foreground Cyan
+Write-Host "Total activations:     $($report.Count)"
+Write-Host "Off-hours activations: $($offHoursActivations.Count)" -Foreground Yellow
+Write-Host "Admin role activations: $($adminRoles.Count)" -Foreground Cyan
+
+if ($offHoursActivations.Count -gt 0) {
+    Write-Host ""
+    Write-Host "OFF-HOURS ACTIVATIONS (Review Required):" -Foreground Yellow
+    $offHoursActivations | Select-Object ActivatedBy, RoleName, ActivationTime, DayOfWeek, RiskFlag | 
+        Format-Table
+}
+
+# Group by role to show usage patterns
+Write-Host ""
+Write-Host "ACTIVATIONS BY ROLE:" -Foreground Cyan
+$report | Group-Object RoleName | Select-Object Name, Count | Sort-Object Count -Descending | Format-Table
+
+$report | Export-Csv -Path "./pim-activation-audit.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full report exported to ./pim-activation-audit.csv"`,
+    output: String.raw`Fetching PIM activations from last 30 days...
+
+=== PIM Activation Audit Report ===
+Total activations:     156
+Off-hours activations: 23
+Admin role activations: 89
+
+OFF-HOURS ACTIVATIONS (Review Required):
+ActivatedBy              RoleName                   ActivationTime        DayOfWeek RiskFlag
+-----------              --------                   --------------        --------- --------
+hunter@eddington.tech    Global Administrator       6/28/2026 2:23 AM   Saturday Off-hours activation
+admin@eddington.tech     Privileged Role Admin      6/30/2026 11:15 PM  Monday   Off-hours activation
+service-desk@eddington   User Administrator         6/25/2026 6:45 AM  Sunday   Off-hours activation
+
+ACTIVATIONS BY ROLE:
+Name                             Count
+----                             -----
+Global Administrator             34
+User Administrator               28
+Privileged Role Administrator    19
+Security Administrator           15
+Exchange Administrator           12
+
+Full report exported to ./pim-activation-audit.csv`,
+    tags: ["Entra ID", "PIM", "Privileged Identity", "Audit", "Compliance", "Identity Governance"],
+    date: "2026-07-03",
+  },
+  {
+    id: "defender-cloud-secure-score",
+    title: "Microsoft Defender for Cloud Secure Score and Recommendation Export",
+    description: "Export Defender for Cloud secure scores and all active security recommendations across subscriptions. Prioritizes critical and high-severity findings with remediation guidance.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+$subscriptions = Get-AzSubscription
+
+$allRecommendations = @()
+$secureScores = @()
+
+foreach ($sub in $subscriptions) {
+    Set-AzContext -Subscription $sub.Id | Out-Null
+    Write-Host "Scanning subscription: $($sub.Name)" -Foreground Cyan
+    
+    # Get Secure Score (if Security module available)
+    try {
+        Import-Module Az.Security -ErrorAction SilentlyContinue
+        $secureScore = Get-AzSecuritySecureScore -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($secureScore) {
+            $secureScores += [PSCustomObject]@{
+                Subscription   = $sub.Name
+                SubscriptionId = $sub.Id
+                Score          = $secureScore.Percentage
+                MaxScore       = 100
+                CurrentPoints  = $secureScore.Current
+                MaxPoints      = $secureScore.Max
+                Weight         = $secureScore.Weight
+            }
+        }
+    }
+    catch {
+        Write-Host "  Secure Score module not available or permission denied" -Foreground Yellow
+    }
+    
+    # Get Security Recommendations
+    try {
+        $recommendations = Get-AzSecurityRecommendation -ErrorAction SilentlyContinue
+        
+        foreach ($rec in $recommendations) {
+            $allRecommendations += [PSCustomObject]@{
+                Subscription       = $sub.Name
+                RecommendationName = $rec.DisplayName
+                Severity           = $rec.Severity
+                Status             = $rec.Status
+                ResourceType       = $rec.ResourceDetails.ResourceType
+                ResourceId         = $rec.ResourceDetails.Id
+                RemediationSteps   = if ($rec.RemediationSteps) { $rec.RemediationSteps -join "; " } else { "N/A" }
+                Category           = $rec.Category
+                Impact             = $rec.Impact
+                
+            }
+        }
+    }
+    catch {
+        Write-Host "  Unable to fetch recommendations - check Defender for Cloud permissions" -Foreground Yellow
+    }
+}
+
+# Summary statistics
+$critical = $allRecommendations | Where-Object { $_.Severity -eq "Critical" }
+$high = $allRecommendations | Where-Object { $_.Severity -eq "High" }
+$unhealthy = $allRecommendations | Where-Object { $_.Status -eq "Unhealthy" }
+
+Write-Host ""
+Write-Host "=== Defender for Cloud Security Report ===" -Foreground Cyan
+
+if ($secureScores.Count -gt 0) {
+    Write-Host ""
+    Write-Host "SECURE SCORES BY SUBSCRIPTION:" -Foreground Cyan
+    $secureScores | Format-Table Subscription, Score, CurrentPoints, MaxPoints
+}
+
+Write-Host ""
+Write-Host "RECOMMENDATION SUMMARY:" -Foreground Cyan
+Write-Host "Total recommendations: $($allRecommendations.Count)"
+Write-Host "Critical severity:     $($critical.Count)" -Foreground Red
+Write-Host "High severity:         $($high.Count)" -Foreground Yellow
+Write-Host "Unhealthy resources:   $($unhealthy.Count)" -Foreground Magenta
+
+if ($critical.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL FINDINGS (Immediate Action Required):" -Foreground Red
+    $critical | Select-Object Subscription, RecommendationName, ResourceType | Format-Table
+}
+
+if ($high.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH SEVERITY FINDINGS:" -Foreground Yellow
+    $high | Select-Object Subscription, RecommendationName, ResourceType | Format-Table
+}
+
+# Export all recommendations
+$allRecommendations | Export-Csv -Path "./defender-recommendations.csv" -NoTypeInformation
+$secureScores | Export-Csv -Path "./defender-secure-scores.csv" -NoTypeInformation
+
+Write-Host ""
+Write-Host "Reports exported:" -Foreground Green
+Write-Host "  - ./defender-recommendations.csv"
+Write-Host "  - ./defender-secure-scores.csv"`,
+    output: String.raw`Scanning subscription: Production
+Scanning subscription: Staging
+Scanning subscription: Development
+
+=== Defender for Cloud Security Report ===
+
+SECURE SCORES BY SUBSCRIPTION:
+Subscription  Score CurrentPoints MaxPoints
+------------  ----- ------------- ---------
+Production    78.5           785      1000
+Staging       65.2           326       500
+Development   52.3           209       400
+
+RECOMMENDATION SUMMARY:
+Total recommendations: 234
+Critical severity:     12
+High severity:         47
+Unhealthy resources:   89
+
+CRITICAL FINDINGS (Immediate Action Required):
+Subscription RecommendationName                                      ResourceType
+------------ ------------------                                      ------------
+Production   Storage account should use a private link connection     StorageAccount
+Production   SQL server should have vulnerability assessment enabled SqlServer
+Production   Key vault should have purge protection enabled           KeyVault
+
+HIGH SEVERITY FINDINGS:
+Subscription RecommendationName                             ResourceType
+------------ ------------------                             ------------
+Production   NSGs should have flow logs enabled               NetworkSecurityGroup
+Staging      Virtual machines should be migrated to new ARM     VirtualMachine
+Staging      Storage accounts should restrict network access    StorageAccount
+
+Reports exported:
+  - ./defender-recommendations.csv
+  - ./defender-secure-scores.csv`,
+    tags: ["Microsoft Defender", "Azure Security Center", "Secure Score", "Compliance", "Cloud Security"],
+    date: "2026-07-03",
+  },
 ];
 
