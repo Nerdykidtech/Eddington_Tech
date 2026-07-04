@@ -2032,6 +2032,36 @@ Fixing this requires rebuilding governance logic around how agents actually work
 
 The fundamental shift is conceptual. Identity lifecycle management was architected around a person with an employment record. AI agents are autonomous principals that proliferate through deployment pipelines. Your governance model needs to account for both, or you are leaving an expanding access surface completely unmonitored.`,
   },
+  {
+    slug: "azure-cli-password-spray-ropc-bypass-mfa",
+    title: "Azure CLI Password Spray Hits at Least 78 Microsoft Accounts in 81M+ Attempts",
+    date: "2026-07-04",
+    excerpt: "81 million login attempts from a single IPv6 range. 78 accounts compromised across 64 organizations. The kicker: most victims had Conditional Access policies enabled. Attackers used a deprecated OAuth flow called ROPC to bypass MFA entirely.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/azure-cli-password-spray-hits-at-least.html",
+    content: `Huntress watched this campaign unfold between June 12 and June 26. The attacker fired over 81 million login attempts from the LSHIY LLC IPv6 range (2a0a:d683::/32). The result: 78 compromised Microsoft accounts across 64 organizations.
+
+What is notable here is not the volume. It is the bypass.
+
+Most of these organizations had Conditional Access policies in place. Many had MFA enabled. None of it mattered because the attacker targeted a deprecated OAuth flow called Resource Owner Password Credentials (ROPC).
+
+ROPC lets an application authenticate directly with username and password, bypassing the authorization endpoint where Conditional Access policies are actually enforced. Microsoft deprecated it in OAuth 2.1 for exactly this reason. It does not support MFA. It cannot trigger device compliance checks. It is invisible to most policy engines.
+
+The attackers knew this. They aimed Azure CLI specifically because it still supports ROPC for legacy scenarios. If your CAP only enforces MFA for browser logins or specific apps, Azure CLI ROPC logins slide right through.
+
+The compromise pattern tells the story. Two to four accounts per day initially, then 30 identities across 23 businesses on June 22. The attackers were not selective. They used common passwords from breach lists and sprayed until something stuck.
+
+Eight businesses hit in this campaign had no MFA at all. The rest had MFA, but only for certain apps, certain users, or certain locations. Azure CLI was not on the list.
+
+Huntress has seen credential spray attacks surge 155x across their customer base since late May. This is not a boutique campaign. This is systematic exploitation of a protocol gap that exists in most Azure tenants.
+
+The fix is straightforward but requires policy changes most organizations have not made. Require MFA for All Users, All Cloud Apps, and All Client App types when enabling CAP. Restrict Azure CLI application access for non-admin users. Monitor for ROPC sign-ins explicitly. Microsoft has been warning about ROPC for years. This campaign shows why those warnings matter.
+
+Your Conditional Access policies are only as strong as the flows they actually cover.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
