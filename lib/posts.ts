@@ -2062,6 +2062,36 @@ The fix is straightforward but requires policy changes most organizations have n
 
 Your Conditional Access policies are only as strong as the flows they actually cover.`,
   },
+  {
+    slug: "fbi-seizes-netnut-popa-botnet-takedown",
+    title: "FBI Seizes NetNut Proxy Platform, Popa Botnet",
+    date: "2026-07-05",
+    excerpt: "The FBI just seized hundreds of domains tied to NetNut, a residential proxy service running on two million compromised smart TVs and streaming boxes. The same infrastructure was powering the Popa botnet.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/07/fbi-seizes-netnut-proxy-platform-popa-botnet/",
+    content: `The FBI seized NetNut's infrastructure this week, and if you have never heard of them, that is kind of the point. They ran one of the biggest residential proxy networks on the internet, built on two million consumer devices, most of which had no idea they were part of it.
+
+The takedown was not subtle. The NetNut homepage now displays an FBI seizure banner. The Bureau worked with Google, Lumen, and Shadowserver to dismantle the control domains. According to Google's Threat Intelligence Group, this has degraded NetNut's proxy network by millions of devices.
+
+Here is how it worked. NetNut, operated by publicly-traded Israeli firm Alarum Technologies, distributed software through apps on smart TVs and Android streaming boxes. That software turned those devices into always-on proxy nodes. Anyone could rent access to those nodes and route their traffic through residential IP addresses, making it look like it came from someone's living room.
+
+The customers were not just advertisers trying to check geo-blocked content. In a single week in June, Google observed 316 distinct threat actor clusters using suspected NetNut exit nodes. That includes cybercriminals and espionage groups. The use cases they flagged: password spraying, infrastructure access, and lateral movement into home networks once the traffic passed through the compromised device.
+
+The thing about residential proxies is that they break most IP-based security controls. When an attacker connects through a compromised home device, their traffic looks like legitimate residential internet usage. NetNut and similar services sell that as a feature. The threat actors buy it wholesale.
+
+NetNut's SDKs are still embedded in apps across the LG webOS and Samsung Tizen app stores. Spur found that 42 percent of webOS apps and over a quarter of Tizen apps include residential proxy SDKs. Users install a free streaming app, agree to terms of service they do not read, and their television becomes infrastructure for someone else's traffic.
+
+The fix at the consumer level is simple but unpopular: stop buying no-name streaming boxes. The sketchy Android boxes that come pre-loaded with proxy software, or require it to access pirated content, are the primary infection vector. Stick to name-brand devices with official Android TV certification and Play Protect. Check what apps you install, even on legitimate smart TVs.
+
+At the enterprise level, the problem is harder. Residential proxies bypass geographic IP blocking, rate limiting, and some forms of fraud detection. If your security model assumes that residential IPs are trustworthy, you are vulnerable to this. The traffic coming from a NetNut exit node looks exactly like a home user, because it is.
+
+NetNut is not the first. Google took down IPIDEA earlier this year using the same playbook: seize the control infrastructure, disable the accounts, share intelligence with partners. IPIDEA has partially rebuilt by reselling other proxy networks. NetNut may try the same.
+
+The residential proxy ecosystem is resilient because the economics work. Cheap devices with lax security, free apps that bundle proxy SDKs, and paying customers who want traffic that looks legitimate. Until the model stops being profitable, someone will be running the next version of this infrastructure.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
