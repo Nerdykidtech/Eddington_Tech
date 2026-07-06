@@ -2092,6 +2092,38 @@ NetNut is not the first. Google took down IPIDEA earlier this year using the sam
 
 The residential proxy ecosystem is resilient because the economics work. Cheap devices with lax security, free apps that bundle proxy SDKs, and paying customers who want traffic that looks legitimate. Until the model stops being profitable, someone will be running the next version of this infrastructure.`,
   },
+  {
+    slug: "cursor-prompt-injection-sandbox-escape-duneslide",
+    title: "Cursor Prompt Injection Flaws Escape Sandbox, Execute Commands on Developer Machines",
+    date: "2026-07-06",
+    excerpt: "Two critical flaws in Cursor let poisoned prompts break out of the AI editor's sandbox and run commands on developer machines. CVE-2026-50548 and CVE-2026-50549 are zero-click attacks that work via MCP servers or web search results.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/critical-cursor-flaws-could-let-prompt.html",
+    content: `Cato AI Labs found two flaws in Cursor that break out of the editor's sandbox and run commands on your machine. They are calling the pair DuneSlide, and if you are running Cursor older than version 3.0, you are affected.
+
+The vulnerabilities are CVE-2026-50548 and CVE-2026-50549, both rated 9.8 CVSS. Cursor's maker says more than half the Fortune 500 uses the tool. That is a lot of developers running a lot of vulnerable versions.
+
+Here is the attack: a poisoned prompt sneaks in through something Cursor reads automatically. An MCP server. A web search result. Something the developer never sees and never approves. The hidden instructions tell Cursor's agent to write a file. That file write escapes the sandbox. The next command runs unsandboxed as the developer. No click required.
+
+CVE-2026-50548 abuses the working_directory parameter on run_terminal_cmd. Cursor adds whatever path you specify to the allowed-write list. Point it at the sandbox helper binary itself, overwrite it, and subsequent commands run with no sandbox at all.
+
+CVE-2026-50549 uses a symlink trick. Cursor resolves symlinks before writing to make sure the real destination is inside the project. When the check fails, Cursor falls back to trusting the symlink's in-project path. Create a symlink pointing outside the project, break the check, and Cursor writes straight through to the sandbox helper.
+
+Once the sandbox is down, the attacker has code execution as the developer. That means access to any cloud accounts the developer is signed into, any API keys in environment variables, any credentials the IDE has cached. The whole development environment.
+
+Cursor rejected the initial report, saying the threat model did not cover misuse of MCP servers. Cato escalated. Cursor reopened, triaged, and shipped fixes in version 3.0. The CVEs were assigned in June.
+
+This is not the first time. CurXecute in August 2025 rewrote Cursor's MCP config via a poisoned Slack message. MCPoison swapped malicious commands into an approved MCP config. CVE-2026-26268 hid a booby-trapped Git hook. The sandbox in 2.x was Cursor's response. DuneSlide is the escape from that response.
+
+The fix is straightforward: update to Cursor 3.0 or later. The vulnerable versions are everything before that. Given the install base, there are probably thousands of developers still running vulnerable builds.
+
+The broader issue is that AI coding agents are growing attack surfaces. They read from the open web. They connect to external services through MCP. They execute code on developer machines. Every one of those boundaries is a potential injection point. Cursor is not unique here. Any agent with similar capabilities faces similar risks.
+
+Cato says they are disclosing similar flaws in other coding agents and argues the problem is structural. I think they are right. The current model of sandboxing agent commands and trusting inputs is not holding up to determined attackers. We are going to need either better isolation or more paranoid input handling. Probably both.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
