@@ -2124,6 +2124,30 @@ The broader issue is that AI coding agents are growing attack surfaces. They rea
 
 Cato says they are disclosing similar flaws in other coding agents and argues the problem is structural. I think they are right. The current model of sandboxing agent commands and trusting inputs is not holding up to determined attackers. We are going to need either better isolation or more paranoid input handling. Probably both.`,
   },
+  {
+    slug: "writer-ai-writeout-cross-tenant-session-hijack",
+    title: "Writer AI WriteOut Flaw: How a Preview Link Became a Cross-Tenant Account Takeover",
+    date: "2026-07-07",
+    excerpt: "One click on a shared agent preview link was all it took. Sand Security found that Writer's sandbox forwarded victim session cookies to attacker-controlled environments, enabling cross-tenant account takeover.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/writer-ai-flaw-could-let-agent-previews.html",
+    content: `Sand Security dropped a concerning one-click vulnerability in Writer this week, and the mechanics are worth understanding. The flaw, called WriteOut, allowed an attacker to hijack any Writer AI account by simply getting the victim to click a preview link.
+
+Here is how it worked. Writer's platform lets users create AI agents and share preview links so others can test them. When a logged-in Writer user clicked one of these links, their browser sent their session cookie along with the request. The preview proxy then forwarded that cookie into the attacker's sandbox environment.
+
+The attacker controlled the sandbox. Their agent could read process memory, extract the victim's session token, and exfiltrate it. Replay that token and the attacker became the victim, with full access to private chats, documents, agent configurations, and LLM credentials.
+
+The cross-tenant aspect is what makes this particularly bad. The attacker and victim did not need to be in the same organization. A malicious agent created in a personal Writer account could steal sessions from enterprise tenants. Sand Security described it as going from zero access to full control of any Writer AI organization with nothing more than a link.
+
+Writer did have guardrails. Input filtering tried to block obvious attempts to read environment variables or submit malicious code. But the checks looked at the prompt, not runtime behavior. The Sand Security team bypassed this by telling their agent to fetch and run a remote script. The guardrail saw a benign download request. The actual exploit logic never appeared in the prompt at all.
+
+Writer has patched the issue by preventing session cookies from being forwarded into sandbox previews and moving previews to an isolated origin. The fix eliminates the core problem: untrusted code should never run in an environment that has access to production session tokens.
+
+This pattern is not unique to Writer. Any AI platform that runs user-controlled code in managed sandboxes while sharing authentication context with production needs to think carefully about isolation boundaries. The convenience of one-click previews cannot come at the cost of tenant separation.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
