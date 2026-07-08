@@ -2148,6 +2148,40 @@ Writer has patched the issue by preventing session cookies from being forwarded 
 
 This pattern is not unique to Writer. Any AI platform that runs user-controlled code in managed sandboxes while sharing authentication context with production needs to think carefully about isolation boundaries. The convenience of one-click previews cannot come at the cost of tenant separation.`,
   },
+  {
+    slug: "ghostlock-linux-kernel-root-cve-2026-43499",
+    title: "15-Year-Old GhostLock Flaw Enables Root and Container Escape on Most Linux Distros",
+    date: "2026-07-08",
+    excerpt: "A 15-year-old Linux kernel flaw has been hiding in plain sight since 2011. GhostLock (CVE-2026-43499) lets any logged-in user take full root control and escape containers. The vulnerable code ships by default in essentially every mainstream distribution.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/15-year-old-ghostlock-flaw-enables-root.html",
+    content: `Nebula Security dropped GhostLock this week, and the numbers are sobering. CVE-2026-43499 has been in the Linux kernel since 2011. For fifteen years, this code shipped with every mainstream distribution. Any logged-in user could trigger it with ordinary threading calls.
+
+The bug is a use-after-free in the futex priority inheritance path. A cleanup routine runs at the wrong moment and wipes the wrong task's record. The kernel then trusts a stale pointer to memory it has already thrown away and reused. Nebula's exploit chains that mistake into full root control in about five seconds. CVSS 7.8 - high, not critical - because you need local access first.
+
+But here is the problem: local access is exactly what attackers get after they land on your container host. GhostLock also escapes containers. If you are running multi-tenant workloads, this is your worst-case scenario. One compromised container, full host compromise.
+
+The exploit works 97% of the time in Nebula's testing. They published working code. Google paid them $92,337 through kernelCTF. The code is now public, which means anyone can run it.
+
+There is a catch to the patch timeline. The original fix landed in April, but it introduced a separate crash bug tracked as CVE-2026-53166. The cleanup for that was still settling upstream in early July. Early patched builds may lack the final version. You need to check your distribution's advisory and confirm the specific fixed package version rather than assuming you are covered.
+
+Ubuntu's status as of early July: newer releases patched, but 24.04 LTS, 22.04 LTS, and 20.04 LTS still listed as vulnerable or in progress. If you are running Ubuntu LTS on production hosts, verify before you assume.
+
+Nebula found this with VEGA, their AI-driven bug-hunting tool. It is part of a pattern. Days earlier researchers disclosed Bad Epoll (CVE-2026-46242), a similar local-to-root flaw in the same stretch of kernel code. Anthropic's Mythos model was credited with finding a related bug in that same area. The tools are now combing through code that has not had human eyes on it in years.
+
+GhostLock is also the second half of a chain Nebula calls IonStack. The first half is CVE-2026-10702, a Firefox sandbox escape. Combined, a single tap on a malicious link takes you from browser to full Android root. Nebula demonstrated this end-to-end. The Android write-up is coming next.
+
+That is why local kernel bugs still matter. On their own, they need a foothold. Bolted onto a browser exploit, they become remote compromise.
+
+Mitigations exist but they are incomplete. RANDOMIZE_KSTACK_OFFSET and STATIC_USERMODE_HELPER make exploitation harder, but they do not fix the underlying bug. Patching is the only real fix.
+
+Priority targets: shared hosts, multi-tenant machines, cloud servers, containers, CI runners. Anywhere an attacker might already have shell access and wants root.
+
+Fifteen years. Every major distribution. That is the scale of old code in critical paths.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
