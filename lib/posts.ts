@@ -2093,6 +2093,50 @@ NetNut is not the first. Google took down IPIDEA earlier this year using the sam
 The residential proxy ecosystem is resilient because the economics work. Cheap devices with lax security, free apps that bundle proxy SDKs, and paying customers who want traffic that looks legitimate. Until the model stops being profitable, someone will be running the next version of this infrastructure.`,
   },
   {
+    slug: "ghostapproval-symlink-ai-coding-agents",
+    title: "GhostApproval: Symlink Trick Lets Malicious Repos Hijack Developer Machines via AI Assistants",
+    date: "2026-07-09",
+    excerpt: "Wiz found a flaw in six AI coding assistants where a symlink in a malicious repo lets attackers write to your SSH keys or shell startup files. The approval dialog lies about what file is being edited.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/ghostapproval-symlink-flaws-could-let.html",
+    content: `Wiz researchers found a way to trick six popular AI coding assistants into giving attackers access to your machine. They call it GhostApproval, and the technique is simple: hide a symlink in a malicious repository.
+
+The attack works because these assistants ask permission to edit a file, but show you the wrong file path. The dialog says "edit project_settings.json" but the actual write goes to ~/.ssh/authorized_keys or ~/.zshrc via a symlink. You click Accept thinking you are updating a config file. You are actually installing an attacker's SSH key.
+
+The affected tools are Amazon Q Developer, Claude Code, Augment, Cursor, Google Antigravity, and Windsurf. Three have patched. Two have not. Anthropic disputes it is a bug at all.
+
+Here is how the exploit works. An attacker creates a repository with a symlink named project_settings.json that actually points to the victim's SSH authorized_keys file. The README instructs the AI assistant to "add a line" to that config file. The line is the attacker's public SSH key.
+
+The assistant sees the request, resolves the symlink internally, but shows the user only the harmless-looking filename in the approval dialog. The user approves. The assistant writes the key. If the victim machine runs an SSH service reachable by the attacker, they now have passwordless access.
+
+Wiz demonstrated a second variant writing to ~/.zshrc instead. The shell executes the injected code the next time the user opens a terminal. No SSH service required.
+
+The status of the six vendors as of publication:
+- Amazon Q Developer: Fixed in 1.69.0, CVE-2026-12958
+- Cursor: Fixed in v3.0, CVE-2026-50549
+- Google Antigravity: Fixed, CVE pending
+- Augment: Acknowledged, no fix yet
+- Windsurf: Acknowledged, no fix yet
+- Anthropic Claude Code: Disputed, though current versions warn about symlinks
+
+The most exposed are Augment and Windsurf. Augment shows no dialog at all. Windsurf writes the file before the approval buttons appear, making the prompt effectively an undo button.
+
+Anthropic's position is that this sits outside their threat model. The developer chose to trust the repository when opening the session, and approved the edit, so the decision was theirs. The symlink warning shipped in February, which Anthropic characterizes as routine hardening rather than a bug fix.
+
+This is the third major symlink issue in AI coding assistants this year. Adversa AI published SymJack in May using the same pattern against Claude Code, Cursor, GitHub Copilot, and Grok Build. Cato AI Labs found DuneSlide in Cursor around the same time. Three independent teams finding the same flaw suggests this is a design pattern problem, not individual implementation bugs.
+
+The broader pattern is already appearing in the wild. The Miasma worm planted AI agent config files in Microsoft repositories to auto-execute when developers opened projects in Claude Code, Cursor, or Gemini. GitHub disabled 73 affected repositories.
+
+Mitigation is straightforward but requires behavior changes. Do not let AI assistants work in untrusted repositories. Run them in containers or sandboxes when possible. Check your ~/.ssh/authorized_keys and shell startup files after working with unfamiliar code. Look for timestamps that changed while the agent was running.
+
+Tool makers should resolve symlinks before showing approval dialogs, flag any write outside the project folder, and never touch disk before the user actually approves. Anthropic's stance that this is the user's problem to solve is convenient for them but puts the burden on the person least able to evaluate the risk.
+
+"Human in the loop" only works when the loop tells the truth.`,
+  },
+  {
     slug: "cursor-prompt-injection-sandbox-escape-duneslide",
     title: "Cursor Prompt Injection Flaws Escape Sandbox, Execute Commands on Developer Machines",
     date: "2026-07-06",
