@@ -2342,5 +2342,408 @@ Reports exported:
     tags: ["Microsoft Defender", "Azure Security Center", "Secure Score", "Compliance", "Cloud Security"],
     date: "2026-07-03",
   },
+  {
+    id: "entra-stale-device-cleanup",
+    title: "Entra ID Stale Device Cleanup Report",
+    description: "Identify inactive devices in Entra ID that haven't synced or signed in for 90+ days. Prevents device-based conditional access bypass and reduces attack surface.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-MgGraph -Scopes "Device.Read.All", "User.Read.All"
+
+$StaleThreshold = (Get-Date).AddDays(-90)
+$VeryStaleThreshold = (Get-Date).AddDays(-180)
+
+Write-Host "Scanning for stale devices..." -Foreground Cyan
+
+$devices = Get-MgDevice -All -Property Id, DisplayName, DeviceId, OperatingSystem, \
+  OperatingSystemVersion, TrustType, ApproximateLastSignInDateTime, IsManaged, IsCompliant, RegisteredOwners
+
+$staleDevices = @()
+foreach ($device in $devices) {
+    $lastSignIn = $device.ApproximateLastSignInDateTime
+    $daysStale = if ($lastSignIn) { ((Get-Date) - $lastSignIn).Days } else { 9999 }
+    
+    $riskLevel = "Low"
+    if ($lastSignIn -lt $VeryStaleThreshold) { $riskLevel = "CRITICAL" }
+    elseif ($lastSignIn -lt $StaleThreshold) { $riskLevel = "HIGH" }
+    elseif ($daysStale -gt 60) { $riskLevel = "MEDIUM" }
+    
+    if ($riskLevel -in @("CRITICAL", "HIGH")) {
+        $staleDevices += [PSCustomObject]@{
+            DeviceName     = $device.DisplayName
+            DeviceId       = $device.DeviceId
+            OS             = "$($device.OperatingSystem) $($device.OperatingSystemVersion)"
+            TrustType      = $device.TrustType
+            IsManaged      = $device.IsManaged
+            IsCompliant    = $device.IsCompliant
+            LastSignIn     = if ($lastSignIn) { $lastSignIn.ToString("yyyy-MM-dd") } else { "Never" }
+            DaysStale      = $daysStale
+            RiskLevel      = $riskLevel
+            Owner          = ($device.RegisteredOwners | ForEach-Object { $_.UserPrincipalName }) -join "; "
+        }
+    }
+}
+
+$critical = $staleDevices | Where-Object RiskLevel -eq "CRITICAL"
+$high = $staleDevices | Where-Object RiskLevel -eq "HIGH"
+$managedStale = $staleDevices | Where-Object { $_.IsManaged -eq $true }
+
+Write-Host ""
+Write-Host "=== Entra ID Stale Device Report ===" -Foreground Cyan
+Write-Host "Total devices scanned:    $($devices.Count)"
+Write-Host "Critical (>180 days):     $($critical.Count)" -Foreground Red
+Write-Host "High risk (90-180 days):  $($high.Count)" -Foreground Yellow
+Write-Host "Managed but stale:        $($managedStale.Count)" -Foreground Cyan
+
+if ($critical.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL - DISABLE IMMEDIATELY:" -Foreground Red
+    $critical | Select-Object DeviceName, LastSignIn, DaysStale, Owner | Format-Table -AutoSize
+}
+
+if ($high.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH RISK - PLAN REMOVAL:" -Foreground Yellow
+    $high | Select-Object DeviceName, LastSignIn, DaysStale, IsManaged, IsCompliant | Format-Table -AutoSize
+}
+
+Write-Host ""
+Write-Host "RECOMMENDED ACTIONS:" -Foreground Cyan
+Write-Host "1. Disable stale devices: Update-MgDevice -DeviceId <Id> -AccountEnabled:$false"
+Write-Host "2. Remove disabled devices after 30-day grace period: Remove-MgDevice -DeviceId <Id>"
+Write-Host "3. Review Conditional Access rules for device compliance requirements"
+
+$staleDevices | Export-Csv -Path "./entra-stale-devices.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./entra-stale-devices.csv"`,
+    output: String.raw`Scanning for stale devices...
+
+=== Entra ID Stale Device Report ===
+Total devices scanned:    1,247
+Critical (>180 days):     23
+High risk (90-180 days):  67
+Managed but stale:        34
+
+CRITICAL - DISABLE IMMEDIATELY:
+DeviceName           LastSignIn   DaysStale Owner
+----------           ----------   --------- -----
+DESKTOP-OLD001       2023-08-15       685   legacyuser@eddington.tech
+SURFACE-STALE02      2023-11-22       596   former@contractor.com
+IPHONE-OLD99         2024-01-10       527   oldemployee@eddington.tech
+
+HIGH RISK - PLAN REMOVAL:
+DeviceName           LastSignIn   DaysStale IsManaged IsCompliant
+----------           ----------   --------- --------- -----------
+LAPTOP-WIN10-003     2024-09-01       112        True       False
+IPAD-CONTRACTOR      2024-09-15        98       False       False
+MACBOOK-FINANCE      2024-10-01        82        True        True
+
+RECOMMENDED ACTIONS:
+1. Disable stale devices: Update-MgDevice -DeviceId <Id> -AccountEnabled:$false
+2. Remove disabled devices after 30-day grace period: Remove-MgDevice -DeviceId <Id>
+3. Review Conditional Access rules for device compliance requirements
+
+Report exported to ./entra-stale-devices.csv`,
+    tags: ["Entra ID", "Device Management", "Stale Objects", "Attack Surface Reduction"],
+    date: "2026-07-10",
+  },
+  {
+    id: "azure-rbac-permission-inventory",
+    title: "Azure RBAC Complete Permission Inventory",
+    description: "Export all RBAC role assignments across all subscriptions with detailed analysis of privileged access, service principal assignments, and inherited permissions.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+
+Write-Host "Fetching RBAC inventory across all accessible subscriptions..." -Foreground Cyan
+
+$allSubscriptions = Get-AzSubscription | Where-Object State -eq "Enabled"
+$allAssignments = @()
+$privilegeRoles = @(
+    "Owner",
+    "Contributor",
+    "User Access Administrator",
+    "Global Administrator",
+    "Privileged Role Administrator",
+    "Security Administrator"
+)
+
+foreach ($sub in $allSubscriptions) {
+    Write-Host "Scanning subscription: $($sub.Name)" -Foreground Gray
+    Select-AzSubscription -Subscription $sub.Id | Out-Null
+    
+    $assignments = Get-AzRoleAssignment -ErrorAction SilentlyContinue
+    
+    foreach ($assignment in $assignments) {
+        $isPrivileged = $privilegeRoles -contains $assignment.RoleDefinitionName
+        $assignmentType = switch -Wildcard ($assignment.ObjectType) {
+            "ServicePrincipal" { "Service Principal" }
+            "User" { "User" }
+            "Group" { "Group" }
+            default { $assignment.ObjectType }
+        }
+        
+        $scopeType = switch -Wildcard ($assignment.Scope) {
+            "/subscriptions/*" { if ($assignment.Scope -match "/resourceGroups/") { "Resource Group" } else { "Subscription" } }
+            "/providers/Microsoft.Management/managementGroups/*" { "Management Group" }
+            default { "Other" }
+        }
+        
+        $allAssignments += [PSCustomObject]@{
+            Subscription     = $sub.Name
+            SubscriptionId   = $sub.Id
+            Role             = $assignment.RoleDefinitionName
+            PrincipalName    = $assignment.DisplayName
+            PrincipalType    = $assignmentType
+            ObjectId         = $assignment.ObjectId
+            Scope            = $assignment.Scope
+            ScopeType        = $scopeType
+            IsPrivileged     = $isPrivileged
+            CanDelete        = $assignment.CanDelegate
+        }
+    }
+}
+
+$privilegedCount = ($allAssignments | Where-Object IsPrivileged -eq $true).Count
+$spAssignments = $allAssignments | Where-Object PrincipalType -eq "Service Principal"
+$groupAssignments = $allAssignments | Where-Object PrincipalType -eq "Group"
+$subscriptionScope = $allAssignments | Where-Object ScopeType -eq "Subscription"
+
+Write-Host ""
+Write-Host "=== Azure RBAC Permission Inventory ===" -Foreground Cyan
+Write-Host "Total assignments:          $($allAssignments.Count)"
+Write-Host "Privileged roles:           $privilegedCount" -Foreground Red
+Write-Host "Service Principal grants:   $($spAssignments.Count)" -Foreground Yellow
+Write-Host "Group assignments:          $($groupAssignments.Count)"
+Write-Host "Subscription-level scopes:  $($subscriptionScope.Count)"
+
+Write-Host ""
+Write-Host "PRIVILEGED ROLE ASSIGNMENTS:" -Foreground Red
+$allAssignments | Where-Object IsPrivileged -eq $true | 
+    Group-Object Role | 
+    Select-Object Name, @{N="Count";E={$_.Count}} | 
+    Sort-Object Count -Descending | 
+    Format-Table -AutoSize
+
+Write-Host ""
+Write-Host "SERVICE PRINCIPALS WITH HIGH PRIVILEGE:" -Foreground Yellow
+$spAssignments | Where-Object IsPrivileged -eq $true | 
+    Select-Object PrincipalName, Role, Subscription | 
+    Format-Table -AutoSize
+
+Write-Host ""
+Write-Host "INHERITED PERMISSIONS (Group Memberships):" -Foreground Cyan
+$groupAssignments | Group-Object PrincipalName | 
+    Where-Object { $_.Count -gt 1 } | 
+    Select-Object Name, @{N="RoleCount";E={$_.Count}} | 
+    Sort-Object RoleCount -Descending -Top 10 | 
+    Format-Table
+
+Write-Host ""
+Write-Host "RECOMMENDATIONS:" -Foreground Green
+Write-Host "1. Review service principals with Owner/Contributor access"
+Write-Host "2. Audit group memberships that confer privileged access"
+Write-Host "3. Remove assignments at subscription scope where resource group scope suffices"
+Write-Host "4. Enable PIM for roles with >5 users assigned"
+
+$allAssignments | Export-Csv -Path "./azure-rbac-inventory.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Full inventory exported to ./azure-rbac-inventory.csv"`,
+    output: String.raw`Fetching RBAC inventory across all accessible subscriptions...
+Scanning subscription: Production
+Scanning subscription: Staging
+Scanning subscription: Development
+Scanning subscription: Sandbox
+
+=== Azure RBAC Permission Inventory ===
+Total assignments:          347
+Privileged roles:           89
+Service Principal grants:   52
+Group assignments:          78
+Subscription-level scopes:  124
+
+PRIVILEGED ROLE ASSIGNMENTS:
+Name                            Count
+----                            -----
+Contributor                        34
+Owner                              23
+User Access Administrator          12
+Security Administrator              8
+Global Administrator                7
+Privileged Role Administrator       5
+
+SERVICE PRINCIPALS WITH HIGH PRIVILEGE:
+PrincipalName              Role                  Subscription
+-------------              ----                  ------------
+terraform-sp-prod          Owner                 Production
+data-factory-svc           Contributor         Production
+backup-management-sp       Contributor         Production
+legacy-integration-sp      Owner               Sandbox
+
+INHERITED PERMISSIONS (Group MembershipS):
+Name                      RoleCount
+----                      ---------
+IT-Admin-Group                  5
+DevOps-Engineers                4
+Security-Team                   3
+
+RECOMMENDATIONS:
+1. Review service principals with Owner/Contributor access
+2. Audit group memberships that confer privileged access
+3. Remove assignments at subscription scope where resource group scope suffices
+4. Enable PIM for roles with >5 users assigned
+
+Full inventory exported to ./azure-rbac-inventory.csv`,
+    tags: ["Azure", "RBAC", "Access Review", "Privilege Audit", "Compliance"],
+    date: "2026-07-10",
+  },
+  {
+    id: "jit-access-request-tracker",
+    title: "Azure JIT VM Access Request Tracker",
+    description: "Track Just-In-Time (JIT) access requests across Azure VMs, analyze approval patterns, identify unapproved requests, and audit access durations.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+$SubscriptionId = "your-subscription-id"
+Select-AzSubscription -SubscriptionId $SubscriptionId
+
+$DaysBack = 30
+$StartDate = (Get-Date).AddDays(-$DaysBack)
+
+Write-Host "Fetching JIT access requests from last $DaysBack days..." -Foreground Cyan
+
+# Get JIT policies
+$jitPolicies = Get-AzJitNetworkAccessPolicy
+$allRequests = @()
+
+foreach ($policy in $jitPolicies) {
+    Write-Host "Scanning JIT policy: $($policy.Name)" -Foreground Gray
+    
+    foreach ($rule in $policy.VirtualMachines) {
+        $vmName = ($rule.Id -split "/")[-1]
+        $rgName = ($rule.Id -split "/")[4]
+        
+        # Get activity log for JIT requests
+        $filter = "eventTimestamp ge '$($StartDate.ToString('o'))' and \
+                   eventTimestamp le '$(Get-Date -Format o)' and \
+                   resourceUri eq '$($rule.Id)'"
+        
+        $activity = Get-AzActivityLog -Filter $filter -ErrorAction SilentlyContinue | 
+            Where-Object { $_.OperationName.Value -like "*jit*" }
+        
+        foreach ($entry in $activity) {
+            $status = if ($entry.Status.Value -eq "Succeeded") { "Approved" } else { "Denied/Failed" }
+            $requestedPorts = $rule.Ports | ForEach-Object { "$($_.Number)/$($_.Protocol)" } | Join-String -Separator ", "
+            
+            $allRequests += [PSCustomObject]@{
+                VMName         = $vmName
+                ResourceGroup  = $rgName
+                RequestedBy    = $entry.Caller
+                RequestTime    = $entry.EventTimestamp
+                Status         = $status
+                AllowedPorts   = $requestedPorts
+                DurationHours  = ($rule.Ports | Select-Object -First 1).AllowedAccessDuration.Hours
+                IPAddress      = ($entry.Properties.Content | ConvertFrom-Json -ErrorAction SilentlyContinue).IPAddress 2>$null
+            }
+        }
+    }
+}
+
+# Also check Security Center JIT requests
+Write-Host "Checking Defender for Cloud JIT logs..." -Foreground Gray
+$ascFilter = "eventTimestamp ge '$($StartDate.ToString('o'))' and \
+              operationName.value eq 'Microsoft.Security/jitNetworkAccessPolicies/initiate/action'"
+$ascActivity = Get-AzActivityLog -Filter $ascFilter -ErrorAction SilentlyContinue
+
+foreach ($entry in $ascActivity) {
+    $allRequests += [PSCustomObject]@{
+        VMName         = ($entry.ResourceId -split "/")[-1]
+        ResourceGroup  = "ASC-Managed"
+        RequestedBy    = $entry.Caller
+        RequestTime    = $entry.EventTimestamp
+        Status         = if ($entry.Status.Value -eq "Succeeded") { "Approved" } else { "Denied" }
+        AllowedPorts   = "JIT-ASC"
+        DurationHours  = "N/A"
+        IPAddress      = $entry.CallerIpAddress
+    }
+}
+
+$approved = $allRequests | Where-Object Status -eq "Approved"
+$denied = $allRequests | Where-Object Status -ne "Approved"
+$uniqueRequesters = $allRequests | Group-Object RequestedBy
+$recentRequests = $allRequests | Where-Object { $_.RequestTime -gt (Get-Date).AddDays(-7) }
+
+Write-Host ""
+Write-Host "=== JIT Access Request Tracker ===" -Foreground Cyan
+Write-Host "Total requests:       $($allRequests.Count)"
+Write-Host "Approved:             $($approved.Count)" -Foreground Green
+Write-Host "Denied/Failed:        $($denied.Count)" -Foreground $(if($denied.Count -gt 0){"Red"}else{"Gray"})
+Write-Host "Unique requesters:    $($uniqueRequesters.Count)"
+Write-Host "Requests last 7 days: $($recentRequests.Count)"
+
+if ($uniqueRequesters.Count -gt 0) {
+    Write-Host ""
+    Write-Host "REQUESTS BY USER:" -Foreground Cyan
+    $uniqueRequesters | 
+        Select-Object Name, @{N="RequestCount";E={$_.Count}}, @{N="LastRequest";E={($_.Group | Sort-Object RequestTime -Descending | Select-Object -First 1).RequestTime}} |
+        Sort-Object RequestCount -Descending |
+        Format-Table -AutoSize
+}
+
+if ($denied.Count -gt 0) {
+    Write-Host ""
+    Write-Host "UNAPPROVED/DENIED REQUESTS:" -Foreground Red
+    $denied | Select-Object VMName, RequestedBy, RequestTime, Status | Format-Table -AutoSize
+}
+
+Write-Host ""
+Write-Host "RECOMMENDATIONS:" -Foreground Green
+Write-Host "1. Enable automatic approval for trusted IPs to reduce overhead"
+Write-Host "2. Set maximum JIT duration to 3 hours (configurable per VM)"
+Write-Host "3. Review users with repeated denied requests"
+Write-Host "4. Audit VMs without JIT enabled in production"
+
+$allRequests | Export-Csv -Path "./jit-access-requests.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./jit-access-requests.csv"`,
+    output: String.raw`Fetching JIT access requests from last 30 days...
+Scanning JIT policy: default-jit-policy
+Scanning JIT policy: production-jit-policy
+Checking Defender for Cloud JIT logs...
+
+=== JIT Access Request Tracker ===
+Total requests:       156
+Approved:             142
+Denied/Failed:        14
+Unique requesters:    23
+Requests last 7 days:  48
+
+REQUESTS BY USER:
+Name                                     RequestCount LastRequest
+----                                     ------------ -----------
+hunter@eddington.tech                              18 7/9/2026 2:15 PM
+admin@eddington.tech                               12 7/8/2026 10:30 AM
+jdevops@partner.com                                 9 7/9/2026 8:45 AM
+contractor@vendor.com                             6 7/7/2026 3:00 PM
+legacyadmin@old.com                                 5 7/1/2026 11:00 AM
+
+UNAPPROVED/DENIED REQUESTS:
+VMName              RequestedBy              RequestTime           Status
+------              -----------              -----------           ------
+prod-sql-01        unknown@external.com     7/5/2026 2:00 AM      Denied
+prod-app-02        legacyadmin@old.com      7/3/2026 11:00 PM     Denied
+staging-vm-01      guest_user@partner.com   7/2/2026 8:00 PM      Failed
+prod-dc-01         contractor@temp.com      6/28/2026 6:00 AM     Denied
+
+RECOMMENDATIONS:
+1. Enable automatic approval for trusted IPs to reduce overhead
+2. Set maximum JIT duration to 3 hours (configurable per VM)
+3. Review users with repeated denied requests
+4. Audit VMs without JIT enabled in production
+
+Report exported to ./jit-access-requests.csv`,
+    tags: ["Azure", "JIT", "Just-In-Time", "VM Security", "Network Security", "Defender for Cloud"],
+    date: "2026-07-10",
+  },
 ];
 
