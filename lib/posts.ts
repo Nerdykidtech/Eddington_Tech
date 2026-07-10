@@ -2226,6 +2226,36 @@ Priority targets: shared hosts, multi-tenant machines, cloud servers, containers
 
 Fifteen years. Every major distribution. That is the scale of old code in critical paths.`,
   },
+  {
+    slug: "microsoft-entra-passkey-vishing-o-unc-066",
+    title: "Microsoft Entra Passkey Vishing: When Phishing-Resistant Auth Becomes the Lure",
+    date: "2026-07-10",
+    excerpt: "Threat actor O-UNC-066 is weaponizing Microsoft's own passkey enrollment campaigns. Vishing calls direct victims to fake Entra passkey registration flows that enroll attacker-controlled keys instead.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/hackers-use-fake-microsoft-entra.html",
+    content: `Okta is tracking a threat actor who figured out something clever. Microsoft's pushing passkey enrollment hard right now. Administrators can run registration campaigns that nudge users to set up passkeys during sign-in. The threat actor, designated O-UNC-066, is using that legitimate feature as cover for account takeover.
+
+The playbook is straightforward. The attacker registers domains with "passkey" in the name. They call targets claiming to be from IT security. The pitch is that the user needs to register a new passkey to stay compliant or secure. Victims who follow the link see a page that looks exactly like Microsoft's passkey enrollment flow.
+
+It is not Microsoft's flow. It is a PHP panel controlled by the attacker. The victim enters credentials, completes MFA, and then, believing they are securing their account, approves the attacker's passkey registration. Now the attacker has persistent access to the Microsoft 365 account with a legitimate passkey enrolled.
+
+What makes this different from standard phishing is the real-time adaptation. The kit operator enters the stolen credentials on the legitimate Microsoft sign-in page while the victim waits on a loading screen. The MFA challenge that appears on the legitimate site, SMS OTP, authenticator TOTP, or push notification with number matching, is relayed to the victim through the phishing interface. The victim completes it, thinking they are verifying their identity. The attacker is actually completing the authentication that grants them access.
+
+Once inside, the operator initiates passkey enrollment. The victim sees a Microsoft-branded page asking them to save a recovery key and confirm their passkey. They do. The passkey that gets enrolled belongs to the attacker.
+
+The sectors targeted so far include food and beverage, technology, healthcare, automotive, construction, and aviation. This is not opportunistic spray-and-pray. The calling and the kit operation suggest some degree of reconnaissance and targeting.
+
+There are two defensive angles here. The first is user training, which is necessary but insufficient. Users cannot be expected to distinguish legitimate passkey enrollment prompts from fake ones when both look identical and both arrive in the context of a phone call from someone claiming to be security.
+
+The second is administrative control. Microsoft allows administrators to configure registration campaigns to drive passkey adoption. That is the feature being abused. Organizations need to audit who has permission to trigger these campaigns and communicate clearly with users about when legitimate enrollment requests will come.
+
+Okta's recommendation is to treat unsolicited passkey enrollment requests as suspicious, regardless of how legitimate the page looks. Verify through a separate channel before completing any enrollment prompted by a phone call or email.
+
+This is the first time I have seen passkey enrollment specifically weaponized as the attack vector. It will not be the last. Any security feature that involves user action can be turned into social engineering material. The sophistication here is not in the technology. It is in the timing and the psychology.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
