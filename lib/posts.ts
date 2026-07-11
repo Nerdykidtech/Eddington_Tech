@@ -2256,6 +2256,38 @@ Okta's recommendation is to treat unsolicited passkey enrollment requests as sus
 
 This is the first time I have seen passkey enrollment specifically weaponized as the attack vector. It will not be the last. Any security feature that involves user action can be turned into social engineering material. The sophistication here is not in the technology. It is in the timing and the psychology.`,
   },
+  {
+    slug: "progress-sharefile-storage-zone-shutdown-urgent",
+    title: "Progress Tells ShareFile Customers: Shut Down Storage Zone Controllers Now",
+    date: "2026-07-11",
+    excerpt: "Progress Software just issued an emergency shutdown order for all ShareFile Storage Zone Controllers. No patch exists yet. If you are running one of these, it needs to go offline immediately.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/urgent-progress-tells-sharefile.html",
+    content: `Progress Software told ShareFile customers to shut down their Storage Zone Controllers yesterday. Not patch them. Shut them down. That is not a subtle difference.
+
+The company confirmed they are responding to a credible external security threat. They have temporarily disabled access to affected accounts and cut off cloud connectivity for unpatched controllers, the same move Citrix made in 2023 when CVE-2023-24489 was being actively exploited.
+
+What Progress has not said is what the threat actually is. No CVE. No technical details. The order became public when a customer posted the company's email to Reddit. Progress confirmed the disruption on their status page, listing Storage Zone Controller customers as not operational.
+
+Here is why the shutdown order matters. If a fix existed, Progress would be telling customers to apply it. The fact that they are ordering full shutdown instead suggests either a zero-day with no patch yet, or something that cannot be fixed with a patch, like stolen signing keys or compromised infrastructure.
+
+The Storage Zone Controller is on-premise software that lets companies keep files on their own storage while using ShareFile's cloud for sharing and management. It usually sits at the network edge, reachable from the internet. That exposure makes it useful and makes it a target.
+
+This is not ShareFile's first incident. In 2023, attackers exploited CVE-2023-24489, an unauthenticated flaw in the same component. CISA added it to the KEV catalog. Citrix cut unpatched controllers off from the cloud, exactly what Progress just did.
+
+Progress has been here before. They own MOVEit, which suffered a mass zero-day exploitation in 2023 that hit more than 2,700 organizations. The company knows what this kind of incident looks like.
+
+If you are running a Storage Zone Controller, the guidance is clear: keep it offline until Progress explains what the threat is and confirms it is safe to restart. Update to version 5.12.4 or later on the 5.x line, or a current 6.x release, but do not treat that as permission to bring the system back online. Progress has not said those versions clear the current threat.
+
+If your controller is internet-facing, treat this as a potential incident. Preserve logs, start your incident response process, and check for unfamiliar .aspx files in web folders or storage paths you did not create. A clean-looking server is not proof it is clean.
+
+The core problem with Storage Zone Controllers is architectural. They bridge internal storage to cloud sharing, which means they must be reachable from the internet and they hold privileged access to internal file systems. When that kind of component has an unpatched vulnerability, there are no good options. You either accept the risk or you shut it down.
+
+Progress chose the shutdown. That tells you how serious this is.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
