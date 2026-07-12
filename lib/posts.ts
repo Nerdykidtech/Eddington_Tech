@@ -2288,6 +2288,46 @@ The core problem with Storage Zone Controllers is architectural. They bridge int
 
 Progress chose the shutdown. That tells you how serious this is.`,
   },
+  {
+    slug: "jscrambler-npm-compromise-rust-infostealer",
+    title: "jscrambler npm Package Compromised: Rust Infostealer Drops in Preinstall Hook",
+    date: "2026-07-12",
+    excerpt: "The jscrambler npm package was compromised on July 11, 2026. Version 8.14.0 contained a preinstall hook that dropped a Rust-based infostealer targeting developer credentials, cloud keys, and AI tool configurations.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/compromised-jscrambler-8140-npm-release.html",
+    content: `The jscrambler npm package got hit on July 11. Version 8.14.0 came with a preinstall hook that drops a native binary and runs it during install. Six minutes after publish, Socket flagged it. That is fast, but it might not have been fast enough.
+
+jscrambler is a build-time obfuscation tool. It sits in your development dependencies, runs in CI, handles your source code. That is exactly the kind of package you do not want compromised because it runs in the exact places that hold your keys.
+
+The payload is a Rust infostealer, cross-compiled for Linux, Windows, and macOS. The 8.14.0 release added two files that do not exist in the public source: dist/setup.js and dist/intro.js. The intro.js file is not JavaScript. It is a 7.8MB container with three gzip-compressed native binaries inside.
+
+On install, setup.js picks the binary for your platform, writes it to a random filename in the temp directory, marks it executable, and launches it detached. No prompts. No warnings. Just runs.
+
+The target list is long and familiar if you have been watching these attacks: AWS, Azure, and Google Cloud credentials, including the metadata endpoints CI runners use; cryptocurrency wallets from MetaMask, Phantom, and Exodus; Bitwarden vaults; browser passwords and cookies; Discord, Slack, Telegram, and Steam sessions.
+
+Then there is the newer stuff: config files for AI coding tools like Claude Desktop, Cursor, Windsurf, VS Code, and Zed. These are where your API keys and MCP server credentials live now.
+
+The Linux payload can do something nastier than the rest. It links the kernel's BPF library and can load an eBPF program straight into the kernel from memory. That is kernel-level persistence, not userspace file stealing. StepSecurity and SafeDep both flagged this capability. What the eBPF program actually does is still being pulled apart.
+
+The Windows and macOS builds add anti-debugging checks. Persistence is handled with a hidden Windows scheduled task that relaunches every minute, or a macOS LaunchAgent that reloads on login. The C2 details stay encrypted in the binary.
+
+StepSecurity's runtime monitoring caught the dropped binary reaching two hard-coded IPs and Tor infrastructure. The addresses are 37.27.122[.]124 and 57.128.246[.]79.
+
+Here is the part that gets me. npm 12 shipped on July 8, three days before this release, with install scripts off by default. On npm 12, this preinstall hook does not run unless someone approves it. Older clients run them automatically. The attackers knew this. They aimed for the long tail of npm clients still running the old behavior.
+
+Jscrambler confirmed it was a compromised npm publishing credential. That is one account, one set of credentials, and suddenly a build tool used by thousands of developers is dropping malware in CI pipelines.
+
+Version 8.15.0 replaced 8.14.0 at the top of npm's version list, published from the same account but showing none of the malware signals. The bad versions are still there though. They were deprecated, not pulled. Lockfiles pinned to 8.14.0 will keep installing the stealer.
+
+If you think you might have pulled this, check your lockfiles for jscrambler@8.14.0. Check your temp directories for hidden files with random names. On Windows, look for hidden scheduled tasks. On macOS, inspect LaunchAgents.
+
+If you installed it, rotate everything. Cloud keys, npm tokens, GitHub tokens, AI tool API keys. Revoke sessions. Move crypto out of wallets on that host.
+
+The cleanup was fast, but a stealer works in the seconds after install. By the time 8.15.0 replaced it at the top of the list, your credentials might already be gone.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
