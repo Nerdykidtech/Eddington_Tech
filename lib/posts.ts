@@ -2328,6 +2328,32 @@ If you installed it, rotate everything. Cloud keys, npm tokens, GitHub tokens, A
 
 The cleanup was fast, but a stealer works in the seconds after install. By the time 8.15.0 replaced it at the top of the list, your credentials might already be gone.`,
   },
+  {
+    slug: "forg365-phaas-microsoft365-device-code-phishing",
+    title: "Forg365 PhaaS Targets Microsoft 365 with Device Code and AitM Session Theft",
+    date: "2026-07-13",
+    excerpt: "A new phishing-as-a-service operation called Forg365 is targeting Microsoft 365 accounts using device code phishing combined with adversary-in-the-middle tactics. The platform costs $400 a month and is distributed via Telegram.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/forg365-phaas-targets-microsoft-365.html",
+    content: `A new phishing-as-a-service operation called Forg365 is targeting Microsoft 365 accounts using device code phishing combined with adversary-in-the-middle tactics. The platform costs $400 a month and is distributed via Telegram.
+
+Forg365 uses legitimate email delivery infrastructure like Amazon SES and Twilio SendGrid to blend into normal email traffic. Business document and remittance approval lures are the common entry point.
+
+The platform's operator panel at logfriend[.]com lets customers generate lures, set up campaigns, and manage captured tokens. For device-auth phishing, victims see real Microsoft authentication surfaces but the code authorizes an attacker-controlled session.
+
+For AitM attacks, Forg365 uses route tokens and session cookies to decide whether to serve phishing content or benign decoys. If a VPN is detected, the kit redirects to harmless content instead.
+
+A browser extension called ForgCookie handles persistent access. It requests account data from the backend, clears Microsoft session cookies, injects refresh-token credentials, and triggers silent OAuth flows. The result is continued access to compromised accounts without repeated authentication.
+
+The platform also offers post-compromise features. Operators can monitor email accounts for specific keywords and draft AI-assisted responses to particular threads.
+
+This is part of a broader trend. Similar PhaaS ecosystems include Kali365, Sneaky 2FA, The Quarry, and EvilTokens. These kits industrialize phishing by combining lure creation, delivery infrastructure, token handling, and post-compromise operations into subscription models that require minimal technical skill.
+
+The practical takeaway is straightforward: block device code authentication unless required. Review mailbox artifacts after device code events. Audit mail-flow rules. And decommission legacy email aliases that still forward to active mailboxes. Attackers are using these historical identities to deliver messages that look like normal forwarded correspondence.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
