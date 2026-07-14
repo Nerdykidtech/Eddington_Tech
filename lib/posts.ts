@@ -2354,6 +2354,38 @@ This is part of a broader trend. Similar PhaaS ecosystems include Kali365, Sneak
 
 The practical takeaway is straightforward: block device code authentication unless required. Review mailbox artifacts after device code events. Audit mail-flow rules. And decommission legacy email aliases that still forward to active mailboxes. Attackers are using these historical identities to deliver messages that look like normal forwarded correspondence.`,
   },
+  {
+    slug: "oauth-client-id-spoofing-entra-credential-validation",
+    title: "OAuth Client ID Spoofing Lets Attackers Validate Stolen Microsoft Entra Credentials",
+    date: "2026-07-14",
+    excerpt: "Attackers found a way to test stolen Microsoft Entra credentials without leaving a sign-in trace. They are using it at scale.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/oauth-client-id-spoofing-lets-attackers.html",
+    content: `Proofpoint caught two threat actor campaigns exploiting a blind spot in Entra ID sign-in telemetry. The technique lets attackers enumerate accounts and validate passwords without ever generating a successful sign-in event. Your logs will show nothing useful.
+
+The trick is OAuth client ID spoofing. Entra returns different error responses depending on whether a supplied OAuth client ID is valid. Attackers weaponize this to infer valid usernames and correct passwords at scale, effectively checking stolen credential lists without logging a successful login.
+
+Here is how it works. The attacker submits an authentication request to Microsoft's OAuth 2.0 token endpoint using the Resource Owner Password Credentials (ROPC) flow. They supply a syntactically valid client ID that does not correspond to any real application. Entra does not reject malformed UUIDs outright. Instead, it returns an AADSTS error code that reveals whether the account exists and whether the password is correct.
+
+The sign-in logs capture the application ID but leave the application name blank. Detections that look for surges against a specific application name miss this entirely. Conditional Access policies scoped to specific applications do not trigger either.
+
+Proofpoint identified two campaigns using this technique:
+
+UNK_pyreq2323 ran from January through March 2026 from AWS infrastructure. They used more than 700,000 spoofed client IDs to target over one million accounts across nearly 4,000 tenants. Roughly 28 percent of targeted users hit account lockout thresholds due to failed attempts. The campaign modified trailing digits of known application IDs and reused spoofed IDs across up to 12 users.
+
+UNK_OutFlareAZ started in December 2025 and leveraged Cloudflare infrastructure. They targeted over two million users with 3.7 million randomized spoofed application IDs. Unlike the first campaign, they generated a unique client ID per request. They also enumerated users alphabetically.
+
+Both campaigns used valid UUIDs rather than malformed identifiers, which suggests they are working from precompiled username wordlists.
+
+The implications are straightforward. Attackers can validate stolen credentials against your Entra ID environment without triggering traditional detection logic. By fragmenting authentication attempts across many fictional applications, the activity becomes harder to correlate. Standard rate limiting and per-application detection patterns do not catch it.
+
+There is no patch for this behavior. It is a design characteristic of how Entra handles OAuth client ID validation. Detection strategies need to account for blank application names in sign-in logs and monitor for patterns of authentication attempts that do not align with legitimate application usage.
+
+The campaigns are ongoing. If you are running Entra ID, your credentials are being tested this way whether you see it or not.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
