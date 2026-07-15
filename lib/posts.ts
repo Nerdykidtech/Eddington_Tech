@@ -44,6 +44,34 @@ The fix here is not new. Get remote management off the public internet. Turn off
 RustDuck is small now, but the engineering is serious. The techniques it is testing, the Rust rewrite and the anti-analysis routine, are what other crews will borrow next.`,
   },
   {
+    slug: "microsoft-record-570-patch-tuesday-july-2026",
+    title: "Microsoft Patches a Record 570 Security Flaws",
+    date: "2026-07-15",
+    excerpt: "Microsoft released 570 patches for July's Patch Tuesday, nearly triple last month's record. Two zero-days are under active attack, including an AD FS privilege escalation flaw. AI is now finding bugs faster than humans can patch them.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/07/microsoft-patches-a-record-570-security-flaws/",
+    content: `Microsoft patched 570 vulnerabilities this month. That is almost three times June's Patch Tuesday, which was itself a record. 60 of the bugs are critical, meaning remote code execution with minimal user interaction.
+
+Two zero-days are already being exploited.
+
+CVE-2026-56155 is an elevation of privilege in Active Directory Federation Services. CVE-2026-56164 affects Microsoft SharePoint. Both allow an attacker to escalate their rights on a Windows system. CISA added the SharePoint bug to the KEV catalog on July 1.
+
+Microsoft also fixed CVE-2026-50661, a BitLocker bypass that lets attackers with physical access read encrypted data. This one is publicly known but not yet seen in the wild.
+
+Pavan Davuluri, Microsoft's Executive VP, posted last week that users should expect "a higher volume of security updates." The reason is AI. Microsoft is using AI to find bugs faster. So are attackers.
+
+Satnam Narang at Tenable made the point directly: Microsoft's exploitability index is built for humans, not AI. Anthropic's Red Team tested their Mythos model on 14 vulnerabilities rated "Exploitation Less Likely" or "Exploitation Unlikely." It produced working exploits for 13 of them. Microsoft's SharePoint zero-day got a "less likely" rating. It is on the KEV list.
+
+The Copilot vulnerability is worth noting separately. CVE-2026-48561 scores 9.6. An attacker hosts a malicious website. When a user visits it through Microsoft Edge for Android, the site sends crafted prompts to Copilot and executes code remotely. No authentication. No user consent beyond loading the page.
+
+Adobe announced today they are moving to twice-monthly bulletins. They also cited AI for accelerating their patch cycles. Cisco, Mozilla, and Oracle are shipping updates more frequently too. Google's June patches exceeded 900 fixes.
+
+The advice Microsoft gives at this volume is telling: back up your data, and maybe wait a few days before patching. Record patch counts mean record chances of stability issues. The fixes are necessary. The side effects are predictable.`,
+  },
+  {
     slug: "vibe-coding-security-shadow-builders-enterprise-playbook",
     title: "Vibe Coding Security: Enterprise Defense Against Shadow Builder Exposures [2026]",
     date: "2026-06-01",
