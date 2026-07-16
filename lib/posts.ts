@@ -2091,6 +2091,43 @@ The fix is straightforward but requires policy changes most organizations have n
 Your Conditional Access policies are only as strong as the flows they actually cover.`,
   },
   {
+    slug: "scattered-spider-hackers-guilty-plea-uk-trial",
+    title: "Scattered Spider Hackers Plead Guilty on Day 1 of Trial",
+    date: "2026-07-16",
+    excerpt: "Two key members of Scattered Spider pleaded guilty in UK court this week. The group hit Transport for London, MGM Resorts, Caesars, and dozens more. $115 million in ransom payments, 120 network intrusions, and they are still in their early twenties.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/06/scattered-spider-hackers-plead-guilty-on-day-1-of-trial/",
+    content: `Thalha Jubair, 20, and Owen Flowers, 18, pleaded guilty in UK court this week to charges related to Scattered Spider's cyberattacks. They admitted to conspiring against Transport for London and US healthcare providers. The trial was supposed to last six weeks. They folded on day one.
+
+Scattered Spider is the group behind some of the most significant ransomware attacks of the past few years. MGM Resorts. Caesars Entertainment. Transport for London. The list runs to 47 US entities and 120 network intrusions between May 2022 and September 2025.
+
+The US indictment alleges the group extracted at least $115 million in ransom payments. That is not a typo. One hundred fifteen million dollars.
+
+The technique was social engineering at scale. SMS phishing, voice phishing, SIM swapping. They would phish credentials from telecom employees, use those credentials to redirect victim phone numbers to devices they controlled, then intercept MFA codes and take over accounts. It is called SIM swapping, and it works because the phone number is the recovery mechanism for everything else.
+
+Jubair co-ran a Telegram channel called Star Chat that sold SIM-swapping services. The group would pay telecom insiders for access to employee tools, then sell redirects for individual phone numbers. A receipt from one transaction targeting a T-Mobile customer shows the handle "Rocket Ace." That was Jubair.
+
+The 2022 SMS phishing campaign is worth noting separately. Over several weeks, the group sent phishing texts to employees at hundreds of companies. The result: intrusions and data theft at more than 130 organizations, including LastPass, DoorDash, Mailchimp, Plex, and Signal. A single phishing wave compromised the infrastructure underlying half the internet.
+
+Flowers was the one giving anonymous interviews to media after the Vegas casino attacks in September 2023. He is 18 now, which means he was 15 or 16 when the group was running the phishing campaigns that compromised those companies. The Star Chat operation started when Jubair was in his teens.
+
+The US has an extradition request pending for Jubair. Tyler Buchanan, another Scattered Spider member, pleaded guilty in April and is scheduled for sentencing in October. Noah Urban, the Florida member sentenced last year, got 10 years and $13 million in restitution.
+
+Three other defendants still face charges: Ahmed Elbadawy in Texas, Evans Osiebo in Dallas, and Joel Evans in North Carolina.
+
+The group was prolific, well-organized, and mostly composed of kids. Jubair and Flowers are not masterminds with decades of experience. They are teenagers who found a technique that worked and scaled it until it broke into hundreds of organizations.
+
+Scattered Spider is not unique. The social engineering playbook they used is available to anyone with a phone and a Telegram account. The insider access at telecoms is a supply chain problem that affects every customer of those carriers. SIM swapping works because phone numbers were never designed to be security controls.
+
+The guilty pleas mean we will get more details in sentencing, but the pattern is already clear. This group compromised major organizations for years using techniques that require no technical sophistication, just persistence and a willingness to manipulate people over the phone.
+
+Flowers and Jubair are scheduled for sentencing on July 15. Given the scale of the operation and the US extradition request, they are facing significant time. Whether that deters the next group is an open question.
+`,
+  },
+  {
     slug: "fbi-seizes-netnut-popa-botnet-takedown",
     title: "FBI Seizes NetNut Proxy Platform, Popa Botnet",
     date: "2026-07-05",
