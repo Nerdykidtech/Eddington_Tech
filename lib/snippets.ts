@@ -2745,5 +2745,358 @@ Report exported to ./jit-access-requests.csv`,
     tags: ["Azure", "JIT", "Just-In-Time", "VM Security", "Network Security", "Defender for Cloud"],
     date: "2026-07-10",
   },
+  {
+    id: "pim-activation-report",
+    title: "PIM Role Activation Report",
+    description: "Export all PIM (Privileged Identity Management) role activations from the last 90 days, identifying unusual activation patterns and users with standing access.",
+    category: "iam",
+    language: "powershell",
+    code: String.raw`Connect-MgGraph -Scopes "PrivilegedAccess.Read.AzureAD", "Directory.Read.All"
+
+$daysBack = 90
+$startDate = (Get-Date).AddDays(-$daysBack)
+
+Write-Host "Fetching PIM role activations from last $daysBack days..." -Foreground Cyan
+
+$activations = @()
+$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+
+foreach ($roleDef in $roleDefinitions) {
+    $roleName = $roleDef.DisplayName
+    $roleId = $roleDef.Id
+    
+    # Get active assignments (standing access)
+    $assignments = Get-MgRoleManagementDirectoryRoleAssignmentSchedule -Filter "roleDefinitionId eq '$roleId'" -ErrorAction SilentlyContinue
+    
+    foreach ($assignment in $assignments) {
+        $user = Get-MgUser -UserId $assignment.PrincipalId -ErrorAction SilentlyContinue
+        
+        $activations += [PSCustomObject]@{
+            UserName       = $user.DisplayName
+            UPN            = $user.UserPrincipalName
+            RoleName       = $roleName
+            AssignmentType = if ($assignment.AssignmentType -eq "Assigned") { "STANDING_ACCESS" } else { "PIM_ELIGIBLE" }
+            StartTime      = $assignment.StartDateTime
+            EndTime        = $assignment.EndDateTime
+            Duration       = if ($assignment.EndDateTime) { "Temporary" } else { "Permanent" }
+            ActivatedBy    = $assignment.ActivatedBy
+        }
+    }
+}
+
+# Get PIM activation history from audit logs
+$auditLogs = Get-MgAuditLogDirectoryAudit -Filter "activityDateTime ge $startDate" -All | Where-Object {
+    $_.ActivityDisplayName -like "*Add eligible member*" -or
+    $_.ActivityDisplayName -like "*Activate role*" -or
+    $_.ActivityDisplayName -like "*Add member to role*"
+}
+
+$activationHistory = $auditLogs | ForEach-Object {
+    [PSCustomObject]@{
+        UserName    = $_.TargetResources[0].DisplayName
+        UPN         = $_.TargetResources[0].UserPrincipalName
+        Activity    = $_.ActivityDisplayName
+        TimeStamp   = $_.ActivityDateTime
+        InitiatedBy = $_.InitiatedBy.User.UserPrincipalName
+        IPAddress   = $_.InitiatedBy.User.IpAddress
+    }
+}
+
+$standingAccess = $activations | Where-Object { $_.AssignmentType -eq "STANDING_ACCESS" }
+$tempAccess = $activations | Where-Object { $_.AssignmentType -eq "PIM_ELIGIBLE" }
+
+Write-Host ""
+Write-Host "=== PIM Activation Report ===" -Foreground Cyan
+Write-Host "Total assignments:        $($activations.Count)"
+Write-Host "Standing access (risky):  $($standingAccess.Count)" -Foreground Red
+Write-Host "PIM eligible:             $($tempAccess.Count)"
+Write-Host "Activation events:        $($activationHistory.Count)"
+
+if ($standingAccess.Count -gt 0) {
+    Write-Host ""
+    Write-Host "USERS WITH STANDING ACCESS (Security Risk):" -Foreground Red
+    $standingAccess | Select-Object UPN, RoleName, Duration | Format-Table
+}
+
+$activations | Export-Csv -Path "./pim-activations-report.csv" -NoTypeInformation
+$activationHistory | Export-Csv -Path "./pim-activation-history.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Reports exported:"
+Write-Host "  - pim-activations-report.csv"
+Write-Host "  - pim-activation-history.csv"`,
+    output: String.raw`Fetching PIM role activations from last 90 days...
+
+=== PIM Activation Report ===
+Total assignments:        47
+Standing access (risky):  8
+PIM eligible:             39
+Activation events:        156
+
+USERS WITH STANDING ACCESS (Security Risk):
+UPN                       RoleName                         Duration
+---                       --------                         --------
+admin@eddington.tech      Global Administrator             Permanent
+legacy-svc@eddington.tech Security Administrator           Permanent
+guest-admin@partner.com   User Administrator               Permanent
+
+Reports exported:
+  - pim-activations-report.csv
+  - pim-activation-history.csv`,
+    tags: ["Entra ID", "PIM", "Privileged Identity Management", "RBAC", "Governance"],
+    date: "2026-07-17",
+  },
+  {
+    id: "defender-incident-exporter",
+    title: "Microsoft Defender Incident Bulk Exporter",
+    description: "Export all Microsoft Defender for Endpoint incidents from the last 30 days with alert details, affected assets, and remediation status. Useful for compliance reporting and threat analysis.",
+    category: "security",
+    language: "powershell",
+    code: String.raw`# Requires: SecurityIncident.Read.All permission
+Connect-MgGraph -Scopes "SecurityIncident.Read.All"
+
+$daysBack = 30
+$startDate = (Get-Date).AddDays(-$daysBack).ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+Write-Host "Fetching Defender incidents from last $daysBack days..." -Foreground Cyan
+
+$incidents = Get-MgSecurityIncident -Filter "createdDateTime ge $startDate" -All -ErrorAction SilentlyContinue
+
+$report = $incidents | ForEach-Object {
+    $severity = switch ($_.Severity) {
+        "high"    { "HIGH" }
+        "medium"  { "MEDIUM" }
+        "low"     { "LOW" }
+        "informational" { "INFO" }
+        default   { $_.Severity }
+    }
+    
+    $status = $_.Status
+    
+    # Get alerts for this incident
+    $alertIds = $_.Alerts | ForEach-Object { $_.Id }
+    $alertCount = $alertIds.Count
+    
+    [PSCustomObject]@{
+        IncidentId     = $_.Id
+        Title          = $_.Title
+        Severity       = $severity
+        Status         = $status
+        AssignedTo     = $_.AssignedTo
+        CreatedTime    = $_.CreatedDateTime
+        LastUpdated    = $_.LastUpdateDateTime
+        AlertCount     = $alertCount
+        Category       = ($_.Categories -join "; ")
+        AffectedUsers  = ($_.AffectedUsers -join "; ")
+        AffectedDevices= ($_.ImpactedAssets | ForEach-Object { $_.Id } -join "; ")
+        Classification = $_.Classification
+        Determination  = $_.Determination
+    }
+}
+
+$openIncidents = $report | Where-Object { $_.Status -eq "active" }
+$highSeverity = $report | Where-Object { $_.Severity -eq "HIGH" }
+$unassigned = $report | Where-Object { [string]::IsNullOrEmpty($_.AssignedTo) }
+
+Write-Host ""
+Write-Host "=== Microsoft Defender Incident Report ===" -Foreground Cyan
+Write-Host "Total incidents:      $($report.Count)"
+Write-Host "Open incidents:       $($openIncidents.Count)" -Foreground Yellow
+Write-Host "High severity:        $($highSeverity.Count)" -Foreground Red
+Write-Host "Unassigned:           $($unassigned.Count)" -Foreground Magenta
+
+if ($highSeverity.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH SEVERITY INCIDENTS (Immediate Attention):" -Foreground Red
+    $highSeverity | Select-Object IncidentId, Title, Status, AssignedTo | Format-Table
+}
+
+if ($unassigned.Count -gt 0) {
+    Write-Host ""
+    Write-Host "UNASSIGNED INCIDENTS:" -Foreground Magenta
+    $unassigned | Select-Object IncidentId, Title, Severity | Format-Table
+}
+
+$report | Export-Csv -Path "./defender-incidents-report.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Report exported to ./defender-incidents-report.csv"`,
+    output: String.raw`Fetching Defender incidents from last 30 days...
+
+=== Microsoft Defender Incident Report ===
+Total incidents:      127
+Open incidents:       23
+High severity:        8
+Unassigned:           12
+
+HIGH SEVERITY INCIDENTS (Immediate Attention):
+IncidentId    Title                              Status    AssignedTo
+----------    -----                              ------    ----------
+12345         Cobalt Strike Beacon Detected      active    
+12348         Lateral Movement Detected          active    analyst@eddington.tech
+12352         Ransomware Activity Alert          active    
+12360         Data Exfiltration Detected         active    
+
+UNASSIGNED INCIDENTS:
+IncidentId    Title                              Severity
+----------    -----                              --------
+12345         Cobalt Strike Beacon Detected      HIGH
+12350         Suspicious PowerShell Activity     MEDIUM
+12355         Phishing Link Clicked              LOW
+12362         Malicious USB Device               MEDIUM
+
+Report exported to ./defender-incidents-report.csv`,
+    tags: ["Microsoft Defender", "Incident Response", "Threat Hunting", "SOC", "Compliance"],
+    date: "2026-07-17",
+  },
+  {
+    id: "nsg-rule-analyzer",
+    title: "Azure NSG Rule Security Analyzer",
+    description: "Analyze all Network Security Groups in a subscription to identify overly permissive rules, unrestricted inbound access, and security gaps in network segmentation.",
+    category: "infrastructure",
+    language: "powershell",
+    code: String.raw`Connect-AzAccount
+$SubscriptionId = "your-subscription-id"
+Select-AzSubscription -SubscriptionId $SubscriptionId
+
+$highRiskRules = @()
+$nsgs = Get-AzNetworkSecurityGroup
+
+foreach ($nsg in $nsgs) {
+    Write-Host "Analyzing NSG: $($nsg.Name) in $($nsg.ResourceGroupName)" -Foreground Cyan
+    
+    foreach ($rule in $nsg.SecurityRules) {
+        $riskLevel = "Low"
+        $riskReasons = @()
+        
+        # Check for overly permissive inbound rules
+        if ($rule.Direction -eq "Inbound" -and $rule.Access -eq "Allow") {
+            
+            # Check for ANY source
+            if ($rule.SourceAddressPrefix -contains "*" -or $rule.SourceAddressPrefix -contains "Internet") {
+                $riskReasons += "Open to Internet"
+                $riskLevel = "CRITICAL"
+            }
+            
+            # Check for Azure-wide access
+            if ($rule.SourceAddressPrefix -contains "VirtualNetwork") {
+                $riskReasons += "Open to entire VNet"
+                if ($riskLevel -ne "CRITICAL") { $riskLevel = "HIGH" }
+            }
+            
+            # Check for sensitive ports open
+            $sensitivePorts = @(22, 23, 3389, 445, 1433, 3306, 5432, 6379, 27017, 9200)
+            foreach ($port in $sensitivePorts) {
+                if ($rule.DestinationPortRange -contains $port -or 
+                    $rule.DestinationPortRange -contains "*" -or
+                    ($rule.DestinationPortRange -match "\d+-\d+" -and 
+                     [int]($rule.DestinationPortRange -split "-")[0] -le $port -and
+                     [int]($rule.DestinationPortRange -split "-")[1] -ge $port)) {
+                    $riskReasons += "Sensitive port $port exposed"
+                    if ($riskLevel -ne "CRITICAL") { $riskLevel = "HIGH" }
+                }
+            }
+            
+            # Check for wide port ranges
+            if ($rule.DestinationPortRange -contains "*") {
+                $riskReasons += "All ports allowed"
+                if ($riskLevel -eq "Low") { $riskLevel = "MEDIUM" }
+            }
+            
+            # Check for protocols
+            if ($rule.Protocol -eq "*") {
+                $riskReasons += "All protocols allowed"
+            }
+            
+            # Add to findings if there are risk reasons
+            if ($riskReasons.Count -gt 0) {
+                $highRiskRules += [PSCustomObject]@{
+                    NSGName           = $nsg.Name
+                    ResourceGroup     = $nsg.ResourceGroupName
+                    RuleName          = $rule.Name
+                    Priority          = $rule.Priority
+                    Direction         = $rule.Direction
+                    Access            = $rule.Access
+                    SourcePrefix      = ($rule.SourceAddressPrefix -join ", ")
+                    DestinationPrefix = ($rule.DestinationAddressPrefix -join ", ")
+                    DestinationPorts  = ($rule.DestinationPortRange -join ", ")
+                    Protocol          = $rule.Protocol
+                    RiskLevel         = $riskLevel
+                    RiskReasons       = ($riskReasons -join "; ")
+                }
+            }
+        }
+    }
+}
+
+$critical = $highRiskRules | Where-Object { $_.RiskLevel -eq "CRITICAL" }
+$high = $highRiskRules | Where-Object { $_.RiskLevel -eq "HIGH" }
+$medium = $highRiskRules | Where-Object { $_.RiskLevel -eq "MEDIUM" }
+
+Write-Host ""
+Write-Host "=== NSG Security Analysis ===" -Foreground Cyan
+Write-Host "Total NSGs scanned:   $($nsgs.Count)"
+Write-Host "Critical risk rules:  $($critical.Count)" -Foreground Red
+Write-Host "High risk rules:      $($high.Count)" -Foreground Yellow
+Write-Host "Medium risk rules:    $($medium.Count)" -Foreground Magenta
+
+if ($critical.Count -gt 0) {
+    Write-Host ""
+    Write-Host "CRITICAL RULES (Immediate Action Required):" -Foreground Red
+    $critical | Select-Object NSGName, RuleName, DestinationPorts, RiskReasons | Format-Table
+}
+
+if ($high.Count -gt 0) {
+    Write-Host ""
+    Write-Host "HIGH RISK RULES:" -Foreground Yellow
+    $high | Select-Object NSGName, RuleName, SourcePrefix, DestinationPorts | Format-Table
+}
+
+$highRiskRules | Export-Csv -Path "./nsg-security-analysis.csv" -NoTypeInformation
+Write-Host ""
+Write-Host "Detailed report exported to ./nsg-security-analysis.csv"
+Write-Host ""
+Write-Host "RECOMMENDATIONS:" -Foreground Green
+Write-Host "1. Replace '*' source with specific CIDR ranges"
+Write-Host "2. Use Azure Bastion or JIT instead of exposing RDP/SSH"
+Write-Host "3. Restrict database ports to private endpoints only"
+Write-Host "4. Apply NSG flow logging for traffic analysis"
+Write-Host "5. Enable Azure Firewall for centralized rule management"`,
+    output: String.raw`Analyzing NSG: nsg-prod-web in production-rg
+Analyzing NSG: nsg-prod-db in production-rg
+Analyzing NSG: nsg-staging in staging-rg
+Analyzing NSG: nsg-default in default-rg
+
+=== NSG Security Analysis ===
+Total NSGs scanned:   12
+Critical risk rules:  5
+High risk rules:      18
+Medium risk rules:    23
+
+CRITICAL RULES (Immediate Action Required):
+NSGName         RuleName              DestinationPorts    RiskReasons
+-------         --------              ----------------    -----------
+nsg-prod-web    Allow-Any-SSH         22                  Open to Internet; Sensitive port 22 exposed
+nsg-prod-db     Allow-Any-RDP         3389                Open to Internet; Sensitive port 3389 exposed
+nsg-default     Allow-All-Inbound     *                   Open to Internet; All ports allowed
+nsg-staging     Allow-Internet-SQL    1433                Open to Internet; Sensitive port 1433 exposed
+nsg-prod-db     Allow-Redis-External  6379                Open to Internet; Sensitive port 6379 exposed
+
+HIGH RISK RULES:
+NSGName         RuleName              SourcePrefix    DestinationPorts
+-------         --------              ------------    ----------------
+nsg-prod-web    Allow-VNet-All        VirtualNetwork  80,443,8080
+nsg-prod-db     Allow-DB-Internal     VirtualNetwork  1433,3306,5432
+nsg-staging     Allow-Dev-Access      VirtualNetwork  22,3389,5985
+
+Detailed report exported to ./nsg-security-analysis.csv
+
+RECOMMENDATIONS:
+1. Replace '*' source with specific CIDR ranges
+2. Use Azure Bastion or JIT instead of exposing RDP/SSH
+3. Restrict database ports to private endpoints only
+4. Apply NSG flow logging for traffic analysis
+5. Enable Azure Firewall for centralized rule management`,
+    tags: ["Azure", "NSG", "Network Security", "Firewall", "Vulnerability Assessment"],
+    date: "2026-07-17",
+  },
 ];
 
