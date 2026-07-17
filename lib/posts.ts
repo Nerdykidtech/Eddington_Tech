@@ -14,6 +14,30 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "n8n-token-exchange-cve-2026-59208",
+    title: "n8n Token Exchange Flaw Lets Attackers Log In As Other Users",
+    date: "2026-07-17",
+    excerpt: "n8n patched a bug in their Enterprise token exchange feature that let attackers log in as other users without passwords. The flaw ignored the JWT issuer claim, matching users on subject alone. Strix's AI security agent found it.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/n8n-token-exchange-flaw-could-let.html",
+    content: `n8n shipped a fix last month for a bug that let attackers log in as other users without knowing their passwords. The catch: it only hit Enterprise deployments using a preview feature almost nobody enables.
+
+The bug was in token exchange, n8n's way of letting OEM partners embed the platform behind their own login. Partner signs a JWT, n8n checks the signature, looks up the user, grants access. The lookup keyed on \`sub\` — the subject claim — and ignored \`iss\`, the issuer.
+
+That is broken. A subject identifier means nothing without its issuer. Two different companies can both have a user named "admin" or "jsmith" or "user_4829." n8n treated them as the same person.
+
+Strix found it. They are building an AI penetration testing agent and were running it against n8n's authentication when the agent flagged the mismatch. They reported it, n8n patched June 24, CVE went public July 9.
+
+The exposure is narrow. Token exchange is Enterprise-only, still marked preview, and you need at least two trusted issuers configured. Most n8n instances do not use this at all.
+
+But if you do: check your config. The fix is in 1.88.0 and later. CVSS 4.0 says 7.6, high. NVD says 6.8, medium. CISA says no known exploitation. No PoC in the wild yet.
+
+The broader point is what found it. An AI agent probing authentication flows caught an identity binding mistake that humans missed. This will not be the last time.`,
+  },
+  {
     slug: "rustduck-botnet-iot-ddos-hardening",
     title: "RustDuck Botnet Rebuilds in Rust to Hijack Routers and IoT for DDoS",
     date: "2026-06-30",
