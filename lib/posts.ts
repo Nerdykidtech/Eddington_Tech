@@ -2475,6 +2475,28 @@ There is no patch for this behavior. It is a design characteristic of how Entra 
 
 The campaigns are ongoing. If you are running Entra ID, your credentials are being tested this way whether you see it or not.`,
   },
+  {
+    slug: "cisa-github-leak-postmortem-lessons",
+    title: "CISA's GitHub Leak Postmortem: What Actually Went Wrong",
+    date: "2026-07-18",
+    excerpt: "CISA published a postmortem on the GitHub leak that exposed AWS GovCloud credentials for six months. The contractor ignored nine automated alerts. CISA took 48+ hours to rotate keys after notification. The report is worth reading.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/07/lessons-learned-from-cisas-recent-github-leak/",
+    content: `A CISA contractor pushed 844 MB of sensitive data to a public GitHub repository called 'Private CISA' and left it there for six months. The repo included AWS GovCloud admin credentials, plaintext passwords for internal systems, and a file literally named 'importantAWStokens.'
+
+GitGuardian's scanner found it. Their systems sent nine automated alerts to the repository owner. All nine were ignored. On May 15, a GitGuardian researcher contacted KrebsOnSecurity for help escalating. CISA acknowledged the alert quickly. Then they took more than 48 hours to invalidate the exposed keys.
+
+The postmortem CISA published this week is unusually honest about why. Their incident response playbook covered 'cybersecurity incidents' but not 'someone committed our keys to GitHub.' The notification went to the vulnerability disclosure platform, which is meant for product bugs, not infrastructure leaks. The AWS key rotation required coordination across federal and industry partners and took longer than it should have.
+
+CISA is fixing the reporting channels. They are also advocating something I did not expect: continuous secrets scanning. Not quarterly audits. Continuous. Valadon from GitGuardian noted this is the first time a national cybersecurity agency has publicly pushed for both secrets scanning and clearer researcher communication.
+
+The contractor had their access revoked. The keys are rotated. The logs show no evidence of unauthorized use. But the six-month window and the 48-hour response lag are the real story. If the country's lead cybersecurity agency can miss nine alerts and take two days to rotate compromised credentials, the rest of us need to look hard at our own detection and response times.
+
+If you are running GitHub Enterprise: organization-level secret scanning should not be opt-out. Static AWS credentials should not exist in repositories at all. GovCloud supports IAM Roles Anywhere and OIDC federation. The tools to prevent this are available. CISA is now saying publicly that they should have been using them.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
