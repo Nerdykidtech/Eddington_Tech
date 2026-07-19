@@ -2497,6 +2497,30 @@ The contractor had their access revoked. The keys are rotated. The logs show no 
 
 If you are running GitHub Enterprise: organization-level secret scanning should not be opt-out. Static AWS credentials should not exist in repositories at all. GovCloud supports IAM Roles Anywhere and OIDC federation. The tools to prevent this are available. CISA is now saying publicly that they should have been using them.`,
   },
+  {
+    slug: "memghost-ai-agent-memory-poisoning-attack",
+    title: "MemGhost Attack Plants False Memories in AI Agents Through Email",
+    date: "2026-07-19",
+    excerpt: "Researchers demonstrated MemGhost, an attack that poisons AI agent memory through email. One malicious email can make an AI assistant permanently remember false facts about a user, changing how it responds in future sessions. The victim never knows it happened.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/new-memghost-attack-plants-persistent.html",
+    content: `Researchers at UC Santa Barbara and Stanford built a working exploit for something that should worry anyone using AI agents with memory. They call it MemGhost. One email can make an AI assistant store false information about you, permanently, with no indication anything happened.
+
+The attack works because modern AI assistants have persistent memory. They remember things across conversations to personalize responses. The problem is where that memory comes from. Many agents can write to memory based on emails, chat messages, or documents they process.
+
+MemGhost crafts emails that look ordinary but contain hidden instructions. When the AI processes the email, it extracts what looks like a legitimate fact and saves it to memory. The user sees a normal-looking response. The poisoned memory sits there waiting.
+
+In their tests, the researchers used Claude, ChatGPT, and Gemini. All of them could be convinced to store false memories. The attack succeeded even when the malicious payload was buried in quoted text, image alt-text, or document metadata. One variant used ASCII art to hide the instruction from human eyes while the AI read it perfectly.
+
+The real danger is persistence. Unlike a phishing email that gets deleted, a poisoned memory stays until manually cleared. The user has no way to know their AI is operating on false premises. Future conversations get subtly steered by the planted facts.
+
+Defending against this is hard. The researchers suggest memory segmentation, strict input validation, and user confirmation before writes. None of these are standard in current AI agent implementations.
+
+This is what happens when we give AI systems long-term memory without thinking through the trust boundaries. The attack surface is not the AI itself. It is every email, document, and message the AI can read.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
