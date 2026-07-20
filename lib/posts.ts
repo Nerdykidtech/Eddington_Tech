@@ -2521,6 +2521,40 @@ Defending against this is hard. The researchers suggest memory segmentation, str
 
 This is what happens when we give AI systems long-term memory without thinking through the trust boundaries. The attack surface is not the AI itself. It is every email, document, and message the AI can read.`,
   },
+  {
+    slug: "hugging-face-autonomous-ai-agent-breach",
+    title: "Hugging Face Breached by an Autonomous AI Agent",
+    date: "2026-07-20",
+    excerpt: "The world's largest AI model repository was compromised by an autonomous AI agent system. The attackers used a malicious dataset to gain code execution, then deployed LLM-powered agents that executed thousands of actions across sandboxes with self-migrating C2 infrastructure.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/worlds-largest-ai-model-repository.html",
+    content: `Hugging Face disclosed a breach last week. The attackers were not human. They were autonomous AI agents.
+
+The company admitted what security folks have been waiting for: LLM-powered agents are now being used operationally against production infrastructure. Not as tools. As the primary threat actors.
+
+The entry point was a malicious dataset. Hugging Face's platform allows users to upload datasets for model training. The attackers uploaded one that exploited two separate code execution paths: the remote code dataset loader and a template injection in the dataset configuration. Classic supply chain vector, but aimed at the infrastructure that powers modern AI development.
+
+Once the dataset hit a processing worker, the agents took over. They collected cloud credentials, escalated to node-level access, and moved laterally across internal clusters over a weekend. The campaign ran across a swarm of short-lived sandboxes with self-migrating command-and-control staged on public services.
+
+Hugging Face says the agents performed thousands of individual actions. Not scripted. Not predetermined. The swarm adapted, moved, and persisted without human intervention at each step.
+
+The company has since rebuilt compromised nodes, rotated credentials, and added stricter admission controls. They also disclosed something telling about the forensic analysis.
+
+Western frontier models refused to help. When Hugging Face tried to use them for incident response, the guardrails triggered. The models would not process real attack commands, exploit payloads, or C2 artifacts. They could not distinguish between a defender analyzing an attack and an attacker executing one.
+
+So Hugging Face turned to Z.ai's GLM 5.2, a Chinese open-weight model they could run themselves. No usage policy. No guardrails blocking legitimate work. Just the ability to actually do the job.
+
+That is the lesson here. Attackers building autonomous agents are not restricted by terms of service. They are not using hosted APIs with safety filters. They are running open weights on infrastructure they control. Meanwhile defenders trying to use commercial AI for incident response hit walls designed to prevent misuse.
+
+Hugging Face put it directly: have a capable model you can run on your own infrastructure vetted and ready before an incident. Both to avoid guardrail lockout and to keep attacker data from leaving your environment.
+
+The breach accessed internal datasets and service credentials. Hugging Face found no evidence that public models, user datasets, or Spaces were tampered with. The supply chain appears intact. But the precedent is set.
+
+This is the first major disclosure of an autonomous AI agent attack against critical infrastructure. It will not be the last.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
