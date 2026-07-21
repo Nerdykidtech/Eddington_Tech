@@ -2551,9 +2551,39 @@ That is the lesson here. Attackers building autonomous agents are not restricted
 
 Hugging Face put it directly: have a capable model you can run on your own infrastructure vetted and ready before an incident. Both to avoid guardrail lockout and to keep attacker data from leaving your environment.
 
-The breach accessed internal datasets and service credentials. Hugging Face found no evidence that public models, user datasets, or Spaces were tampered with. The supply chain appears intact. But the precedent is set.
-
-This is the first major disclosure of an autonomous AI agent attack against critical infrastructure. It will not be the last.`,
+|The breach accessed internal datasets and service credentials. Hugging Face found no evidence that public models, user datasets, or Spaces were tampered with. The supply chain appears intact. But the precedent is set.
+|
+|This is the first major disclosure of an autonomous AI agent attack against critical infrastructure. It will not be the last.`,
+  },
+  {
+    slug: "hollowgraph-malware-m365-calendar-c2",
+    title: "HollowGraph Malware Hides C2 and Stolen Files in Microsoft 365 Events Dated 2050",
+    date: "2026-07-21",
+    excerpt: "A new espionage implant uses Microsoft 365 calendar events dated 2050 as a command channel. HollowGraph hides operator instructions and exfiltrates stolen data through legitimate Graph API traffic, making it invisible to network controls.",
+    category: "Threat Intelligence",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/hollowgraph-malware-hides-c2-and-stolen.html",
+    content: `Group-IB found a .NET implant that treats a Microsoft 365 calendar as its command channel. It is called HollowGraph, and it is smarter than most malware about hiding in plain sight.
+|
+|The implant does not reach out to attacker infrastructure. It reads tasking from calendar events and writes stolen data back to the same place. Both use the legitimate Microsoft Graph API, so the traffic looks like ordinary Microsoft 365 activity.
+|
+|Here is how it works. HollowGraph queries the compromised mailbox's calendar for an event buried at 2050-05-13. That date is far enough out that no human is likely to scroll to it. The event holds an attached file with encrypted instructions. The malware reads the attachment, decrypts it with hybrid RSA and AES-256, and executes the commands.
+|
+|To exfiltrate, it does the reverse. It encrypts the stolen file, creates its own calendar event at a far-future date, and uploads the data as attachments. Everything is wrapped in the same encryption scheme, with separate key pairs for incoming and outgoing traffic.
+|
+|The C2 channel is not the only clever part. HollowGraph also maintains its Entra ID credentials over DNS. It queries attacker-controlled AAAA records from cloudlanecdn.com, decodes the IPv6 responses into tenant ID, client ID, client secret, and target mailbox, then writes them to a file called logAzure.txt disguised as routine logging. That channel runs in the clear, unlike the encrypted calendar traffic.
+|
+|Group-IB links HollowGraph to Cavern with high confidence. Cavern is a modular backdoor framework Check Point documented earlier this month and tied to an Iranian Ministry of Intelligence-linked actor they call Cavern Manticore. The command syntax and internal tasking match. Group-IB will not name the operator behind this specific campaign, noting only a low-confidence overlap with Lyceum, an Iranian subgroup.
+|
+|The victim geography is notable. The compromised exfiltration mailbox belongs to an Israeli organization. The implant was found on about twelve machines, with only three actively communicating during the analysis window. Activity ran from June 3 to July 9, 2026. Group-IB reads this as targeted espionage, not opportunistic crime.
+|
+|There is no Microsoft vulnerability to patch here. HollowGraph rides legitimate Graph API functionality using compromised credentials. The work is on detection and identity hygiene, not patching.
+|
+|Detection starts with the calendar itself. Hunt for events with far-future dates, bare GUID subjects, or attachments named File{n}.txt. On the identity side, restrict OAuth app permissions to Graph, audit client credential grants, and alert on new client secrets. Watch for application-driven calendar changes rather than user actions, and monitor DNS for high-entropy AAAA queries to suspicious domains.
+|
+|Hiding C2 in trusted Microsoft services is not new. Attackers have used Outlook inboxes, draft folders, and OneDrive before. Events parked in 2050 are just the latest place defenders had no reason to look.`,
   },
 ];
 
