@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppCard } from "@/components/AppCard";
+import { HeroSection } from "@/components/HeroSection";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { apps } from "@/lib/apps";
 import { posts } from "@/lib/posts";
@@ -44,57 +45,7 @@ export const metadata = {
 export default function HomePage() {
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-white/5 bg-surface-900 px-6 py-24 sm:py-40">
-        {/* Animated gradient mesh (no clipped edges) */}
-        <div className="hero-mesh opacity-70" />
-        {/* Animated grid background */}
-        <div className="absolute inset-0 grid-bg opacity-30" />
-        {/* Floating particles */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="particle particle-1" />
-          <div className="particle particle-2" />
-          <div className="particle particle-3" />
-          <div className="particle particle-4" />
-          <div className="particle particle-5" />
-          <div className="particle particle-6" />
-        </div>
-
-        <div className="relative mx-auto max-w-3xl text-center">
-          <RevealOnScroll direction="down">
-            {/* Glowing badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-1.5 text-xs font-medium text-brand-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-400 animate-pulse-glow" />
-              Systems · Identity · iOS
-            </div>
-
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
-              Hunter Eddington
-            </h1>
-            <p className="mt-3 text-base sm:text-lg text-zinc-400 font-medium">
-              System Engineer & IAM Engineer
-            </p>
-            <p className="mt-6 text-base sm:text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto px-2">
-              I design and harden infrastructure, identity systems, and access controls.
-              And I build iOS apps that put security in your pocket.
-            </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-3 sm:gap-4">
-              <a
-                href="#about"
-                className="group relative rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-500 hover:shadow-[0_0_30px_-5px_rgba(14,165,233,0.4)]"
-              >
-                About me
-              </a>
-              <a
-                href="#apps"
-                className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
-              >
-                My apps
-              </a>
-            </div>
-          </RevealOnScroll>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* About */}
       <section id="about" className="scroll-mt-20 px-6 py-20 sm:py-32">

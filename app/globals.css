@@ -90,6 +90,58 @@
 .particle-5 { left: 82%; top: 84%; animation-duration: 11s; animation-delay: 2.2s; background: rgba(99, 102, 241, 0.45); box-shadow: 0 0 8px 2px rgba(99, 102, 241, 0.25); }
 .particle-6 { left: 38%; top: 96%; animation-duration: 8s; animation-delay: 0.5s; }
 
+/* ── Click burst particles ── */
+.hero-burst-particle {
+  animation: burst-out ease-out forwards;
+  margin-top: -50%;
+  margin-left: -50%;
+}
+
+.hero-burst-ring {
+  animation: burst-ring ease-out forwards;
+  margin-top: -50%;
+  margin-left: -50%;
+}
+
+.hero-burst-core {
+  animation: burst-core ease-out forwards;
+  margin-top: -50%;
+  margin-left: -50%;
+}
+
+@keyframes burst-out {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(var(--distance)) scale(0.5);
+  }
+}
+
+@keyframes burst-ring {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes burst-core {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+}
+
 /* ── Pulse glow dot ── */
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; box-shadow: 0 0 4px 0px rgba(14, 165, 233, 0.8); }
