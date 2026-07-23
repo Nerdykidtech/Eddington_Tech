@@ -5,7 +5,6 @@ export const dynamic = "force-static";
 export async function GET() {
   const robotsTxt = `User-agent: *
 Allow: /
-Crawl-delay: 1
 
 Sitemap: https://eddington.tech/sitemap.xml
 `;
