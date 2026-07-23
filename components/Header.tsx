@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { useState } from "react";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -18,7 +19,7 @@ export function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden sm:flex items-center gap-8 text-sm text-zinc-400">
+        <nav className="hidden sm:flex items-center gap-6 text-sm text-zinc-400">
           <Link href="/#about" className="hover:text-white transition-colors">
             About
           </Link>
@@ -37,6 +38,7 @@ export function Header() {
           <Link href="/privacy" className="hover:text-white transition-colors">
             Privacy
           </Link>
+          <CommandPalette />
           <a
             href="https://github.com/nerdykidtech"
             target="_blank"
