@@ -23,60 +23,72 @@
   }
 }
 
+/* ── Hero mesh background (no clipped edges) ── */
+@property --mesh-x {
+  syntax: "<percentage>";
+  initial-value: 50%;
+  inherits: false;
+}
+@property --mesh-y {
+  syntax: "<percentage>";
+  initial-value: 50%;
+  inherits: false;
+}
+
+.hero-mesh {
+  position: absolute;
+  inset: -50%;
+  background:
+    radial-gradient(circle at var(--mesh-x) var(--mesh-y), rgba(14, 165, 233, 0.18), transparent 45%),
+    radial-gradient(circle at calc(100% - var(--mesh-x)) calc(100% - var(--mesh-y)), rgba(99, 102, 241, 0.14), transparent 45%),
+    radial-gradient(circle at calc(var(--mesh-x) * 0.6) calc(var(--mesh-y) * 0.4), rgba(14, 165, 233, 0.10), transparent 40%);
+  animation: mesh-move 20s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes mesh-move {
+  0%   { --mesh-x: 35%; --mesh-y: 35%; }
+  25%  { --mesh-x: 65%; --mesh-y: 40%; }
+  50%  { --mesh-x: 45%; --mesh-y: 65%; }
+  75%  { --mesh-x: 70%; --mesh-y: 55%; }
+  100% { --mesh-x: 40%; --mesh-y: 45%; }
+}
+
 /* ── Animated grid background ── */
 .grid-bg {
   background-image:
     linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 100% 80% at 50% 50%, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 100% 80% at 50% 50%, black 30%, transparent 80%);
 }
 
 /* ── Floating particles ── */
-@property --float-y {
-  syntax: "<length>";
-  initial-value: 0px;
-  inherits: false;
-}
-@property --float-delay {
-  syntax: "<time>";
-  initial-value: 0s;
-  inherits: false;
-}
-
 .particle {
   position: absolute;
-  width: 3px;
-  height: 3px;
+  width: 2px;
+  height: 2px;
   border-radius: 50%;
-  background: rgba(14, 165, 233, 0.6);
-  box-shadow: 0 0 6px 1px rgba(14, 165, 233, 0.4);
+  background: rgba(14, 165, 233, 0.45);
+  box-shadow: 0 0 8px 2px rgba(14, 165, 233, 0.25);
   animation: float-particle linear infinite;
-}
-
-.particle::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: inherit;
-  filter: blur(1px);
+  opacity: 0;
 }
 
 @keyframes float-particle {
   0%   { transform: translateY(0px) translateX(0px); opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { transform: translateY(-120px) translateX(20px); opacity: 0; }
+  15%  { opacity: 0.8; }
+  85%  { opacity: 0.8; }
+  100% { transform: translateY(-140px) translateX(25px); opacity: 0; }
 }
 
-.particle-1 { left: 15%; top: 85%; animation-duration: 8s; animation-delay: 0s; }
-.particle-2 { left: 30%; top: 90%; animation-duration: 11s; animation-delay: 1.5s; width: 2px; height: 2px; }
-.particle-3 { left: 55%; top: 88%; animation-duration: 9s; animation-delay: 0.8s; background: rgba(99, 102, 241, 0.6); box-shadow: 0 0 6px 1px rgba(99, 102, 241, 0.4); }
-.particle-4 { left: 72%; top: 80%; animation-duration: 13s; animation-delay: 3s; width: 2px; height: 2px; }
-.particle-5 { left: 85%; top: 92%; animation-duration: 10s; animation-delay: 2s; background: rgba(99, 102, 241, 0.6); box-shadow: 0 0 6px 1px rgba(99, 102, 241, 0.4); }
-.particle-6 { left: 42%; top: 95%; animation-duration: 7s; animation-delay: 0.4s; width: 4px; height: 4px; }
+.particle-1 { left: 12%; top: 90%; animation-duration: 9s; animation-delay: 0s; }
+.particle-2 { left: 28%; top: 85%; animation-duration: 12s; animation-delay: 2s; }
+.particle-3 { left: 48%; top: 92%; animation-duration: 10s; animation-delay: 1s; background: rgba(99, 102, 241, 0.45); box-shadow: 0 0 8px 2px rgba(99, 102, 241, 0.25); }
+.particle-4 { left: 68%; top: 88%; animation-duration: 14s; animation-delay: 3.5s; }
+.particle-5 { left: 82%; top: 84%; animation-duration: 11s; animation-delay: 2.2s; background: rgba(99, 102, 241, 0.45); box-shadow: 0 0 8px 2px rgba(99, 102, 241, 0.25); }
+.particle-6 { left: 38%; top: 96%; animation-duration: 8s; animation-delay: 0.5s; }
 
 /* ── Pulse glow dot ── */
 @keyframes pulse-glow {

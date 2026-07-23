@@ -46,11 +46,10 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-white/5 bg-surface-900 px-6 py-24 sm:py-40">
+        {/* Animated gradient mesh (no clipped edges) */}
+        <div className="hero-mesh opacity-70" />
         {/* Animated grid background */}
         <div className="absolute inset-0 grid-bg opacity-30" />
-        {/* Gradient orbs */}
-        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-brand-500/10 blur-[100px]" />
-        <div className="absolute -bottom-40 -right-20 h-[400px] w-[400px] rounded-full bg-indigo-500/10 blur-[80px]" />
         {/* Floating particles */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="particle particle-1" />
