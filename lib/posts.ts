@@ -599,6 +599,64 @@ IAM Engineer and System Hardening specialist. Daily notes on security architectu
 `,
   }
 ,
+  {
+    slug: "refluxfs-linux-kernel-root-xfs-cve-2026-64600",
+    title: "Nine-Year-Old RefluXFS Flaw Gives Local Users Root on Default RHEL",
+    date: "2026-07-23",
+    excerpt: "CVE-2026-64600 is a race condition in XFS reflink that lets an unprivileged user overwrite root-owned files and gain persistent root access. Default RHEL, Fedora Server, and Amazon Linux are affected. Found by an AI model.",
+    category: "Hardening",
+    readTime: "5 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/nine-year-old-refluxfs-linux-flaw-gives.html",
+    content: `Qualys disclosed CVE-2026-64600 yesterday. It is a nine-year-old race condition in the Linux kernel's XFS reflink implementation that lets any unprivileged local user overwrite root-owned files and gain persistent root access. The bug has been in the kernel since version 4.11, released in 2017.
+
+Here is the short version: if your system runs XFS with reflink enabled (the default on RHEL, Fedora Server, and Amazon Linux), an attacker with local shell access can overwrite /etc/passwd or a setuid-root binary and become root. The write survives reboots. It leaves no kernel warnings and no log entries. SELinux, seccomp, kernel lockdown, and container boundaries all failed to stop it in Qualys's testing.
+
+## How the race works
+
+The attacker clones a root-owned file using FICLONE, which only requires read access on the source. XFS reflinks use copy-on-write, so both files start pointing at the same physical disk blocks. The attacker then races concurrent O_DIRECT writes against the clone.
+
+The kernel reads the data-fork mapping under the inode lock and hands it to xfs_reflink_fill_cow_hole(), which drops the lock to reserve transaction space. A second writer can complete the copy-on-write during that gap and remap the cloned file to a new block. When the first writer reacquires the lock, it refreshes the copy-on-write fork but keeps using the old data-fork mapping. The upstream patch says it plainly: "the mappings are stale as soon as we reacquire the ILOCK."
+
+That stale address now points to a block owned by the original protected file. XFS sees the block as unshared and permits the direct write. The data intended for the attacker's clone lands in the target instead. It is a check-then-use error across a lock cycle.
+
+Direct I/O skips the page cache entirely. The write hits disk without going through the target inode, so metadata never changes. Qualys said their tests produced no kernel warning, no audit log entry, nothing. On their test machine the race usually won in under ten seconds.
+
+## Who is exposed
+
+Three conditions must be met:
+
+1. Linux 4.11 or later without the RefluXFS fix
+2. XFS filesystem created with reflink=1
+3. The readable target and an attacker-writable directory on the same XFS filesystem
+
+The affected distributions are broad: RHEL 8, 9, and 10, CentOS Stream, Oracle Linux, Rocky Linux, AlmaLinux, CloudLinux 8/9/10, Fedora Server 31 and later, Amazon Linux 2023, and Amazon Linux 2 images from December 2022 onward. RHEL 7 is not affected because those filesystems predate XFS reflink support.
+
+Debian, Ubuntu, SLES, and openSUSE generally do not use XFS for the root filesystem by default. They are exposed only if an administrator explicitly chose XFS with reflink enabled at install time.
+
+Check your system:
+
+\`xfs_info / | grep reflink=\`
+
+If the output shows reflink=1, the second condition is met. Run the same check on any mounted XFS volume where a protected file and an attacker-writable directory share the filesystem.
+
+## The AI angle
+
+Qualys said Claude Mythos Preview, Anthropic's restricted-access frontier model, found the flaw. They pointed it at the kernel and asked it to find a vulnerability similar to Dirty COW. The model located the race, wrote a working root exploit, and drafted the advisory. Researchers then reproduced it on a stock Fedora Server 44 install and coordinated disclosure upstream.
+
+This is the second time in two months that Qualys has credited an AI model with finding a significant Linux kernel vulnerability. In May, they disclosed a nine-year-old ptrace bug also found by an AI-assisted approach. The pattern is clear: AI is getting good at finding the class of bugs that human auditors miss because they require reasoning across lock cycles and block-layer interactions.
+
+## Patch and reboot
+
+The fix was merged on July 16. Red Hat issued advisories before the disclosure: RHSA-2026:39179 and RHSA-2026:39180 for RHEL 8, RHSA-2026:39494 for RHEL 10. Extended-support and SAP streams followed through July 17. Anyone who applied those errata on schedule was covered before RefluXFS had a name.
+
+Debian's tracker lists the fix in trixie-security as kernel 6.12.96-1 and in unstable as 7.1.4-1. Bookworm and bullseye, including their security branches, remain vulnerable as of July 23.
+
+There is no mount option or sysctl that disables XFS reflinks after a filesystem has been created. No practical mitigation or temporary configuration change exists. Patch, reboot, verify you are running the fixed kernel. That is the entire remediation.
+
+The broader lesson: nine years. This bug sat in the kernel since 2017, affecting every default XFS reflink installation, and nobody found it until an AI model was pointed at it. Your patching cadence matters, but so does your assumption that "we would have caught this by now." Maybe you would not have.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
