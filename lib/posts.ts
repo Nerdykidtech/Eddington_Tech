@@ -657,6 +657,28 @@ There is no mount option or sysctl that disables XFS reflinks after a filesystem
 
 The broader lesson: nine years. This bug sat in the kernel since 2017, affecting every default XFS reflink installation, and nobody found it until an AI model was pointed at it. Your patching cadence matters, but so does your assumption that "we would have caught this by now." Maybe you would not have.`,
   },
+  {
+    slug: "lg-banning-residential-proxies-smart-tv-apps",
+    title: "LG to Ban Residential Proxies from Smart TV Apps",
+    date: "2026-07-24",
+    excerpt: "LG is suspending smart TV apps that turn televisions into residential proxy nodes, after researchers found 42% of webOS apps contained proxy SDKs. The fix comes after months of exposure, but the broader problem persists across the smart TV ecosystem.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/07/lg-to-ban-residential-proxies-from-smart-tv-apps/",
+    content: `Your smart TV might be selling your bandwidth. LG Electronics USA announced this week it will suspend smart TV apps that turn televisions into residential proxy nodes, less than a month after security firm Spur found that 42% of apps on LG's webOS store included proxy SDKs. Another quarter of Samsung Tizen apps had the same issue.
+
+The SDKs let app developers monetize their software by routing paying customers' traffic through your TV. Bright Data accounted for the majority of these proxy SDKs across both LG and Samsung platforms. A Pac-Man game on the platform offered users a choice: watch ads in the game, or let your TV become a proxy node indefinitely.
+
+LG Senior VP John Taylor told KrebsOnSecurity the company is working with developers to remove the proxy option, and developers who don't comply will be suspended from the platform. Taylor said LG will strengthen its evaluation process for developer-submitted apps going forward.
+
+The consent model is the real problem here. Spur's Trevor Sutter pointed out that a one-time consent prompt buried in a TV app isn't meaningful transparency or ongoing control. When minors in a household use the same device, they can't meaningfully consent to their TV being used as a proxy node.
+
+Bright Data says its network is built on consent and has undergone independent audits. But the scale of the exposure (42% of an app store) suggests the vetting process wasn't working. Proxy companies also claim to prevent customers from interacting with other devices on the user's local network, though the practical enforcement of that boundary is debatable.
+
+This isn't just a TV problem. The same proxy SDK model exists across smart devices, IoT platforms, and mobile app stores. LG's response is reactive. The question is whether other manufacturers and app stores will proactively address this before researchers have to expose it again.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
