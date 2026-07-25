@@ -679,6 +679,40 @@ Bright Data says its network is built on consent and has undergone independent a
 
 This isn't just a TV problem. The same proxy SDK model exists across smart devices, IoT platforms, and mobile app stores. LG's response is reactive. The question is whether other manufacturers and app stores will proactively address this before researchers have to expose it again.`,
   },
+  {
+    slug: "certighost-ad-cs-domain-controller-impersonation",
+    title: "Certighost Exploit Lets Low-Privileged AD Users Impersonate a Domain Controller",
+    date: "2026-07-25",
+    excerpt: "CVE-2026-54121 lets any authenticated domain account obtain a certificate for a DC via AD CS chase fallback, then use it to DCSync the krbtgt hash. Microsoft patched July 14, public PoC dropped July 24.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/certighost-exploit-lets-low-privileged.html",
+    content: `Your least-privileged AD user can now impersonate a domain controller.
+
+CVE-2026-54121, a flaw in Active Directory Certificate Services, lets any authenticated domain account obtain a certificate for a DC and authenticate as that machine. Microsoft patched it July 14. Researchers published a working exploit July 24.
+
+The bug lives in a mechanism called chase. When an AD CS certification authority cannot reach the end entity's directory, the Windows enrollment protocol lets the requester provide two fields: \`cdc\`, the AD server to contact, and \`rmd\`, the machine object to resolve. The CA follows those instructions without verifying the server is actually a domain controller.
+
+Attackers run rogue LSA and LDAP services, relay the CA's authentication challenge to the real DC over Netlogon, and get back the target DC's \`objectSid\` and \`dNSHostName\`. A controlled machine account supplies valid domain identity. The CA authenticates that account, signs the DC's identity into a certificate, and hands it over.
+
+That certificate is the keys to the kingdom. The exploit uses PKINIT to authenticate as the target DC, then runs DCSync to pull the \`krbtgt\` hash. At that point, you can forge Golden Tickets for any account in the forest. The entire chain requires only network access and a standard domain account. No admin rights. No user interaction.
+
+Microsoft's fix adds \`CRequestInstance::_ValidateChaseTargetIsDC\` to \`certpdef.dll\`. Before following a chase, the CA now rejects IP literals, overlong names, and LDAP metacharacters. It requires exactly one matching AD computer object whose DNS name matches the target and whose \`userAccountControl\` includes \`SERVER_TRUST_ACCOUNT\` (8192). A SID comparison blocks object substitution.
+
+If you cannot patch immediately, you can disable chase fallback:
+
+\`certutil -setreg policy\\EditFlags -EDITF_ENABLECHASECLIENTDC\`
+
+\`Restart-Service CertSvc -Force\`
+
+The researchers tested this only in a lab. It breaks legitimate enrollment flows. Treat it as temporary.
+
+The affected surface is broad: Windows Server 2012 through 2025, including Server Core editions, plus Windows 10 versions 1607 and 1809. Any organization running an Enterprise CA with the default Machine certificate template and default machine-account quota is exposed.
+
+No known exploitation in the wild as of July 24. That absence does not prove nothing happened. The PoC is public, the chain is straightforward, and the target is domain dominance. Patch now.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
