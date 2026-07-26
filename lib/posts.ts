@@ -713,6 +713,32 @@ The affected surface is broad: Windows Server 2012 through 2025, including Serve
 
 No known exploitation in the wild as of July 24. That absence does not prove nothing happened. The PoC is public, the chain is straightforward, and the target is domain dominance. Patch now.`,
   },
+  {
+    slug: "hermes-ai-agent-unattended-post-exploitation-thai-finance-ministry",
+    title: "Hacker Runs Hermes AI Agent Unattended for Post-Exploitation at Thai Finance Ministry",
+    date: "2026-07-26",
+    excerpt: "An attacker installed the Hermes AI agent on a rented server, enabled YOLO mode to skip human approval, and pointed it at Thailand's Ministry of Finance. The agent autonomously scanned for root access, exploited a default-auth Hadoop cluster, and crawled staff personnel records going back to 2012.",
+    category: "Threat Intelligence",
+    readTime: "5 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/hacker-runs-hermes-ai-agent-unattended.html",
+    content: `Someone installed Hermes on a rented server, flipped YOLO mode on, and pointed it at Thailand's Ministry of Finance. The agent ran the whole post-exploitation chain by itself. No human approving commands. No vendor watching. No account to ban.
+
+This is the part that should bother you. Previous AI-assisted attacks required tricking the model into cooperating. When Anthropic caught a Chinese group using Claude Code for espionage last November, they banned the accounts. Hermes runs locally on the attacker's machine. There is no cloud service to notify, no terms of service to violate, no off switch.
+
+The ministry's Hadoop cluster was the real prize. Apache HiveServer2 defaults to authentication mode NONE, accepting any password. The operator's script connected to port 10000, installed a malicious Java UDF called HiveCmd.jar, and ran OS commands through ordinary database queries. Cloudera's own docs warn that anyone who can install a UDF gets arbitrary code execution as the Hive service account.
+
+The human did the smart parts. Custom linpeas.sh targeting four 2026 kernel exploits (Copy Fail, Dirty Frag x2, DirtyClone). A password list built from the ministry's own department abbreviations. A web shell hidden at /storage/Counter/nine/.journald-cache.php. Shellcode with hardcoded intranet paths. The agent did the repetitive parts: scan, read output, decide what to check next, scan again.
+
+Hunt.io and Bob Diachenko found the agent's own logs sitting on a web server with directory listing enabled. 585 files. 470 MB of attack tooling. The operator's SSH session came from Hong Kong. The staging server previously hosted a ShadowPad controller and now runs a VShell C2 listener.
+
+The Hermes agent leaves a trail too. Its web panel returns a HermesWebUI server header. Its results land in a predictable /hermes-results/ folder. Hunt.io indexed 575 exposed result directories as of July 23. The irony: the agent's observability features, designed for legitimate admins to monitor their own deployments, became the detection vector.
+
+What to check: HiveServer2 running with authentication NONE. Web servers making connections to Hadoop ports 10000 or 50070. Hidden PHP files in web roots with leading-dot names. Kernel patches for CVE-2026-31431, CVE-2026-43284, CVE-2026-43500, and CVE-2026-43503. Sudo updated to 1.9.5p2 or later.
+
+The real question isn't whether someone used an AI agent to attack a government network. That was always going to happen. The question is what happens when the next operator remembers to turn on directory listing protection.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
