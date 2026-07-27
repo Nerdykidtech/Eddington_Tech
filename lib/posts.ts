@@ -739,6 +739,36 @@ What to check: HiveServer2 running with authentication NONE. Web servers making 
 
 The real question isn't whether someone used an AI agent to attack a government network. That was always going to happen. The question is what happens when the next operator remembers to turn on directory listing protection.`,
   },
+  {
+    slug: "chatgpt-agentforger-csrf-rogue-ai-agent",
+    title: "ChatGPT AgentForger Flaw Let One Phishing Link Deploy a Rogue AI Agent Inside Your Org",
+    date: "2026-07-27",
+    excerpt: "Zenity Labs found a CSRF flaw in OpenAI's Agent Builder that let a single link stand up an attacker-controlled AI agent with the victim's access, schedule it to run every hour, and route commands through their connected apps. OpenAI patched it in June.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/chatgpt-agentforger-flaw-could-deploy.html",
+    content: `Here's what I keep thinking about: one link. Not a trojan, not a zero-day, not a multi-stage chain. Just a link.
+
+Zenity Labs disclosed a CSRF vulnerability in OpenAI's ChatGPT Agent Builder that let an attacker forge an autonomous AI agent inside a victim's organization with a single click. The researcher who found it, Mike Takahashi, called it AgentForger.
+
+The mechanics are straightforward. Agent Builder accepted initialization state through URL parameters, including an agent template and a natural-language prompt. When the page loaded, that prompt was not just placed into the input box. It was automatically submitted and executed. An instruction embedded in a URL became the first command the Builder acted on.
+
+The attack URL looked like: chatgpt[.]com/agents/studio/new?template_name=chief-of-staff&initial_assistant_prompt=[malicious prompt]
+
+Three prerequisites had to be true: the victim had to be logged into ChatGPT, they needed Workspace Agents access, and they needed at least one authorized connector to an enterprise app like Outlook, Slack, or Google Drive. The connector was the prize. The malicious prompt told the Builder to create an agent from the chief-of-staff template, attach every available connector, set them all to Never Ask for approval, publish it, and schedule it to run every hour.
+
+That last part is the persistence mechanism. Preview Mode is supposed to be a dry run for testing. In this flow, Preview Mode executed the forged agent against the victim's connected accounts using the approval settings the attacker just configured. The agent ran, checked for emails from a specific address with subjects starting with TASK, executed whatever instructions those emails contained, and sent results back to the attacker.
+
+The attacker didn't need the victim to click again. Didn't need the Builder tab to stay open. Each TASK email became a new assignment. The agent was not waiting for another click. It was waiting for instructions.
+
+Zenity also demonstrated that the rogue agent could impersonate the victim on Teams, sending phishing links to coworkers that redirected to a fake Microsoft login page. One compromised account, one forged agent, and you've got a self-replicating BEC operation.
+
+OpenAI patched this on June 8, 2026 after Zenity's responsible disclosure. But Agent Builder itself is being deprecated on November 30, 2026 in favor of the Agents SDK and Workspace Agents in ChatGPT. The underlying issue, though, isn't specific to one product. It's an agent trust failure. The platform assumed the user intentionally created, approved, scheduled, and operated the agent. CSRF broke that assumption.
+
+What to audit: check which ChatGPT Workspace Agents exist in your org, who authorized them, and whether any were created through URL-based initialization. If you're running Agent Builder before the June 8 patch, revoke all agent schedules and re-authorize connectors. The broader lesson is that autonomous agents with scheduled execution and multi-app access need the same lifecycle controls as service accounts: least privilege, approval gates, regular access reviews, and kill switches.`,
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
