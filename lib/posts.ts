@@ -769,6 +769,30 @@ OpenAI patched this on June 8, 2026 after Zenity's responsible disclosure. But A
 
 What to audit: check which ChatGPT Workspace Agents exist in your org, who authorized them, and whether any were created through URL-based initialization. If you're running Agent Builder before the June 8 patch, revoke all agent schedules and re-authorize connectors. The broader lesson is that autonomous agents with scheduled execution and multi-app access need the same lifecycle controls as service accounts: least privilege, approval gates, regular access reviews, and kill switches.`,
   },
+  {
+    slug: "teamcity-cve-2026-63077-unauthenticated-rce",
+    title: "TeamCity CVE-2026-63077: Unauthenticated RCE via Agent Polling Protocol",
+    date: "2026-07-28",
+    excerpt: "JetBrains patched a critical flaw in TeamCity On-Premises that lets unauthenticated attackers execute OS commands through the agent polling protocol. CVSS 9.8. Fixed in 2025.11.7 and 2026.1.3.",
+    category: "Hardening",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/critical-teamcity-flaw-could-let.html",
+    content: `JetBrains patched a critical vulnerability in TeamCity On-Premises that lets unauthenticated attackers execute operating system commands. CVE-2026-63077 carries a CVSS score of 9.8 and affects every on-premise TeamCity installation. TeamCity Cloud was already patched.
+
+The bug lives in the agent polling protocol. TeamCity agents connect to the server to pick up build tasks, and the server authenticates them during that handshake. The flaw lets an attacker skip that authentication entirely. Send the right HTTP request to a TeamCity server and you get OS-level command execution under whatever privileges the server process runs with.
+
+That means access to every credential stored in TeamCity: build secrets, deployment tokens, cloud provider keys, SSH certificates. If your TeamCity server has admin access to your infrastructure, an attacker who exploits this bug inherits all of it.
+
+JetBrains credited Antoni Tremblay with discovering and reporting the issue on July 10. Fixes shipped in versions 2025.11.7 and 2026.1.3. For teams stuck on older versions, JetBrains released a security patch plugin that covers installations back to 2017.1.
+
+No active exploitation has been reported yet. That window will not stay open.
+
+If you run TeamCity On-Premises and your server is reachable from the internet, treat this as urgent. Update immediately. If you cannot update, install the patch plugin. Either way, put the server behind a VPN or restrict access at the network layer. Even the login page and REST API are attack surface.
+
+The broader pattern here is that CI/CD systems are high-value targets that rarely get the same security scrutiny as production servers. Your build server probably has more access to your infrastructure than most employees do. Treat it accordingly.`
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
