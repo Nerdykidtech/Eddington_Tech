@@ -793,6 +793,33 @@ If you run TeamCity On-Premises and your server is reachable from the internet, 
 
 The broader pattern here is that CI/CD systems are high-value targets that rarely get the same security scrutiny as production servers. Your build server probably has more access to your infrastructure than most employees do. Treat it accordingly.`
   },
+
+  {
+    slug: "check-point-smartconsole-auth-bypass-cve-2026-16232",
+    title: "Check Point SmartConsole Auth Bypass Gets Public PoC After Zero-Day Exploitation",
+    date: "2026-07-29",
+    excerpt: "CVE-2026-16232 lets unauthenticated attackers grab full admin access to Check Point management servers by replaying the server's own identity during login. Rapid7 released a PoC Python script to test for the flaw.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/07/rapid7-releases-poc-for-exploited-check.html",
+    content: `Check Point patched a critical authentication bypass in SmartConsole on July 22. Three days later, Rapid7 dropped a proof-of-concept script that confirms whether your management server is vulnerable. The catch: researchers already observed active zero-day exploitation before the patch shipped.
+
+CVE-2026-16232 carries a CVSS score of 9.3 and affects Check Point Security Management Server and Multi-Domain Security Management Server (MDS). An unauthenticated attacker with network access to the management interface can walk away with full administrative privileges. No credentials. No interaction from an admin. Just the management server listening on its default port.
+
+The root cause is a broken trust boundary in the authentication path. When SmartConsole boots up, the server shares its Secure Internal Communication (SIC) distinguished name during an unauthenticated handshake. A vulnerable server then accepts whatever DN the client presents during login, instead of verifying it against the actual remote peer certificate. An attacker reads the server's own DN from that initial exchange, replays it back as their identity, and gets an application login token with full admin access.
+
+From there, the attacker can modify security policies, reconfigure the firewall, or pivot to anything the management server controls.
+
+Rapid7's Stephen Fewer described the flaw as a case where the server trusts the client's word about who it is rather than checking the certificate. The patch forces the server to validate the supplied DN against the authenticated remote peer certificate and rejects any mismatch. It also adds an empty identity check that blocks remote application logins when no authenticated SIC identity exists.
+
+The PoC Python script Rapid7 released tests whether a target is vulnerable or patched. It does not weaponize the bypass, but it makes detection trivial for both defenders and attackers.
+
+Check Point disclosed that a handful of customers were already targeted before the patch. If you run Check Point management servers and did not apply the July 22 Jumbo Hotfixes, you are exposed to a straightforward unauthenticated takeover.
+
+Check your SmartConsole version. Apply the hotfix. If you suspect compromise, audit your security policy changes and SIC certificate bindings for anything that looks out of place.`
+  },
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
