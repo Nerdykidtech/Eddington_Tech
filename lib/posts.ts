@@ -820,6 +820,31 @@ Check Point disclosed that a handful of customers were already targeted before t
 
 Check your SmartConsole version. Apply the hotfix. If you suspect compromise, audit your security policy changes and SIC certificate bindings for anything that looks out of place.`
   },
-];
+
+    {
+      slug: "cisco-fmc-static-credentials-zero-day-cve-2026-20316",
+      title: "Cisco FMC Static Credentials Could Expose Sensitive Data",
+      date: "2026-07-30",
+      excerpt: "Cisco Secure Firewall Management Center ships with static credentials for a low-privilege account. CVE-2026-20316 is under active exploitation and CISA added it to the KEV catalog.",
+      category: "Hardening",
+      readTime: "4 min",
+      author: "Hunter Eddington",
+      image: "https://eddington.tech/og-image.png",
+      source: "The Hacker News|https://thehackernews.com/2026/07/cisco-fmc-zero-day-actively-exploited.html",
+      content: `Cisco shipped a firewall management console with hardcoded credentials. That sentence should bother you.
+
+CVE-2026-20316 is a CVSS 5.3 vulnerability in Cisco Secure Firewall Management Center (FMC) Software. The score looks low, but the impact is not. An unauthenticated remote attacker can log in to the FMC using a static low-privilege account and pull sensitive data from the system. No exploit kit needed. No social engineering. Just a username and password that come built in.
+
+CISA added this to the KEV catalog on July 29. Active exploitation started earlier this month. The advisory did not say who is behind the attacks, but the IoC is specific enough to hunt: if your FMC logs show \`/var/tmp/license.tmp\` in the output of \`cat /var/log/messages | grep license\`, someone has been inside.
+
+The real danger is chaining. Cisco also updated its advisory for CVE-2026-20079, a CVSS 10.0 authentication bypass in the same product. Both vulnerabilities share the same IoC. CVE-2026-20079 lets an attacker run arbitrary executable files as root. Pair that with the static credentials from CVE-2026-20316 and you have unauthenticated root on a device that manages your entire firewall fleet.
+
+Hot fixes are out for versions 7.0 through 10.0. Federal agencies have until August 1 to patch. If your FMC management interface is exposed to the internet, you should treat this as urgent regardless of your compliance obligations.
+
+The pattern here is familiar. Vendor ships default credentials on a management interface, assumes nobody will find them, and then someone does. It happened with Huawei routers, with Fortinet, with Palo Alto PAN-OS. The fix is always the same: change the passwords, restrict network access to the management plane, and stop shipping static accounts on production devices.
+
+If you run Cisco FMC, check your logs today. The hot fix filenames are in the advisory. Apply them before the weekend.`
+    },
+  ];
 
 export const postSlugs = posts.map((post) => post.slug);
