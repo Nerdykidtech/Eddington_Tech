@@ -845,6 +845,36 @@ The pattern here is familiar. Vendor ships default credentials on a management i
 
 If you run Cisco FMC, check your logs today. The hot fix filenames are in the advisory. Apply them before the weekend.`
     },
-  ];
+    {
+    slug: "owa-persistent-mailbox-backdoor-laundry-bear",
+    title: "Russian Hackers Exploit Microsoft OWA Flaw to Keep Mailbox Access After Credential Rotation",
+    date: "2026-07-31",
+    excerpt: "A Russian threat actor is using a half-click OWA exploit to deploy OWAReaper, a backdoor that persists in mailboxes even after password resets and device reimaging. Credential rotation won't save you.",
+    category: "IAM",
+    readTime: "5 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Laundry Bear, a Russian threat actor previously linked to Zimbra exploitation, is now hitting Microsoft Outlook Web Access with a half-click exploit that deploys a persistent backdoor into victim mailboxes. The target list includes U.S. and European government agencies, telecoms, financial firms, hospitality, and aerospace.
+
+The attack chain starts simple. Compromised or adversary-controlled Proton Mail accounts send vague phishing emails about supply chain analyses or market metrics. No attachments. No URLs. Just the email body. When a victim opens it in a vulnerable OWA instance, the exploit for CVE-2026-42897 (CVSS 8.1) fires automatically. That is the entire user interaction required to trigger compromise.
+
+What makes OWAReaper, the backdoor deployed in these attacks, worth paying attention to is its persistence model. The malware does three things that make eviction hard.
+
+First, it writes itself into the browser's localStorage as encrypted code with a decryption wrapper. Every time the victim opens OWA, the malware re-executes automatically. Credential rotation does not clear localStorage. Device reimaging does not clear it either, unless the user's browser profile is wiped.
+
+Second, it checks for Outlook add-ins with ReadWriteMailbox permissions and uses them to steal OAuth tokens. Then it grants itself Owner-level permissions on every mail folder in the Exchange server. This is server-side persistence. Even if you reset the password and re-image the machine, the actor retains access through the mailbox ACLs.
+
+Third, it injects hidden iframes into emails stored in OWA's offline IndexedDB cache. These iframes re-infect the target when the victim opens cached emails, creating a persistence loop that survives both credential rotation and host reimaging.
+
+For command-and-control, OWAReaper uses two methods. It queries GitHub's Commit Search API every 24 hours for commits containing the target's email address, parsing encrypted commands from commit messages. It also checks inbound emails for messages matching a specific format that carry the same command structure. Commands include code replacement, C2 server rotation, and arbitrary JavaScript execution via eval().
+
+The malware also takes steps to avoid detection during operation. It disables OWA pop-ups and right-click menus while running, then rewrites the original email on the Exchange server to strip the exploit content after execution.
+
+This campaign began on July 22, 2026, and Proofpoint assessed the broad targeting volume as intentional, designed to blend in with spam and avoid suspicion.
+
+If you run on-prem Exchange with OWA exposed, the practical takeaway is straightforward. Patch CVE-2026-42897 if you have not already. Audit your Exchange mailbox folder permissions for unexpected Owner-level grants. Check localStorage and IndexedDB in browser profiles for suspicious entries. And if you suspect compromise, credential rotation alone is not enough. You need to clean the server-side mailbox ACLs and purge the offline cache.`,
+    source: "The Hacker News|https://thehackernews.com/2026/07/russian-hackers-exploit-microsoft-owa.html"
+  },
+];
 
 export const postSlugs = posts.map((post) => post.slug);
