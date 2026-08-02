@@ -905,6 +905,41 @@ This comes a month after OpenAI disclosed that its models escaped a sandboxed en
 For security teams, the implication is straightforward. Your evaluation and testing environments need the same network segmentation and access controls as production. An AI model running a CTF in your environment is no different from giving a penetration tester unrestricted access to your network. The difference is that the model doesn't know it's supposed to stop at the boundary.`,
     source: "The Hacker News|https://thehackernews.com/2026/07/anthropic-says-claude-mistook-open.html"
   },
+    {
+      slug: `captivecrunch-midnight-blizzard-hotel-wi-fi-malware`,
+      title: `Midnight Blizzard Hijacks Hotel Wi-Fi to Push Surveillance Malware and Steal Credentials`,
+      date: `2026-08-02`,
+      excerpt: `Microsoft disclosed CaptiveCrunch, an operation where Storm-2945 (a sub-cluster of Midnight Blizzard) hijacks hotel Wi-Fi captive portals to deliver CornFlake RAT and abuse device code authentication flows for MFA-satisfied access.`,
+      category: `Threat Intelligence`,
+      readTime: `4 min`,
+      author: `Hunter Eddington`,
+      image: `https://eddington.tech/og-image.png`,
+      source: `The Hacker News|https://thehackernews.com/2026/08/hijacked-hotel-wi-fi-pushes-fake.html`,
+      content: `
+Microsoft disclosed an operation they're calling CaptiveCrunch this week, and it's the kind of thing that should make anyone who travels for work pay attention.
+
+Storm-2945, a sub-cluster of Midnight Blizzard (APT29, Cozy Bear, Russia's SVR), has been hijacking hotel Wi-Fi networks since early May. The attack is straightforward. The captive portal gateway that serves the login page also acts as the DNS resolver for connected devices. Control the gateway, and you control where every DNS query goes.
+
+From there, the attackers redirect laptops' automatic connectivity checks to fake browser or OS update pages. Some use ClickFix instructions that tell the victim to open a terminal and run a command. The gateway controls where you land, but it doesn't silently infect you. You still have to download or execute the payload.
+
+The payload is CornFlake, a Go-based RAT that copies itself to %APPDATA%\\svchost32\\svchost32.exe and registers as "Cloud Sync Service." A fake progress window holds your attention while it installs. Once running, it takes idle-triggered screenshots, records clipboard contents with the active window title, steals browser cookies and saved passwords (including those protected by Chrome's App-Bound Encryption), scans removable media, and opens a remote shell. A watchdog process restores any persistence mechanism defenders remove.
+
+Microsoft also identified ChocoShell, an in-memory PowerShell stealer that collects Microsoft 365 and Azure AD access and refresh tokens from the Token Broker cache. Those stolen tokens enable session replay without needing a browser cookie.
+
+And then it gets worse. Since July 16, some CaptiveCrunch landing pages have been redirecting guests into Microsoft's device code authentication flow. The victim enters an attacker-supplied code on Microsoft's legitimate sign-in page. That's it. The attacker gets MFA-satisfied access. Passkeys, hardware security keys, enforced phishing-resistant MFA, none of it matters, because the device code flow operates at the authorization layer, not the authentication layer.
+
+This is the same technique that went from niche red-team trick to industrial-scale threat earlier this year. Microsoft reported 10 to 15 new device code phishing campaigns per day in April. The FBI issued a standalone advisory on the Kali365 kit. And now Midnight Blizzard is using it as part of a hotel-based attack chain.
+
+ReliaQuest investigated the same Microsoft-impersonating domains and overlapping infrastructure eight days before Microsoft's disclosure. They flagged the tradecraft as resembling APT28 (Fancy Bear/Forest Blizzard) but stopped short of attribution because the assessment rests on TTP overlap rather than direct technical linkage. Microsoft acknowledges the similarity to the Forest Blizzard router hijacking it disclosed in April.
+
+The mitigation for the Wi-Fi piece is straightforward: always-on, full-tunnel VPN. Your DNS queries go through corporate resolvers before the venue's gateway can answer them. For the device code flow, block it through Conditional Access wherever you don't need it. Microsoft says so themselves. But many organizations can't simply disable device code flows without breaking developer tooling, CLI workflows, or constrained-device scenarios.
+
+The initial compromise vector for the hotel networks remains under investigation. ReliaQuest assesses with low-to-medium confidence that exposed management interfaces and weak or reused administrator credentials may have been the way in.
+
+Microsoft found common equipment and management systems across affected networks, which could mean access to shared services within the captive portal ecosystem. If so, the compromises may not have been isolated to individual hotels. They haven't named any affected provider.
+`,
+    },
+
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
