@@ -940,6 +940,45 @@ Microsoft found common equipment and management systems across affected networks
 `,
     },
 
+    {
+      slug: `chinese-threat-actor-darksword-ios-ghostblade`,
+      title: `Chinese Threat Actor Deploys DarkSword Exploit Kit on iOS with GHOSTBLADE Malware`,
+      date: `2026-08-03`,
+      excerpt: `A Chinese threat actor is running over 100 fake AWS and Apple ID phishing sites to deploy the leaked DarkSword iOS exploit kit. The attack drops GHOSTBLADE malware that steals keychain, iCloud, and Wi-Fi credentials from iOS 18.4 through 18.7 devices.`,
+      category: `iOS Security | Threat Intelligence`,
+      readTime: `4 min`,
+      author: `Hunter Eddington`,
+      image: `https://eddington.tech/og-image.png`,
+      source: `The Hacker News|https://thehackernews.com/2026/08/chinese-threat-actor-uses-leaked.html`,
+      content: `
+An unknown Chinese threat actor is running a campaign targeting iOS devices using the leaked DarkSword exploit kit. Censys identified over 100 web properties operated by this actor, most of them fake AWS sign-in pages hosted on domains that also serve the exploit toolkit itself.
+
+DarkSword is a full-chain exploit kit that targets iOS versions 18.4 through 18.7. Google Threat Intelligence Group, iVerify, and Lookout originally detailed the kit earlier this year after finding it used by commercial surveillance vendors and suspected state-sponsored actors against targets in Saudi Arabia, Turkey, Malaysia, and Ukraine. The kit uses watering hole sites to trigger now-patched iOS vulnerabilities, firing JavaScript that ultimately deploys GHOSTBLADE, an information-stealing implant.
+
+Then the source code leaked on GitHub. And everything changed.
+
+The leaked kit has since spread across multiple threat actors, each repackaging it for their own infrastructure. This particular cluster runs the original leaked code rather than a reimplementation, according to Censys researcher Aidan Holland. The evidence: a shared staging-page hash and Russian-language code comments carried over directly from the leaked source.
+
+Censys found seven DarkSword Admin login panels across three countries as of July 30, plus a Singapore-based host running three distinct exploit-panel front ends and a Hong Kong host that bundles an Apple ID credential-harvesting decoy. One panel on 38.22.89[.]117:8888 displays Chinese-language field labels for username, password, and login.
+
+The attack chain is straightforward. A victim hits one of the operator's domains, either an AWS-console impersonation subdomain or an Apple ID sign-in page. A malicious iframe loads JavaScript that fires the DarkSword exploit chain and drops GHOSTBLADE modules.
+
+Once exploitation succeeds, the implant dumps keychain, iCloud, and Wi-Fi credentials and begins sweeping files for exfiltration. Harvested data gets packaged and sent to attacker-controlled endpoints, where the operator logs into one of three panels: DarkSword Admin, Decode Dashboard, or C2 Control Panel.
+
+The C2 Control Panel itself is the most revealing piece. It features a near-black background with a red accent, an animated particle-canvas effect, a group name rendered directly on the page, and a visible Telegram contact link. The group name is in Chinese characters, roughly translating to Asia-Pacific Group.
+
+Censys also found an open directory on a Frankfurt IP that exposes the operator's tooling: an SSH key with the comment jkcing@apt, a web-content fuzzer, and references to a previously undocumented malware family called Thorn C2.
+
+What makes this significant is the infrastructure overlap. The Singaporean host, now offline, also hosted an administration panel for Coruna, another iOS exploit kit targeting a much older range of iOS versions from 3.0 through 17.2.1. There is evidence that a threat actor tracked as UNC6353 has leveraged both Coruna and DarkSword in attacks against Ukrainian targets.
+
+The DarkSword leak is a case study in what happens when offensive tooling gets out of containment. What was once restricted to a small number of commercial surveillance vendors and state-sponsored operators is now available to anyone who can find the GitHub repository. The barrier to entry for iOS exploitation just dropped dramatically, and the infrastructure Censys mapped shows the aftermath: multiple panels, multiple operators, one leaked kit.
+
+For defenders, the phishing domains are the detection surface. The fake AWS and Apple ID pages are the entry point, and they follow predictable patterns. Network-level detection of the C2 panels and their IP ranges is the other angle. Several of the IPs are already flagged in threat intelligence feeds. The iOS patches for the vulnerabilities DarkSword exploits have been available for months, but the targets are running versions 18.4 through 18.7, which suggests the victims are not on the latest builds.
+
+That is the pattern with these kits. They do not need zero-days if people are not patching.
+`,
+    },
+
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
