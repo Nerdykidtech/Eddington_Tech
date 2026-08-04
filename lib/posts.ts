@@ -979,6 +979,47 @@ That is the pattern with these kits. They do not need zero-days if people are no
 `,
     },
 
+    {
+      slug: `google-password-manager-passkey-attacks`,
+      title: `Google Password Manager Attacks Could Let Malware Hijack Passkey-Protected Accounts`,
+      date: `2026-08-04`,
+      excerpt: `Unit 42 discovered three attack paths against Chrome's Google Password Manager that let malware sign into passkey-protected accounts without user interaction. The attacks target the code around passkeys, not the cryptography itself.`,
+      category: `IAM`,
+      readTime: `4 min`,
+      author: `Hunter Eddington`,
+      image: `https://eddington.tech/og-image.png`,
+      source: `The Hacker News|https://thehackernews.com/2026/08/google-password-manager-attacks-could.html`,
+      content: `Passkeys were supposed to be the end of password problems. Turns out the implementation around them has gaps that malware can exploit.
+
+Unit 42 published research on three attack paths against Chrome's Google Password Manager cloud authenticator. They call them Pass-ta-key, Silver Pass-ta-key, and Golden Pass-ta-key. None of them break the cryptography. They go after the code around the passkey: how Chrome stores device keys, how it re-enrolls a device, and whether the site you're signing into checks that a human was verified.
+
+The attacks can silently get a valid authentication assertion, install an attacker-controlled user-verification key, or extract the 32-byte Security Domain Secret used to decrypt synced passkey private keys. The last two provide reusable access from the attacker's own environment after the initial endpoint compromise.
+
+This is post-compromise stuff. The malware needs to already be running on the victim's machine. But that's exactly the scenario where you need your defenses to hold.
+
+The research is limited to Google Password Manager in Chrome on Windows with a Trusted Platform Module. Every path starts with local reconnaissance: Chrome stores synchronized credential records under %LocalAppData%\\Google\\Chrome\\User Data\\<Profile>\\Sync Data\\LevelDB. An unprivileged process can read enough metadata to identify relying parties, usernames, credential identifiers, and encrypted private-key material.
+
+Here's what each path does:
+
+Pass-ta-key extracts Chrome's wrapped device identity key and asks the TPM to sign an attacker-controlled request. Chrome creates the TPM key without a key name, which stops it being persisted to disk, then exports it as an opaque blob and reloads it later under a flag that suppresses any prompt. The result is a valid assertion with the User Verified flag left unset. GitHub enforced the check. eBay accepted the test assertion until they fixed it after disclosure.
+
+Silver Pass-ta-key forces Chrome to re-enroll the device. Chrome doesn't create its user-verification key immediately, and in that window an attacker can register their own. The service doesn't check whether a newly registered key came from secure hardware. Assertions signed with that key carry the UV flag, enabling later logins without the victim's device.
+
+Golden Pass-ta-key goes after the Security Domain Secret itself. Malware triggers re-enrollment, reads the secret out of Chrome's process memory while it sits there in plaintext, and uses it to recover synchronized passkey private keys. Chrome creates or receives 32-byte security-domain secrets in client-process data structures, confirming the secret enters Chrome memory.
+
+Unit 42 said Google removed an earlier SDS exposure from Chrome's FIDO logs and eBay now validates the UV flag. But the secret still reaches the client and stays in Chrome's memory, so the logging change doesn't close the path.
+
+No CVE identifiers yet. No complete remediation status. As of August 3, searches of Google's public Chrome materials found no notice documenting either reported change.
+
+What to do about it:
+
+Relying parties should set userVerification to required and verify the returned UV bit rather than trusting the request setting alone. Credential providers should attest newly enrolled keys, strengthen re-registration and recovery checks, restrict access to local passkey state, and keep master keys out of client logs and memory.
+
+Changing the Google Password Manager PIN or deleting Password Manager data might not invalidate a secret an attacker already holds. That's the part that should worry you.
+
+Passkeys are still better than passwords. But "better than passwords" isn't the same as "secure." The implementation matters, and right now the implementation has holes that let malware walk through the front door.`,
+    },
+
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
