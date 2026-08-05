@@ -1020,6 +1020,35 @@ Changing the Google Password Manager PIN or deleting Password Manager data might
 Passkeys are still better than passwords. But "better than passwords" isn't the same as "secure." The implementation matters, and right now the implementation has holes that let malware walk through the front door.`,
     },
 
+    {
+      slug: `greatness-phaas-device-code-phishing-mfa-bypass`,
+      title: `Greatness PhaaS Kit Adds Device Code Phishing to Bypass MFA`,
+      date: `2026-08-05`,
+      excerpt: `The Greatness phishing-as-a-service platform now supports device code phishing, exploiting the OAuth 2.0 Device Authorization Grant to bypass MFA and steal Microsoft 365 tokens. Attackers get full mailbox, Teams, and SharePoint access for $289/month.`,
+      category: `IAM`,
+      readTime: `5 min`,
+      author: `Hunter Eddington`,
+      image: `https://eddington.tech/og-image.png`,
+      content: `Greatness, a commercial phishing-as-a-service kit that's been around since at least 2022, just added device code phishing to its arsenal. This matters because device code phishing is one of the few remaining ways to bypass MFA without needing to compromise the user's device first.
+
+The attack exploits the OAuth 2.0 Device Authorization Grant flow. Here's how it works: the victim receives a phishing email, usually disguised as a RingCentral voicemail notification. They click through a redirect chain that includes anti-analysis protections, CAPTCHA gates, and user-agent fingerprinting. Eventually they land on Microsoft's real device login page and are asked to enter a code the attacker controls. Once they approve, the attacker gets access and refresh tokens for Microsoft 365.
+
+The tokens give the attacker access to email, Teams, SharePoint, OneDrive, contacts, calendars, and everything else the Graph API can reach. In one observed campaign, an attacker's proxy IP was still authenticating against a victim's account more than two weeks after the initial phishing hit.
+
+What makes this worse: the emails bypass email gateways by exploiting safe sender exclusions. The targets are actual RingCentral customers, so when the phishing emails fail SPF, DKIM, and DMARC checks, they still land in inboxes because RingCentral's domain is on the safe sender list. Any vendor breach that exposes a customer list also exposes which organizations will trust that vendor's domain.
+
+Greatness costs $289 per month on Telegram. The subscription includes a dashboard with campaign statistics, domain configuration, CAPTCHA selection, and over 11 downloadable lure templates covering voicemail, document sharing, QR codes, and more. The operators claim they keep stolen cookies safe via one-way hash protection and say only the customer with their Telegram 2FA code can access the logs.
+
+Post-compromise activity shows attackers replaying tokens within minutes from dedicated proxy infrastructure, then enumerating Microsoft 365 resources via the Graph API. Some register new devices within minutes of the breach to generate a Primary Refresh Token for long-term persistence. Others wait several hours before setting up malicious inbox rules or exfiltrating email data.
+
+Greatness isn't the only PhaaS kit doing this. Tycoon 2FA added device code phishing earlier this year despite a law enforcement operation that took down 330 of its domains. The trend is clear: PhaaS platforms are evolving from simple credential harvesting into integrated attack ecosystems that chain multiple bypass techniques.
+
+The fix is straightforward but requires action. Block the device code authentication method at the global level in Conditional Access Policies. If you need it for specific service accounts, explicitly exclude those and audit the usage continuously. Move to phishing-resistant MFA methods like FIDO2 security keys. And teach employees to distrust unexpected codes.
+
+The RingCentral safe sender angle is worth paying attention to. If your organization uses a vendor and that vendor gets breached, the attacker now knows your email gateway trusts their domain. Treat every vendor breach disclosure as a trigger to audit your email exclusion rules.`,
+      source: `The Hacker News|https://thehackernews.com/2026/08/greatness-phaas-adds-device-code.html`
+    },
+
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
