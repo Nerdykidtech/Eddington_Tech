@@ -1049,6 +1049,36 @@ The RingCentral safe sender angle is worth paying attention to. If your organiza
       source: `The Hacker News|https://thehackernews.com/2026/08/greatness-phaas-adds-device-code.html`
     },
 
+
+    {
+      slug: `icloud-private-relay-webkit-proxy-bypass`,
+      title: `iCloud Private Relay Leaks Real IPs Through Three WebKit Bypasses`,
+      date: `2026-08-06`,
+      excerpt: `Three WebKit features silently bypass iCloud Private Relay and expose your real IP address. Every website can trigger the leak through WebAuthn configuration with zero user interaction.`,
+      category: `iOS Security`,
+      readTime: `4 min`,
+      author: `Hunter Eddington`,
+      image: `https://eddington.tech/og-image.png`,
+      content: `iCloud Private Relay has a problem. Three features in WebKit — the browser engine behind Safari and every other browser on iOS — bypass the proxy and send traffic straight from your device. Your real IP address leaks out.
+
+Researchers Talal Haj Bakry and Tommy Mysk published a proof of concept this week showing that DNS prefetching, WebAuthn Related Origin Requests, and WebTransport all route traffic outside the configured proxy. DNS prefetching resolves hostnames through the device's normal DNS path instead of the proxy. WebAuthn Related Origin Requests cause the OS credential service to fetch validation files directly from the device. WebTransport opens a direct HTTP/3 connection and skips the proxy entirely.
+
+The WebAuthn one is the worst. Any website can configure the passkey API in a way that triggers the leak. The site doesn't need to actually use passkeys — it just needs to claim support for the WebAuthn standard. Once configured, WebKit sends a request that bypasses both proxy configurations and iCloud Private Relay in Safari. The real IP address is exposed to whatever server the site points at.
+
+Mysk told The Hacker News that the website has to deliberately exploit the bug to associate the browsing session with the leaked IP, but this requires no user interaction and no passkey usage. The attacker just needs you to visit a page that sets up the right WebAuthn configuration.
+
+The leak affects every WebKit-based browser on iOS and iPadOS. That includes Safari, Chrome, Edge, Firefox, and Brave on Apple's mobile platforms. Desktop Chrome on macOS is not affected, but Safari on macOS is. Any browser that relies on WebKit's proxy configuration APIs can be targeted.
+
+A PoC site at leaks.psylo.app lets you check whether your real IP is leaking. It shows your regular HTTPS traffic alongside possible IP leaks from the proxy bypass. The researchers noted that desktop Chrome is not affected and VPN connections mitigate the leaks, but Safari users on iOS with Private Relay enabled have no protection against this.
+
+This is the third security issue in iCloud Private Relay since its launch in 2021. FingerprintJS found a WebRTC-based leak months after release. Apple fixed a Hide My Email vulnerability last month that exposed real email addresses in Mail logs. Now three WebKit features are undermining the core privacy promise of the entire system.
+
+Apple told 404 Media it is investigating. There is no timeline for a fix, no patch plugin, and no workaround beyond switching browsers on desktop — which does nothing for iOS users since every browser on the platform is WebKit under the hood.
+
+The pattern is familiar. Apple ships a privacy feature, researchers find the implementation gaps, and the feature works less than advertised. Private Relay promises that no single party, including Apple, can see where you browse and from where. These bypasses break that guarantee on every website that bothers to set them up.`,
+      source: `The Hacker News|https://thehackernews.com/2026/08/webkit-proxy-bypasses-can-expose-real.html`
+    },
+
 ];
 
 export const postSlugs = posts.map((post) => post.slug);
