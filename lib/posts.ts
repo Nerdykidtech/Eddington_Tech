@@ -1079,6 +1079,33 @@ The pattern is familiar. Apple ships a privacy feature, researchers find the imp
       source: `The Hacker News|https://thehackernews.com/2026/08/webkit-proxy-bypasses-can-expose-real.html`
     },
 
-];
+  {
+    slug: "windows-hello-business-key-abuse-entra-id-persistence",
+    title: `Windows Hello for Business Keys Can Be Borrowed for Persistent Entra ID Access`,
+    date: "2026-08-07",
+    excerpt: `Researcher Dirk-jan Mollema showed that malware in a signed-in session can silently use a Windows Hello for Business key to authenticate to Entra ID, register a new device, and obtain a 90-day Primary Refresh Token — all without extracting the private key or requiring admin rights.`,
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Entra ID researcher Dirk-jan Mollema published a technique this week that should worry anyone running Windows Hello for Business: malware already running in a signed-in session can silently borrow the user's WHfB key to authenticate to Entra ID.
+
+No private key extraction. No PIN recovery. No biometric prompt. The code just asks Windows to sign authentication data while the user is interactively signed in. Administrator privileges are not required.
+
+Here is how it works. WHfB keys are FIDO2 passkeys. The WebAuthn sign-in flow accepts them, and the Entra ID challenge it produces is not bound to a session, user, or tenant. Mollema found that an attacker can request the challenge on another host entirely, have the compromised endpoint produce the signed assertion, and feed it to ROADtools to open a browser session or request tokens as the victim.
+
+The token that comes back carries no device ID claim. Without that device binding, the attacker can register a new device they control, request a Primary Refresh Token for it, and reach Microsoft cloud services as if they were the user. PRTs are valid for 90 days and renew continuously while the user actively uses the device.
+
+It gets worse. The WebAuthn sign-in satisfies Conditional Access policies that require phishing-resistant authentication strength. It also counts as fresh multi-factor authentication, which means the attacker can add passkeys or additional WHfB keys on the new device where tenant policies allow it.
+
+The technique is not new in concept. Mollema presented similar work at DEF CON 32 in 2024, but that version required access to an Entra-registered or joined device. This new approach removes that prerequisite entirely.
+
+There is no CVE. No Microsoft advisory. No reported active exploitation. Mollema describes it as a consequence of how WHfB works, and says Microsoft left the behavior as-is.
+
+For detection, Mollema recommends hunting for WHfB sign-ins with an empty device ID. Legitimate incognito or non-SSO browser sessions can produce the same pattern, so expect false positives. The more reliable signal is an unexpected device registration followed by a PRT request from that device.
+
+This is a real limitation of phishing-resistant authentication. The credential stays hardware-bound and unexported, but malware inside the signed-in session can invoke it on the attacker's behalf. If you are relying on WHfB plus Conditional Access as your zero-trust foundation, this finding is worth a serious conversation about what else sits in your detection stack.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/malware-can-abuse-windows-hello-for.html"
+  }];
 
 export const postSlugs = posts.map((post) => post.slug);
