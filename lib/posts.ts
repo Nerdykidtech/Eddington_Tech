@@ -1106,6 +1106,33 @@ For detection, Mollema recommends hunting for WHfB sign-ins with an empty device
 
 This is a real limitation of phishing-resistant authentication. The credential stays hardware-bound and unexported, but malware inside the signed-in session can invoke it on the attacker's behalf. If you are relying on WHfB plus Conditional Access as your zero-trust foundation, this finding is worth a serious conversation about what else sits in your detection stack.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/malware-can-abuse-windows-hello-for.html"
-  }];
+  },
+  {
+    slug: "atlassian-rovo-prompt-injection-data-exfiltration",
+    title: "Atlassian Rovo AI Assistant Tricked Into Exfiltrating Jira and Confluence Data",
+    date: "2026-08-08",
+    excerpt: "Two independent security researchers found that Atlassian's Rovo AI assistant can be tricked into collecting Jira and Confluence data and sending it to attacker-controlled servers through prompt injection. One attack vector is fixed; the other remains unconfirmed.",
+    category: "IAM",
+    readTime: "5 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Atlassian's Rovo AI assistant can be tricked into exfiltrating Jira and Confluence data to attacker-controlled servers. Two security firms found this independently, through different attack paths. One is fixed. The other status is unclear.
+
+PromptArmor, an AI security firm, hid instructions inside a document that a user uploads to Rovo. When the user asks Rovo to organize their Jira tickets, the assistant reads the hidden instructions, searches Jira and Confluence as requested, appends what it finds to an attacker's URL, and opens it. The attacker reads the ticket and page contents from their own server logs.
+
+The key problem: Rovo doesn't check whether the URL it's opening is one the assistant constructed itself. Disabling Rovo's web-search setting doesn't stop this because the outbound request uses a separate URL-retrieval capability. PromptArmor disclosed this to Atlassian on May 23, received a case number two days later, followed up twice, and published on August 5 after what it described as no further communication. The file-based path status remains unconfirmed.
+
+Varonis Threat Labs found a different route. The rovoChatPrompt URL parameter lets an attacker preload instructions into Rovo Chat. One click from an authenticated user runs those instructions with that user's privileges and sends the results to an attacker's server. Varonis calls this RovoBlast and demonstrated exfiltration of a private API key from Confluence. The same one-click technique was tested against Jira and data reachable through SharePoint and Outlook connectors.
+
+Atlassian fixed RovoBlast server-side on July 8, 2026. Bugcrowd marked the report resolved and paid a $6,000 bounty. Neither issue has a CVE identifier.
+
+Rovo is on by default for apps on Standard, Premium, and Enterprise plans. Organizations can block Rovo features for supported apps, which disables current and upcoming AI features including Agents and Chat. But on a site running several Jira-family apps, blocking one doesn't remove shared capabilities. Rovo Search, Chat and Create stay available as long as any Jira app on that site has Rovo enabled.
+
+The attack works because Rovo follows the signed-in user's permissions. The data that leaves is data the user can access. That's the product working as intended. What changes is that the user never chose to send it.
+
+Neither disclosure reports evidence that either technique has been used against a real organization. But the window for the file-based path remains open, and the web-search toggle isn't the security boundary it appears to be.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/atlassian-rovo-can-be-tricked-into.html"
+  }
+];
 
 export const postSlugs = posts.map((post) => post.slug);
