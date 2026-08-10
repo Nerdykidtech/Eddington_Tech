@@ -19,6 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://eddington.tech"),
   title: "Eddington.Tech | System Engineer & IAM Engineer",
   description:
     "Personal site of Hunter Eddington — System Engineer, IAM Engineer, and iOS developer. Showcase of apps and projects.",
@@ -35,10 +36,19 @@ export const metadata: Metadata = {
     siteName: "Eddington.Tech",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Eddington.Tech",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     creator: "@huntereddington",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
