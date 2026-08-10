@@ -1132,6 +1132,43 @@ The attack works because Rovo follows the signed-in user's permissions. The data
 
 Neither disclosure reports evidence that either technique has been used against a real organization. But the window for the file-based path remains open, and the web-search toggle isn't the security boundary it appears to be.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/atlassian-rovo-can-be-tricked-into.html"
+  },
+
+  {
+    slug: "pass-the-passkey-windows-entra-id-replay",
+    title: "Pass-the-Passkey: Windows Leaks YubiKey Signatures, Entra ID Replays Them",
+    date: "2026-08-10",
+    excerpt: "SpecterOps showed at Black Hat that Windows stores past YubiKey signatures in cleartext and Entra ID will replay them, letting an attacker authenticate as a privileged user without ever touching the key. Three passkey research efforts this week paint the same picture: the cryptography holds, the implementation around it does not.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Three research teams published passkey attacks this week. None of them broke the cryptography. All of them found ways around the protections passkeys are supposed to guarantee.
+
+The headline finding is from SpecterOps, presented at Black Hat USA. They call it Pass-the-Passkey: a chain that uses a Windows logging bug and a weakness in Entra ID's passkey validation to impersonate privileged users. Policies requiring phishing-resistant MFA do not stop it.
+
+The bug is CVE-2026-34348, an information disclosure in the Windows Event Logging Service. Windows stores signatures your YubiKey generated in cleartext, and any authenticated unprivileged user, remote users included, can read them. SpecterOps took one of those old signatures and replayed it through Entra ID's passkey validation to authenticate as a privileged user.
+
+No private key was extracted. The YubiKey never left its owner. The problem is that Windows kept a signature around, and the cloud identity provider accepted it a second time.
+
+Microsoft shipped a fix for the Windows side and said it applied mitigations for the passkey relay issue on the Entra side. Public detail on what that Entra-side mitigation actually covers is thin, which is its own problem.
+
+This was not the only passkey research this week. Unit 42 showed malware can pull the 32-byte Security Domain Secret out of Chrome's memory during passkey re-registration and recover synced private keys, with no rotation or revocation path available. Dirk-jan Mollema showed malware in a signed-in Windows session can invoke a hardware-bound Windows Hello for Business key without a fresh PIN or biometric prompt, and the resulting token can lack a device ID claim, a clean road to a Primary Refresh Token. I covered both of those in earlier posts.
+
+The thread running through all three is worth stating plainly. Synced passkeys have a master key problem. Device-bound passkeys have a key-that-works-from-inside-a-compromised-session problem. Neither choice closes the surface.
+
+The timing makes this worse. Starting September 1, 2026, Microsoft automatically enables passkeys for Entra ID users who still authenticate with SMS or voice. SMS and voice delivery retire February 1, 2027. Millions of users are being moved onto passkeys as the phishing-resistant default at the moment researchers are showing how the surrounding controls fail.
+
+What to do:
+
+Patch CVE-2026-34348. The fix exists, and the affected surface covers every supported Windows release.
+
+If your service accepts WebAuthn assertions, enforce userVerification and verify the returned flag rather than trusting the request setting. That is the same lesson from the Google Password Manager work last week: eBay only validated the flag after researchers tested it, which suggests a lot of other relying parties are not.
+
+On the Entra side, hunt for Windows Hello for Business sign-ins without a device ID and for unexpected device registrations. Treat passkey stores, recovery flows, and browser memory as credential territory, because that is how attackers treat them.
+
+Passkeys are still better than passwords. But the pitch was that they would end phishing. What this week showed is that the implementation around them has seams, and they are being found faster than they are being fixed.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/new-passkey-attacks-can-recover-synced.html"
   }
 ];
 
