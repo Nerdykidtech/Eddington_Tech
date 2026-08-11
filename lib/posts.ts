@@ -1169,6 +1169,33 @@ On the Entra side, hunt for Windows Hello for Business sign-ins without a device
 
 Passkeys are still better than passwords. But the pitch was that they would end phishing. What this week showed is that the implementation around them has seams, and they are being found faster than they are being fixed.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/new-passkey-attacks-can-recover-synced.html"
+  },
+
+  {
+    slug: "ghostsplice-mcp-secret-exfiltration",
+    title: "Malicious MCP Servers Can Split Instructions to Make AI Coding Agents Exfiltrate Secrets",
+    date: "2026-08-11",
+    excerpt: "ASSET Research Group's GhostSplice attack shows a malicious MCP server can steal SSH keys, environment secrets, and source code from an AI coding assistant without sending a single instruction that looks malicious. The request arrives split across tool descriptions and results, and the agent stitches the pieces together itself. Same model, different client, completely different outcome.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `ASSET Research Group's GhostSplice attack shows that a malicious MCP server can quietly walk off with SSH keys, environment secrets, source code, and customer data without ever sending one instruction that looks malicious.
+
+The technique is straightforward. Instead of one harmful request, the attacker splits it into fragments and places each piece in a channel the coding agent already trusts: one fragment in a tool description, another in a tool result, sometimes a third via server-initiated sampling. Each piece looks routine. The agent stitches them together in its working context and sends the data back.
+
+The split matters because it defeats refusal. A model that turns down a blunt send-me-your-.env-file request will often comply when the same ask arrives in pieces. The researchers tested 15 model and client combinations. GPT-4o, Gemini 2.0 Flash, and Llama 3.3 70B went from 0% exfiltration in the one-piece test to 100% when split in two. Claude Haiku 4.5 stayed at 0% in the API tests but hit 100% in a three-piece Cursor test. GPT-5.4 scored 90% in Cursor, 100% through Codex CLI, and 0% behind Claude Code.
+
+That spread is the real story. Same model, different client, different outcome. The safety boundary around the model matters as much as the model itself. Claude Sonnet 4.6 and Opus 4.6 show 0% in the published table, yet ASSET notes Sonnet still sent proprietary source containing a live hardcoded key in one test while redacting the more obvious secrets. Those numbers describe specific setups, not guarantees.
+
+The simplest lure was also the hardest to second-guess. Elaborate compliance stories gave the model something false to question. A plain fill-in-the-blanks template did not. To the model, the task was just filling in the form the tool asked it to fill in.
+
+Be clear about the limits. This is not remote exploitation. It assumes the developer already connected the attacker's MCP server and that the agent can already read the files being taken. The threat model is a poisoned integration, not a network break-in.
+
+The defense lands on the client. The MCP spec says clients should keep a human able to deny tool invocations and treat annotations from untrusted servers as untrusted. ASSET's prescription is stricter: treat server output as data, not instructions, and do not let values from one tool's output flow unchecked into another tool's arguments.
+
+This is the second disclosure from the same lab, after Ghostcommit in June hid instructions in a PNG and had an agent encode .env secrets into source. Different mechanics, same weak spot. Anyone running coding agents with access to credentials should treat third-party MCP servers like compromised dependencies, because that is effectively what they are.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/malicious-mcp-servers-can-split.html"
   }
 ];
 
