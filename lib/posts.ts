@@ -1196,6 +1196,27 @@ The defense lands on the client. The MCP spec says clients should keep a human a
 
 This is the second disclosure from the same lab, after Ghostcommit in June hid instructions in a PNG and had an agent encode .env secrets into source. Different mechanics, same weak spot. Anyone running coding agents with access to credentials should treat third-party MCP servers like compromised dependencies, because that is effectively what they are.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/malicious-mcp-servers-can-split.html"
+  },
+
+  {
+    slug: "attackers-exploit-vmware-vcenter-cve-2026-59310",
+    title: "Attackers Exploit VMware vCenter Vulnerability for Persistent Remote Access",
+    date: "2026-08-12",
+    excerpt: "Attackers are actively exploiting CVE-2026-59310, a CVSS 9.8 directory traversal in VMware vCenter Server, just five days after Broadcom's patch shipped. QUIRSO found 361 compromised hosts across 47 countries, with persistence planted via cron jobs and reverse_ssh tunnels. Patch now, then check for outbound SSH and cron entries you did not create.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Five days after Broadcom shipped the patch, attackers were already using it to break into vCenter servers.
+
+The flaw is CVE-2026-59310, a directory traversal in VMware vCenter Server that lets anyone with network access execute arbitrary code. CVSS 9.8. Broadcom released fixes late last month. German firm QUIRSO found the exploitation during an incident response engagement, and the timeline is ugly: compromised systems started contacting attacker domains on August 3, five days after disclosure. So far they count 361 victim IPs across 47 countries, most in Germany, the US, Turkey, Iran, and France.
+
+The chain is short. Path traversal drops a file, a malicious cron job keeps it alive, and reverse_ssh maintains a tunnel back to attacker infrastructure. That last piece matters. reverse_ssh connects outbound, so it slides past the inbound-focused controls most orgs put in front of vCenter. It is a legitimate open-source admin tool, which is exactly why it works here.
+
+QUIRSO is careful about attribution. reverse_ssh alone is not proof of compromise. Combined with an unauthorized install, unexpected outbound connections, or execution on a vulnerable appliance, it becomes a high-priority indicator. The firm suspects an APT. VMware appliances have been a staple target for Chinese state actors for years, and the same reverse_ssh pattern showed up in SentinelOne's PurpleHaze reporting last year.
+
+The disclosure-to-exploitation gap keeps shrinking. If you have not patched, patch now. If you already did, go hunting: cron jobs you did not create, outbound SSH you did not configure, reverse_ssh binaries on the appliance. Defused Cyber is also logging a scanning spike against the sibling vmdir auth bypass, CVE-2026-59309 (also CVSS 9.8): version probes via POST /sdk/ and walks of the /websso SAML flow. That fingerprinting is what exploitation looks like right before it starts.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/attackers-exploit-vmware-vcenter.html"
   }
 ];
 
