@@ -1217,6 +1217,36 @@ QUIRSO is careful about attribution. reverse_ssh alone is not proof of compromis
 
 The disclosure-to-exploitation gap keeps shrinking. If you have not patched, patch now. If you already did, go hunting: cron jobs you did not create, outbound SSH you did not configure, reverse_ssh binaries on the appliance. Defused Cyber is also logging a scanning spike against the sibling vmdir auth bypass, CVE-2026-59309 (also CVSS 9.8): version probes via POST /sdk/ and walks of the /websso SAML flow. That fingerprinting is what exploitation looks like right before it starts.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/attackers-exploit-vmware-vcenter.html"
+  },
+
+  {
+    slug: "sharepoint-jwt-authentication-bypass-cve-2026-55040",
+    title: "Attackers Exploit SharePoint Authentication Bypass After Public PoC Release",
+    date: "2026-08-13",
+    excerpt: "Attackers are exploiting CVE-2026-55040, a critical SharePoint authentication bypass, within days of Rapid7's PoC release. The flaw chains four weaknesses in SharePoint's JWT validation to forge tokens and impersonate any site user. Eight of the 12 observed exploitation attempts landed on August 12-13, right after the PoC went public.",
+    category: "IAM",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Rapid7 published a working PoC for CVE-2026-55040 earlier this week. Within 48 hours, attackers were running it against SharePoint servers.
+
+The bug is a critical authentication bypass in SharePoint, CVSS 9.1, patched in Microsoft's July Patch Tuesday release. An unauthenticated attacker can forge a JWT and impersonate any SharePoint site user, including a site administrator. Microsoft's advisory is blunt about what that means: the authentication feature can be bypassed because the vulnerability allows impersonation. File disclosure and data modification, without touching availability.
+
+The root cause sits in SharePoint's JWT validation pipeline, specifically the two classes that parse Bearer service-to-service tokens: SPJsonWebSecurityTokenHandlerV2 and SPJsonWebSecurityBaseTokenHandlerV2. Rapid7 found four weaknesses that chain together:
+
+- The outer JWT header declares "alg: none", so no signature is required on the outer token.
+- The actor token's x5t header carries SharePoint's own STS certificate thumbprint, which resolves a signing key with no verification.
+- The resolved certificate is not in TrustedSecurityTokenServices, so the issuer gets accepted.
+- The actor token's signature is a non-empty value like "AAAA" that is never verified.
+
+Nothing in that list is exotic on its own. Together they let an attacker mint a token SharePoint accepts as a real user, with zero credentials. Rapid7's PoC automates the whole thing: forge the token, query the target's domain controller, enumerate users by SID, find a site administrator, and log in as them.
+
+KEVIntel telemetry shows 12 exploitation attempts since July 19, eight of them on August 12 and 13, right after the PoC went public. The source IPs span five countries and regions: Hong Kong, Japan, the Netherlands, Taiwan, and the US.
+
+This is also the fifth SharePoint vulnerability exploited in the wild this year, after CVE-2026-45659, CVE-2026-56164, CVE-2026-58644, and CVE-2026-50522. At some point that stops being a run of bad luck. SharePoint's token handling is a target, and the gap between disclosure and exploitation keeps shrinking.
+
+If you have not applied the July Patch Tuesday updates, that is the fix. Then check SharePoint logs for token-based impersonation: logins tied to no real session, S2S token use from unexpected sources. The PoC is public, it works, and the people running it are not waiting for you to catch up.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/attackers-exploit-sharepoint.html"
   }
 ];
 
