@@ -1247,6 +1247,33 @@ This is also the fifth SharePoint vulnerability exploited in the wild this year,
 
 If you have not applied the July Patch Tuesday updates, that is the fix. Then check SharePoint logs for token-based impersonation: logins tied to no real session, S2S token use from unexpected sources. The PoC is public, it works, and the people running it are not waiting for you to catch up.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/attackers-exploit-sharepoint.html"
+  },
+
+  {
+    slug: "lazarus-afd-sys-zero-day-troy-backdoor",
+    title: "Lazarus Exploits Windows Zero-Day to Gain SYSTEM Access and Deploy Backdoor",
+    date: "2026-08-14",
+    excerpt: "Lazarus Group is exploiting CVE-2026-68820, an AFD.sys privilege escalation zero-day patched in this week's August Patch Tuesday, against defense and aerospace companies in France, Germany, Brazil, and India. The Dream Job campaign now pairs a new backdoor called Troy with the FudModule 3.1 kernel rootkit, which can disable Smart App Control. Patch AFD.sys first.",
+    category: "Threat Intelligence",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Lazarus Group turned a Windows kernel driver bug into the entry point for Operation Dream Job, and the fix shipped in this week's Patch Tuesday.
+
+CVE-2026-68820 is a privilege escalation flaw in AFD.sys, the Windows Ancillary Function Driver for WinSock. CVSS 7.0. Microsoft patched it on August 11. Check Point Research says the exploit was already working in early June, and Lazarus has been running it against defense and aerospace companies in France, Germany, Brazil, and India.
+
+The delivery is classic Dream Job: a fake recruiter on LinkedIn, a job offer PDF, and a nudge to install a PDF viewer to read it. This time there are two parallel infection paths.
+
+The first is DLL side-loading through libmupdf.dll. The malicious DLL renders a bogus job description while a lightweight downloader called MISTPEN runs in memory, reaching attacker infrastructure through Microsoft Graph API and OneDrive. MISTPEN drops reconnaissance and persistence modules, triggers the AFD.sys exploit for SYSTEM privileges, and hands off to ForestTiger, a remote access tool that has been in Lazarus's arsenal for years.
+
+The second path is a trojanized PDF viewer called SecurityPDF, hosted on sites impersonating Enveil, a real encryption startup (envell[.]xyz, enveil[.]online, uxtramine[.]org). The viewer waits for a PDF containing a marker string, then decrypts and loads a backdoor called Troy straight into memory. Troy answers to 17 commands: file enumeration, upload and download, archiving and exfiltration, interactive shell, process termination, in-memory DLL injection, config updates.
+
+The kernel piece is FudModule 3.1, an updated version of the rootkit Lazarus has leaned on since at least 2022. The new trick: it sets VerifiedAndReputablePolicyState to zero and reloads the code integrity policy, which disables Smart App Control, the Windows feature that decides whether a program is safe to run. The handshake negotiates keys with ML-KEM, a post-quantum algorithm. That is a tell about what they expect to happen to their C2 traffic eventually.
+
+The infrastructure is the part I keep coming back to. No bespoke C2 domains. Lazarus hijacked legitimate WordPress and SharePoint sites plus Roundcube webmail servers vulnerable to CVE-2025-49113, planting a PHP webshell called RelayShell. In one case, an already-breached France-based organization was used to send phishing to new victims, bypassing reputation filters.
+
+Patch AFD.sys first. And then sit with Check Point's point: when the website, the download, and the recruiter all look right, the old advice to spot the phishing link stops working. Verify software through official channels, not search rankings, and assume trust can be counterfeited.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/lazarus-exploits-windows-zero-day-to.html"
   }
 ];
 
