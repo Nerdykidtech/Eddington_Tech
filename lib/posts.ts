@@ -1274,6 +1274,31 @@ The infrastructure is the part I keep coming back to. No bespoke C2 domains. Laz
 
 Patch AFD.sys first. And then sit with Check Point's point: when the website, the download, and the recruiter all look right, the old advice to spot the phishing link stops working. Verify software through official channels, not search rankings, and assume trust can be counterfeited.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/lazarus-exploits-windows-zero-day-to.html"
+  },
+
+  {
+    slug: "malicious-litellm-releases-teampcp",
+    title: "Malicious LiteLLM Releases Tied to Trivy Hack May Have Exposed 2,500+ Organizations",
+    date: "2026-08-17",
+    excerpt: "Two malicious LiteLLM releases sat on PyPI for about 40 minutes in March, harvesting cloud keys, SSH keys, Kubernetes tokens, and database passwords from whatever installed them. CloudSEK's new dataset ties the captured loot, roughly 434,000 files, to more than 2,500 organizations. The releases are part of the TeamPCP campaign behind the Trivy compromise, and the FBI says treat those secrets as live until rotated.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `Two malicious LiteLLM releases sat on PyPI for about 40 minutes in March. In that window they grabbed cloud keys, SSH keys, Kubernetes tokens, database passwords, and whatever else was sitting in environment variables on machines that installed them. Threat intel firm CloudSEK now says the captured loot maps to more than 2,500 organizations.
+
+Let me be careful about what that number means, because it is doing a lot of work. CloudSEK obtained roughly 434,000 captured files from confidential sources. That is not a victim count. It does not mean 2,500 organizations had stolen credentials used against them. Each file gets tied to an organization through identity signals in the CI runner environment, and matches carry High or Medium confidence ratings. NVIDIA, Cisco, Deloitte, Volkswagen, FedEx, Siemens, and X Corp appear in the data. CloudSEK published the whole thing as a public lookup you can search by domain.
+
+The mechanism is nastier than the usual poisoned package. Version 1.82.8 shipped a file named litellm_init.pth. Python executes .pth files at interpreter startup, so the payload ran on any machine that started a Python process in that environment, whether or not anything ever imported LiteLLM. The stolen secrets were encrypted and sent to models.litellm[.]cloud, an attacker-controlled domain. The payload also read model API keys straight out of the environment, including OPENAI_API_KEY and ANTHROPIC_API_KEY.
+
+This was not a one-off. The poisoned releases belong to the TeamPCP campaign, which Google tracks as UNC6780. The same attackers hit Aqua Security's Trivy scanner in March: force-pushed malicious commits to 76 of 77 trivy-action version tags, published a malicious Trivy 0.69.4, and kept access after an incomplete credential rotation. The ecosystem compromise is CVE-2026-33634, added to CISA's Known Exploited Vulnerabilities catalog on March 26. PyPA's advisory describes the chain the same way: an API token exposed through the compromised Trivy dependency was then used to upload the two LiteLLM versions.
+
+The downstream damage is confirmed even if the scale figures are not. Checkmarx said credentials from the Trivy attack let attackers into its GitHub repositories and publish malicious artifacts. Mercor reported unauthorized activity tied to the LiteLLM versions. CERT-EU assessed with high confidence that a European Commission AWS account was compromised through the supply-chain attack, with about 91.7 GB of compressed data exfiltrated.
+
+The FBI has been on this since July. Advisory FLASH-20260702-01 tells organizations to rotate CI/CD secrets, publishing tokens, and cloud credentials exposed during the relevant windows, and warns that the actors are likely to weaponize this material long after the initial compromise. A static cloud key or SSH key copied during that window stays usable until someone rotates it.
+
+What to actually do: check whether anything in your environment installed LiteLLM 1.82.7 or 1.82.8 during the March 24 window, 10:39 to 16:00 UTC. Rotate every secret those systems could reach. Search your GitHub orgs for repositories named tpcp-docs or docs-tpcp, and check release assets tagged data-<timestamp>. Then start moving off long-lived tokens. That last one is the actual fix, and it is the one most organizations will keep putting off.`,
+    source: "The Hacker News|https://thehackernews.com/2026/08/malicious-litellm-releases-tied-to.html"
   }
 ];
 
