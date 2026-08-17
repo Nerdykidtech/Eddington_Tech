@@ -1299,6 +1299,41 @@ The FBI has been on this since July. Advisory FLASH-20260702-01 tells organizati
 
 What to actually do: check whether anything in your environment installed LiteLLM 1.82.7 or 1.82.8 during the March 24 window, 10:39 to 16:00 UTC. Rotate every secret those systems could reach. Search your GitHub orgs for repositories named tpcp-docs or docs-tpcp, and check release assets tagged data-<timestamp>. Then start moving off long-lived tokens. That last one is the actual fix, and it is the one most organizations will keep putting off.`,
     source: "The Hacker News|https://thehackernews.com/2026/08/malicious-litellm-releases-tied-to.html"
+  },
+
+  {
+    slug: "macos-screen-sharing-auth-bypass-cve-2026-65400",
+    title: "macOS Screen Sharing Auth Bypass Exploited in the Wild to Mine Monero",
+    date: "2026-08-17",
+    excerpt: "CVE-2026-65400 lets network attackers authenticate to macOS Screen Sharing without credentials, and the Netherlands NCSC says it is being actively exploited. Attackers are reaching root on internet-exposed Macs and dropping Monero miners. Patch to Tahoe 26.6.1, Sequoia 15.7.9, or Sonoma 14.8.9, or disable Screen Sharing entirely.",
+    category: "Hardening",
+    readTime: "3 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `If your Mac runs Screen Sharing and port 5900 is reachable from the internet, stop reading and go patch it. Or turn it off. I'll wait.
+
+CVE-2026-65400 is a critical authentication bypass in macOS Screen Sharing, Apple's built-in VNC remote desktop service. CVSS 9.8. A network attacker can authenticate without valid credentials. Apple shipped fixes on August 6 in macOS Tahoe 26.6.1, Sequoia 15.7.9, and Sonoma 14.8.9.
+
+The Netherlands NCSC warned this week that the flaw is being actively exploited. Every reported case follows the same shape: a Mac with port 5900 exposed, an attacker who reached root, and a Monero miner dropped on the system.
+
+Not a foothold. Root. Anonymous network access straight to a crypto miner, no user interaction anywhere in the chain.
+
+Researcher Alfredo Pesoli of Bynario found and reported the bug, then published details on a cluster of related Screen Sharing flaws Apple fixed in the same wave. CVE-2026-43779 is a logic issue that lets an app intercept another process's network connections (CVSS 9.8). CVE-2026-43777 is a remote denial of service (7.5). CVE-2026-43760 is an access issue (8.6).
+
+The last one is the interesting one. It lives in a legacy Screen Sharing auth path, the "VNC viewers may control screen with password" option. Pesoli's write-up shows how a file copy operation turns into protected file disclosure, arbitrary root file creation, and remote root command execution. It requires the attacker to already hold the VNC password, which sounds reassuring until you remember how VNC passwords actually get used. One shared password for a whole fleet, set once in 2019, never rotated.
+
+The practical list:
+
+If you don't use Screen Sharing, disable it. System Settings, General, Sharing, Screen Sharing. A feature that's off can't be exploited.
+
+If you do use it, keep port 5900 off the public internet. VPN, or Apple Remote Management with locked-down access controls. "It's just for the admin" is how these boxes end up in botnets.
+
+Patch. Tahoe 26.6.1, Sequoia 15.7.9, Sonoma 14.8.9. Apple does not ship emergency point releases for fun.
+
+What gets me about this one is the payload. Attackers aren't stealing data or staging ransomware. They're farming compute on boxes left with a door open, and that tells you this is running at scale against anything with 5900 reachable. The patch has been out since August 6 and the NCSC is still seeing fresh infections.
+
+Check your exposed ports. This only stops when people stop leaving VNC on the internet.`,
+    source: "BleepingComputer|https://www.bleepingcomputer.com/news/security/hackers-exploit-macos-screen-sharing-flaw-to-deploy-monero-miner/"
   }
 ];
 
