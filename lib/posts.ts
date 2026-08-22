@@ -1334,6 +1334,45 @@ What gets me about this one is the payload. Attackers aren't stealing data or st
 
 Check your exposed ports. This only stops when people stop leaving VNC on the internet.`,
     source: "BleepingComputer|https://www.bleepingcomputer.com/news/security/hackers-exploit-macos-screen-sharing-flaw-to-deploy-monero-miner/"
+  },
+
+  {
+    slug: "exposed-aws-keys-admin-access-truffle-security",
+    title: "9,300+ Leaked AWS Keys Still Active, 242 Grant Full Admin Access",
+    date: "2026-08-22",
+    excerpt: "Truffle Security found more than 9,300 AWS access keys exposed over the last four years still work, and 88% of the keys it could fully verify still authenticated in August. 242 carry AdministratorAccess and 526 are root keys. Almost nobody rotates.",
+    category: "IAM",
+    readTime: "4 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    content: `If you have ever committed an AWS key to a public repo, there is a decent chance it still works. Truffle Security just published four years of data on this, and the numbers are rough.
+
+More than 9,300 AWS access keys exposed between August 2022 and August 2026 are still active and valid. Truffle scanned code repositories, Git history, datasets, Docker images, registries, and CI logs, and pulled out 431,875 AWS secrets. After deduplication that is 64,024 unique keys tied to 50,654 AWS accounts.
+
+The uncomfortable part is who owns them. 817 of the exposed keys belong to companies. 526 are root keys, the highest privilege AWS offers, not restricted by IAM at all. 242 are IAM user keys with the AdministratorAccess policy attached, which is full control over the account.
+
+Truffle could fully re-verify 10,616 of the keys, and 88% still authenticated as of August 10. They put it plainly: 768 of the live keys in the two company sets grant full control of a company's AWS account.
+
+An attacker with one of those keys can exfiltrate or wipe cloud data, take over servers and applications, create rogue admin accounts for persistence, or spin up cryptominers on the company's bill. Truffle checked budget alerts while it was in there. Only 262 of 2,754 readable accounts had one set.
+
+Hugging Face is the single largest leak source, at 8,482 unique key exposures. Given how many teams push secrets into model repos and dataset files, that tracks.
+
+Then the rotation problem. Of 2,903 keys with known creation dates, the median age is 1,831 days, roughly five years. The oldest has been alive for 17.4 years. Only 13.7% had a newer access key for the same user, which is the tell that almost nobody rotates. A key that has been exposed for years and still works is not a credential. It is a standing backdoor.
+
+The fix list is short and boring:
+
+Delete your root access keys. IAM roles do everything root keys do, and roles do not leak.
+
+Review IAM credentials by age and rotate anything old.
+
+Rotate or revoke any key that ever touched a public repo, a client-side bundle, a Docker image, or a CI log. Treat every committed credential as compromised, because it is.
+
+Set budget alerts on every account. The cryptominer scenario only hurts when nobody notices the bill.
+
+Truffle says its testing was read-only and it notified every owner it could identify. Good on them, but the notification is the minimum. The keys were the problem all along.
+
+This is the kind of finding that never makes a great headline and matters more than most of them. Nobody is getting hacked here. The keys are just sitting there, valid, often years old, waiting for someone to read the same public repos Truffle did.`,
+    source: "BleepingComputer|https://www.bleepingcomputer.com/news/security/hundreds-of-leaked-aws-keys-give-full-control-over-corporate-accounts/"
   }
 ];
 
