@@ -28,7 +28,7 @@ export const posts: Post[] = [
 
 This is not a credit card breach. It is not a retail data breach. It is a breach of the physical identity verification infrastructure that thousands of American businesses use to confirm who is sitting in front of them. Driver license data is permanent in a way financial data is not. You cannot cancel a license and get a new one the way you cancel a card and get a new number.
 
-## How the Breach Works
+## How the breach works
 
 idscan.net provides identity verification services. Their systems scan driver licenses using infrared and ultraviolet light. Infrared reads security features invisible to the human eye. UV reveals fluorescent inks and holograms used in modern IDs. Their technology processes more than 21 million verifications per month at over 20,000 locations across the United States and internationally. Their customer list includes Hertz, Target, FedEx, Motorola Solutions, the financial services firm Jack Henry, and Caesars Entertainment. They have an exclusive agreement to verify IDs at Planet13 marijuana dispensaries across multiple states.
 
@@ -38,7 +38,7 @@ idscan.net's documentation states their systems capture front and back license s
 
 The Nexus service adds roughly 400,000 new records per day. The attackers have maintained access to idscan.net's data pipeline for over a year, according to Nexus's own posts on the Russian cybercrime forum Exploit.
 
-## The Vendor Concentration Problem
+## The vendor concentration problem
 
 idscan.net sits in the middle of a vendor chain connecting physical retail, car rental, hospitality, financial services, and government-adjacent facilities. One breach at a single vendor exposes records from all of its downstream customers simultaneously.
 
@@ -58,7 +58,7 @@ This data enables identity theft at scale. With a license scan, an attacker can 
 
 The license number is particularly valuable because it persists across address changes, card renewals, and most life events. It is a lifetime identifier.
 
-## What Makes This Breach Different
+## What makes this breach different
 
 Most data breaches involve credentials or financial data that can be cancelled and reissued. A driver license is different. The IR and UV scan data captured by idscan.net represents the physical security layer of an identity document. That data cannot be revoked. The document itself cannot be replaced.
 
@@ -66,11 +66,11 @@ The security industry has built response playbooks around data breaches: contain
 
 What makes the 400,000 records per day growth rate even more concerning is what it implies about the attackers' access. They are not draining a static database. They have sustained access to a live data stream inside idscan.net's infrastructure.
 
-## Detection: Hunting for Evidence of License Data Exfiltration
+## Detection: hunting for evidence of license data exfiltration
 
 Organizations using idscan.net or similar vendors should assume their scanned data may have been exposed. The following detection logic helps determine whether exfiltration occurred.
 
-### SIGMA Rule: High-Volume License API Queries
+### SIGMA rule: high-volume license API queries
 
 \`\`\`yaml
 title: Anomalous ID Verification API Volume
@@ -100,7 +100,7 @@ tags:
   - attack.t1074
 \`\`\`
 
-### SIGMA Rule: Bulk Data Export from ID Verification System
+### SIGMA rule: bulk data export from ID verification system
 
 \`\`\`yaml
 title: Bulk License Record Export
@@ -130,7 +130,7 @@ tags:
   - attack.t1041
 \`\`\`
 
-### Network Threat Hunting
+### Network threat hunting
 
 \`\`\`bash
 # Hunt for outbound connections to dark web infrastructure from ID verification servers
@@ -149,7 +149,7 @@ suricata rule:
 zeek notice for HTTP POST bodies >1MB to non-whitelisted external destinations
 \`\`\`
 
-### YARA Rule: Detecting Stolen License Data Storage Patterns
+### YARA rule: detecting stolen license data storage patterns
 
 \`\`\`yaml
 rule nexus_license_storage_pattern
@@ -171,25 +171,25 @@ rule nexus_license_storage_pattern
 }
 \`\`\`
 
-## Incident Response Playbook
+## Incident response playbook
 
-### For Organizations Using idscan.net
+### For organizations using idscan.net
 
 If your organization processes customer IDs through idscan.net or a similar vendor, assume breach.
 
 **Hours 0-24: Initial Assessment**
 
-Contact your idscan.net account team and request a formal breach notification. Do not assume they will notify you proactively. Identify all internal systems that receive, store, or transmit ID scan data from this vendor. Map the full data flow. Determine retention periods: how long does your organization store ID scans? Are they encrypted at rest? Who has access? Check access logs for your ID verification integration for the past 12 months. Look for unusual query patterns, after-hours access, or access from unexpected IP ranges. Review whether your organization stores raw IR/UV scans or only verification result flags. Storing raw scans dramatically increases your exposure surface.
+Contact your idscan.net account team and request a formal breach notification. Do not assume they will notify you first. Identify all internal systems that receive, store, or transmit ID scan data from this vendor. Map the full data flow. Determine retention periods: how long does your organization store ID scans? Are they encrypted at rest? Who has access? Check access logs for your ID verification integration for the past 12 months. Look for unusual query patterns, after-hours access, or access from unexpected IP ranges. Review whether your organization stores raw IR/UV scans or only verification result flags. Storing raw scans dramatically increases your exposure surface.
 
-**Days 2-7: Containment and Notification**
+**Days 2-7: Containment and notification**
 
 If evidence of unauthorized access exists, assume all stored ID scans for all customers processed through this vendor are exposed. Notify legal counsel. Engage your state's breach notification requirements. Begin drafting customer notifications. Implement additional monitoring on any system that touches this vendor's data. Consider temporarily restricting access to the vendor integration pending further investigation.
 
-**Days 8-30: Long-Term Response**
+**Days 8-30: Long-term response**
 
-Evaluate whether to continue using idscan.net or similar vendors. If continuing, negotiate contractual security requirements including data retention limits, encryption requirements, and breach notification SLAs. Implement zero-trust principles for any system that touches ID verification data. Assume the exposed data is in attacker hands and plan fraud monitoring accordingly.
+Evaluate whether to continue using idscan.net or similar vendors. If continuing, negotiate contractual security requirements including data retention limits, encryption requirements, and breach notification SLAs. Implement zero-trust principles for any system that touches ID verification data. Assume the exposed data is in attacker hands. Plan fraud monitoring based on that.
 
-## The Regulatory Gap
+## The regulatory gap
 
 This breach exposes a gap in how regulators treat identity verification vendors. KYC and AML compliance frameworks require financial institutions to collect and verify identity documents. They do not adequately specify how those documents must be secured, how long they may be retained, or what happens when the vendor holding them is breached.
 
