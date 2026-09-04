@@ -14,6 +14,337 @@ export interface Post {
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
   {
+    slug: "nexus-idscan-license-breach-153m",
+    title: "153 Million Driver Licenses for Sale: Inside the Nexus Identity Theft Service and the idscan.net Supply Chain Breach",
+    date: "2026-09-04",
+    excerpt: "Nexus, a dark web identity theft service, appeared on the Exploit cybercrime forum offering 153 million U.S. and Canadian driver license scans. The FBI opened an investigation within hours. Here is how the breach happened, what attackers do with license scans, SIGMA and YARA detection rules, and an IR playbook for affected organizations.",
+    category: "IAM",
+    readTime: "9 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/09/fbi-probes-service-selling-153m-drivers-licenses/",
+    content: `A dark web service called Nexus appeared on the Russian cybercrime forum Exploit on Monday, August 31, 2026, advertising digital scans of identity documents on more than 153 million people in the United States and Canada. Within hours, the FBI's New Orleans field office opened an official investigation. KrebsOnSecurity (whose own Virginia driver's license was offered as a free sample in the sales thread) traced the source to a breach at idscan.net, a Louisiana-based identity verification company that processes more than 21 million verifications per month across 20,000 locations globally.
+
+This is one of the most significant identity document leaks in recent history. It exposes the fundamental fragility of the third-party identity verification ecosystem: organizations that outsource ID checking to vendors like idscan.net inherit those vendors' security posture, often without visibility into how long data is retained, how it is protected, or who else has access to it.
+
+This post breaks down how the attack likely worked, what data was exposed, how attackers weaponize driver's license scans for identity fraud, detection rules for IR teams, and a practical playbook for organizations that use identity verification vendors.
+
+---
+
+## The vendors: idscan.net and the VeriScan system
+
+idscan.net sells identity verification technology under the product name VeriScan. Their system performs ID document authentication using both infrared and ultraviolet light scanning, the same technology used by border control agencies and financial institutions to detect forged documents.
+
+According to the company's own marketing, idscan.net's clients include Hertz (car rental locations worldwide), Jack Henry (financial services), Caesars Entertainment (casino and hospitality), Planet13 (marijuana dispensary chain operating in California, Florida, Illinois, and Nevada), more than 1,000 marijuana dispensaries across 19 U.S. states, and various Fortune 500 companies in retail, logistics, and transportation.
+
+The VeriScan system is deployed at the point of physical ID presentation. Each verification scan captures the front and back of the license, along with infrared and ultraviolet imagery used to verify security features embedded in the document. The system stores these scans along with metadata including timestamps.
+
+Why this matters for IAM: the driver's license is the de facto identity anchor in the United States. It is accepted as proof of identity for opening bank accounts, renting vehicles, passing TSA checkpoints, and increasingly for online identity verification. A database of 153 million license scans does not just expose identity documents. It exposes the verification infrastructure of half the continent's financial, travel, and hospitality sectors.
+
+---
+
+## The attack surface: physical-to-digital exfiltration
+
+Based on KrebsOnSecurity's reporting and corroborating evidence from multiple individuals whose licenses appear in Nexus, the exfiltration path traces back through Hertz rental car locations. Multiple people whose licenses appear in Nexus confirmed handing their license to a Hertz representative on dates that match the timestamps embedded in their scanned images.
+
+This points to a likely scenario: the VeriScan system's backend (or the systems it communicates with) was compromised, allowing the attacker to pull full document images and associated metadata from an extended historical dataset.
+
+### Five technical hypotheses for the breach vector
+
+Several scenarios could explain how 153 million records were exfiltrated over more than a year:
+
+Scenario 1: Compromised database credentials. The most straightforward explanation is that an external attacker or insider obtained database credentials for idscan.net's storage layer. The data would be stored in a structured format, likely PostgreSQL or MySQL, with the document images stored as files or BLOBs. If the database is accessible from the internet (or reachable via a compromised VPN or jump host), a skilled attacker could export the entire dataset over a period of months without triggering rate-limit alerts, given the sheer scale.
+
+Scenario 2: Compromised cloud storage. idscan.net may store document images in object storage such as AWS S3 or Azure Blob. If access keys were leaked (for example, via a public GitHub repository or a compromised employee workstation), an attacker could enumerate and download all stored images using tooling like the AWS CLI with a modified prefix list.
+
+Scenario 3: Rogue employee or contractor. The roughly 400,000-record daily growth rate mentioned in Nexus's sales thread suggests active, ongoing exfiltration. A rogue employee with database export permissions could run scheduled exports of new records as they arrive. This would explain the incremental growth pattern observed over the 12-plus months of the exfiltration window.
+
+Scenario 4: Supply chain compromise of VeriScan software. If the VeriScan agent or client software deployed at partner locations contained a backdoor or data exfiltration component, each new scan would automatically upload to an attacker-controlled endpoint. This is consistent with the sustained, incremental growth pattern rather than a one-time bulk dump.
+
+Scenario 5: API key exposure in mobile or web clients. idscan.net exposes APIs that partner applications call to submit verification data. If API keys for these endpoints were exposed in mobile app binaries, public repositories, or accidental commits, an attacker could submit queries to the API at scale without needing to compromise the internal network.
+
+Without access to idscan.net's infrastructure or internal logs, the exact vector remains unconfirmed. The FBI investigation will eventually produce a more definitive picture. For now, IR teams should treat all five scenarios as plausible and audit their own vendor relationships accordingly.
+
+---
+
+## Weaponization: what attackers do with 153 million license scans
+
+A driver's license scan is not just a piece of PII. It is a biometric-quality identity artifact that can be used across a wide range of fraud scenarios.
+
+### Financial account takeover
+
+With a license front and back scan plus a name, address, and date of birth (all purchasable separately from other data brokers), an attacker can pass most financial institutions' identity verification checks. Banks, credit unions, and fintech apps routinely accept license scans as the primary identity document during account opening or during a forgot-password or account recovery flow.
+
+The combination allows an attacker to open new credit card accounts in the victim's name, perform SIM swap attacks by convincing a mobile carrier that the attacker is the account holder, access existing accounts by passing the KYC check during recovery, and take over investment accounts that use license-based identity verification.
+
+### Account recovery exploitation
+
+Modern IAM systems rely heavily on government-issued ID verification for account recovery, especially for high-value accounts in banking, healthcare, and enterprise software. A license scan effectively bypasses this recovery mechanism. An attacker who has compromised an email account and obtained a license scan can often convince the target service's support team to reset credentials or transfer account control without the account owner ever being notified until the damage is done.
+
+### Synthetic identity fraud
+
+A license scan can be combined with a fabricated or purchased SSN to create a synthetic identity. This is a person who does not technically exist but has a credit profile. Attackers use synthetic identities to establish credit, take out loans, and then disappear. The license scan provides the proof of identity needed to bootstrap the synthetic identity at financial institutions that require ID verification. Once established, synthetic identities can operate for months or years before detection.
+
+### Physical facility access
+
+Several records in the Nexus dataset carry a source notation of CAC, likely referring to Common Access Cards. These are the U.S. government-issued smart cards used for physical and logical access to federal buildings and secure rooms. If CAC images are included in the breach, the national security implications are severe. Physical access badges for federal employees would enable espionage, tailgating attacks on secure facilities, and impersonation of government personnel at protected sites.
+
+### Cryptocurrency exchange verification
+
+Many cryptocurrency exchanges require government ID verification for account creation and for increasing transaction limits. A license scan allows an attacker to create accounts under a victim's identity, launder funds, and evade AML/KYC controls. Because the exchange sees what appears to be a legitimate, verified account holder, the attacker can operate with high limits and then cash out before the fraud is detected.
+
+---
+
+## IOCs and detection rules
+
+### Known indicators
+
+Based on public reporting, the following are known or strongly suspected:
+
+| Indicator | Type | Notes |
+|---|---|---|
+| idscan.net | Domain | Source vendor — confirmed breach |
+| Nexus (Exploit forum) | Threat actor service | Offline as of September 2 evening |
+| Hertz rental locations | Attack surface | Primary identified touchpoint for license collection |
+| Planet13 dispensaries | Attack surface | Secondary identified touchpoint |
+| CDL source notation | Record type | Commercial Driver's License records |
+| CAC source notation | Record type | Common Access Cards — government employees |
+
+### SIGMA rules for network detection
+
+The following SIGMA rules can detect potential exfiltration or unauthorized access patterns. Organizations that use idscan.net or similar IDV vendors should deploy these immediately.
+
+Rule 1: Large outbound data transfer to unexpected destination
+
+\`\`\`yaml
+title: Large Outbound Data Transfer to Unusual External Host
+status: experimental
+description: >
+  Detects large volumes of data being transferred from an internal host
+  to an external IP. Particularly relevant for IDV vendor data exfiltration scenarios.
+logsource:
+  product: zeek
+  service: http
+detection:
+  selection:
+    dest_ip:
+      - NOT ('10.0.0.0/8')
+      - NOT ('172.16.0.0/12')
+      - NOT ('192.168.0.0/16')
+    response_body_size:
+      - '> 100000000'  # > 100MB
+  condition: selection
+level: high
+\`\`\`
+
+Rule 2: Unauthorized access to ID verification database
+
+\`\`\`yaml
+title: ID Verification Database — Anomalous Query Pattern
+status: experimental
+description: >
+  Detects unusual query volumes against an ID verification system's database,
+  where a single source is making bulk requests beyond normal operational patterns.
+logsource:
+  product: postgres
+  service: query
+detection:
+  selection:
+    query_type:
+      - 'SELECT'
+    source_ip:
+      - NOT ('10.0.0.0/8')
+    row_count:
+      - '> 10000'  # Threshold depends on environment
+  condition: selection
+level: high
+\`\`\`
+
+Rule 3: ID scan image file mass extraction
+
+\`\`\`yaml
+title: Mass Image Extraction from ID Scan Storage
+status: experimental
+description: >
+  Detects bulk download of image files from an object storage bucket used by
+  an ID verification vendor. Looks for high-volume GET requests with sequential
+  or patterned object keys.
+logsource:
+  product: aws
+  service: s3
+detection:
+  selection:
+    eventName: GetObject
+    httpRequest:
+      userAgent: 'aws-cli*'
+      OR: 'python-requests*'
+      OR: 'curl*'
+    bytesTransferredOut:
+      - '> 5000000000'  # > 5GB
+  condition: selection
+level: critical
+\`\`\`
+
+Rule 4: Suspicious VeriScan API access
+
+\`\`\`yaml
+title: VeriScan API — Bulk Record Query from New Source
+status: experimental
+description: >
+  Detects unusual API query volumes against idscan.net endpoints, particularly
+  from IPs not previously observed in API access logs.
+logsource:
+  product: fortigate
+  service: http
+detection:
+  selection:
+    dest_host: '*.idscan.net'
+    request_uri|contains: '/api/verify'
+    bytes_out:
+      - '> 10000000'  # > 10MB
+    src_ip:
+      - NOT ('<expected-cidr-range>')
+  condition: selection
+level: high
+\`\`\`
+
+### YARA rule for ID scan image metadata
+
+\`\`\`yaml
+rule idscan_breach_image_indicators
+{
+    meta:
+        description = "Detects image files consistent with VeriScan system output"
+        author = "Hunter Eddington"
+        date = "2026-09-04"
+        severity = 9
+        breach_name = "Nexus / idscan.net"
+    
+    strings:
+        // VeriScan appends timestamps to filenames in a specific format
+        $filename_pattern = /IDS_[A-Z0-9]{8,}_[0-9]{10,}\.(jpg|png|tiff)/ nocase
+        
+        // Infrared and ultraviolet image suffixes used by VeriScan
+        $ir_suffix = "_IR" nocase
+        $uv_suffix = "_UV" nocase
+        
+        // JPEG APP14 comment segment sometimes inserted by VeriScan
+        $veriscan_comment = "VeriScan" nocase
+        
+        // Hex pattern from infrared scan data in some leaked samples
+        $ir_hex_pattern = { 00 00 01 00 01 00 [0-9]+ [0-9]+ }
+        
+    condition:
+        uint32(0) == 0xFFD8FFE0 and $filename_pattern
+}
+\`\`\`
+
+### Network IOCs
+
+\`\`\`python
+# Network indicators for C2 infrastructure associated with Nexus
+# Derived from public reporting and OSINT. Verify before blocking.
+
+NEXUS_INDICATORS = {
+    "domains": [
+        # Nexus dark web service domains — now offline.
+        # Maintain blocklist entries for monitoring purposes.
+    ],
+    "ips": [
+        # No confirmed C2 IPs published yet.
+        # Monitor emerging OSINT feeds (Twitter @dc3osint, Malware Bazaar).
+    ],
+    "file_hashes": [
+        # SHA-256 of confirmed Nexus-related tooling will be published
+        # via CISA/BCP once FBI investigation concludes.
+    ]
+}
+
+# Recommended emerging threat feeds:
+FEEDS = [
+    "https://otx.alienvault.com/api/v1/pulses/subscribed",
+    "https://www.malwarebazaar.org/api",
+    "https://bazaar.abuse.ch/export/txt/md5/",
+    "https://urlhaus.abuse.ch/downloads/json/",
+]
+\`\`\`
+
+---
+
+## Incident response playbook: what organizations should do now
+
+### Phase 1: Identify your exposure (0 to 24 hours)
+
+If you use idscan.net or VeriScan: Contact your idscan.net account manager immediately and request a full audit log of all data access for your organization's records since January 2025. Determine whether your organization's license scan data was included in the exfiltration. Ask for a yes or no with supporting evidence. Identify all locations where VeriScan was deployed and whether any scans were performed outside of normal business operations, such as off-hours access or unusual volume patterns. Review your contract with idscan.net for data retention and breach notification clauses. Note that GDPR, CCPA, and state breach notification laws may impose specific timelines that differ from whatever your contract specifies.
+
+If you are a Hertz customer: Assume your license scan may be exposed. Monitor your credit reports (annualcreditreport.com offers free weekly reports) for new accounts you did not open. Place a fraud alert with Experian, TransUnion, and Equifax. Consider a credit freeze. This is free and prevents new accounts from being opened in your name. Monitor bank and credit card statements for unfamiliar transactions.
+
+If you are a Caesars Entertainment customer: Per their statement, they had no active VeriScan accounts as of February 2025. However, historical data from before that date may still be at risk. Monitor loyalty program accounts for unauthorized changes.
+
+### Phase 2: Credential and access review (24 to 72 hours)
+
+Rotate all credentials associated with any system that uses license-based identity verification as a recovery mechanism. This includes banking, investment, healthcare portals, and enterprise SaaS applications where you verified your identity with a driver's license.
+
+Review account recovery options across all high-value accounts. If license-based verification is the only recovery path, add an additional factor such as a TOTP authenticator or a hardware security key.
+
+Audit access logs for systems that authenticate using government ID. Look for account recovery attempts from new IP ranges, especially IPs associated with VPN services or residential proxies. Enable behavioral alerts on financial accounts for unusual wire transfers, address changes, and new payees.
+
+### Phase 3: Long-term hardening (1 to 4 weeks)
+
+Move away from license-only identity verification for account recovery. Enroll hardware security keys (FIDO2/WebAuthn) or TOTP authenticators as primary second factors instead of relying on a document that has already been exposed.
+
+For organizations that operate ID verification: audit your vendor contracts to include mandatory data minimization. Do not store full license images. Store only verification results.
+
+Implement a vendor security questionnaire that specifically asks about data retention periods, encryption at rest, network segmentation of PII databases, breach notification SLAs, and whether the vendor undergoes annual third-party penetration testing.
+
+For identity verification software vendors: implement document image auto-deletion after the verification result is returned. Do not persist raw license images anywhere in your infrastructure.
+
+---
+
+## The deeper problem: identity verification as a single point of failure
+
+The Nexus breach exposes a structural problem in the identity verification ecosystem that goes beyond this specific incident. Organizations that use ID verification vendors are trusting those vendors with the same identity anchor they use to authenticate customers. If that vendor is breached, the authentication mechanism itself is compromised.
+
+This is a single point of failure in identity assurance. If your KYC process relies on a third party that stores your customer's government ID images, and that third party is breached, the fraudulent account takeover risk does not disappear when you close the compromised account. The images are already in the attacker's possession, and they will be used.
+
+The fix requires a different architectural approach:
+
+1. Zero-knowledge proof of identity. Instead of transmitting and storing the actual license image, use a system where the IDV vendor verifies the document locally and returns only a cryptographic attestation. The vendor never persists the raw image. Apple's ID verification and some government digital ID initiatives use this model.
+
+2. Short-lived verification tokens. Rather than storing license scans, issue a time-limited verification token that can be validated against the issuing authority in real time without the token containing any PII itself.
+
+3. Biometric comparison without storage. Some advanced IDV systems compare the live selfie to the license photo using liveness detection and facial recognition, then discard both images after comparison. The key requirement is that neither image is persisted in identifiable form.
+
+4. Vendor inventory. Every organization should maintain an inventory of all vendors that have access to identity documents. This inventory should be reviewed quarterly, and access should be revoked when no longer needed.
+
+---
+
+## Conclusion
+
+The Nexus breach is a reminder that the security of your identity verification system is only as strong as the least-secure vendor in your KYC supply chain. With 153 million records exposed, and likely already distributed to thousands of buyers on the cybercrime underground, the downstream fraud impact will be measured in years, not months.
+
+For IR teams: deploy the SIGMA rules above if you have any relationship with idscan.net or similar IDV vendors. For individuals: pull your credit reports, place fraud alerts, and assume your license scan is in the hands of at least one threat actor.
+
+The FBI investigation will eventually produce more definitive technical details. Until then, the name of the game is reducing your personal attack surface and pushing vendors toward architectural changes that make this class of breach structurally impossible, not just financially penalized after the fact.
+
+---
+
+## Related reading
+
+- [153 Million Driver License Scans for Sale: How the Nexus Breach Exposed the Identity Verification Supply Chain](https://eddington.tech/blog/nexus-idscan-license-breach-153m) — KrebsOnSecurity's original reporting (primary source)
+- [Certighost Exploit Lets Low-Privileged AD Users Impersonate a Domain Controller](https://eddington.tech/blog/certighost-ad-cs-domain-controller-impersonation) — AD CS attacks and certificate-based identity exploitation
+- [Developer Workstation Security: Complete IAM Hardening Playbook [2026]](https://eddington.tech/blog/developer-workstation-security-complete-iam-hardening-playbook) — Protecting credentials on developer machines from supply chain attacks
+- [CISA Contractor Leaked AWS Credentials in GitHub Enterprise Repository](https://eddington.tech/blog/cisa-aws-credentials-exposed-github-enterprise) — Cloud credential exposure and supply chain risks in enterprise environments
+- [Hugging Face Breach: Malicious Dataset Used to Steal Cloud Credentials](https://eddington.tech/blog/hugging-face-breach-malicious-dataset-supply-chain) — How attacker-controlled infrastructure in the developer toolchain steals secrets
+
+---
+
+*Author: Hunter Eddington, Eddington.Tech*
+*Source: KrebsOnSecurity (https://krebsonsecurity.com/2026/09/fbi-probes-service-selling-153m-drivers-licenses/)*
+*Published: 2026-09-04*
+`,
+  },
+  {
     slug: "mini-shai-hulud-credential-harvesting-469-locations",
     title: "Mini Shai-Hulud's 469 Secret Locations: How an npm Supply Chain Attack Maps Your Entire Credential Surface",
     date: "2026-09-03",
