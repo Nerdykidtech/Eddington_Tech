@@ -12,8 +12,388 @@ export interface Post {
 }
 
 // Placeholder — replace with real posts as you write them daily
-export const posts: Post[] = [
+export const posts: Post[
   {
+    slug: "oauth-consent-phishing-credential-persistence-fbi-psa-260901",
+    title: "OAuth Consent Phishing: Why Your Password and MFA Mean Nothing Once a Malicious App Gets Access",
+    date: "2026-09-04",
+    excerpt: "The FBI's latest alert is direct: OAuth consent phishing bypasses both passwords and multi-factor authentication, and the access it grants survives password rotations and MFA changes. Here is how the attack chain works, why Entra ID's default token policies fail to protect you, SIGMA and YARA detection rules, and a complete IR playbook for when an attacker has already slipped through this door.",
+    category: "IAM",
+    readTime: "11 min",
+    author: "Hunter Eddington",
+    image: "https://eddington.tech/og-image.png",
+    source: "The Hacker News|https://thehackernews.com/2026/09/threatsday-ceo-phishing-kits-5k-dropbox.html",
+    content: `OAuth Consent Phishing: Why Your Password and MFA Mean Nothing Once a Malicious App Gets Access
+
+The FBI's latest alert is direct: OAuth consent phishing is now a primary vector for compromising high-value targets, and the persistence it grants survives password rotations and MFA changes. Here is how it works, how to detect it, and exactly what to do when an attacker has already slipped through this door.
+
+On September 1, 2026, the FBI's Internet Crime Complaint Center published PSA 260901 detailing a campaign that has been running since late 2025. Malicious actors are messaging prominent individuals — government officials, journalists, executives — through commercial messaging platforms, impersonating journalists, event coordinators, and trusted acquaintances. The lure is always the same: a link to review a shared document, an invitation to an event, a file waiting for verification. Click the link, authenticate with your real credentials (Microsoft, Google, whichever provider the malicious app is registered with), and approve the permission request. From that moment, the attacker has persistent access to your email, files, contacts, and whatever else the app was configured to read and write. Changing your password does nothing. Replacing your TOTP token does nothing. The token is the new perimeter — and most organizations have no idea how many of these tokens are active.
+
+---
+
+## How OAuth Consent Phishing Works
+
+The mechanics are not new, but the execution has matured. This is not a zero-day exploit. It is a legitimate protocol being abused through a combination of social engineering and correct API behavior.
+
+### Step 1 — Malicious App Registration
+
+The attacker registers an application with a legitimate OAuth provider — Microsoft identity platform, Google Cloud, GitHub, or any OAuth 2.0-compatible service. The app is given a name that inspires trust: "DocuSign Verify," "Dropbox Storage," "Event Planning Tool," "Identity Confirmation Service." These names appear on the permission grant screen, and most users have learned to click through those screens without reading them.
+
+The app requests a specific set of scopes. For a Microsoft-based attack, this typically includes Files.ReadWrite.All, Mail.Read, Mail.Send, and offline_access. For Google, it might be https://www.googleapis.com/auth/gmail.readonly combined with https://www.googleapis.com/auth/drive. The offline_access scope is critical — it issues a refresh token that persists even after the user logs out.
+
+\`\`\`python
+# Simplified OAuth app registration payload (attacker perspective)
+# In reality this happens through the provider's official app registration portal
+
+OAUTH_SCOPES = [
+    "openid",
+    "profile",
+    "email",
+    "Files.ReadWrite.All",        # Microsoft Graph — full file access
+    "Mail.Read",                  # Read all email
+    "Mail.Send",                  # Send as the user
+    "offline_access"              # Issue refresh token — persists past logout
+]
+
+# The victim sees a permission screen like:
+# "[DocuSign Verify] is requesting access to:
+#  - Read and write your files
+#  - Read your email
+#  - Send email on your behalf
+#  - Remain signed in"
+\`\`\`
+
+### Step 2 — The Approach
+
+The attacker sends a direct message through a commercial messaging platform — Signal, WhatsApp, Telegram, or a LinkedIn/email combination. The message impersonates someone the target knows or respects. A journalist asking to confirm a quote before publishing. An event coordinator confirming dietary requirements. A colleague sharing a document that needs review before a deadline.
+
+The message includes a link that routes through the legitimate OAuth provider's consent flow. When the target clicks, they land on an official Microsoft or Google login page. They authenticate with their real credentials. The second factor succeeds. The permission grant screen appears. The app name looks legitimate. The scopes seem reasonable for a document-sharing tool. They click Allow.
+
+\`\`\`python
+# What the victim actually grants — simplified token response
+# This happens inside the OAuth provider's infrastructure
+
+TOKEN_RESPONSE = {
+    "token_type": "Bearer",
+    "scope": "Files.ReadWrite.All Mail.Read Mail.Send offline_access",
+    "expires_in": 3600,
+    "access_token": "eyJ...",       # Short-lived, 1 hour
+    "refresh_token": "0...",          # Long-lived, survives password change
+    "id_token": "eyJ..."
+}
+
+# The attacker now has:
+# - access_token: use immediately for API calls
+# - refresh_token: use to obtain new access tokens indefinitely
+# - id_token: identify the compromised account
+\`\`\`
+
+### Step 3 — Persistent Access
+
+The access token expires in an hour. The refresh token does not. The attacker stores the refresh token securely — it is a long-lived credential that works until the victim explicitly revokes it. This is the critical property that makes consent phishing different from password theft: a password change does not invalidate OAuth refresh tokens unless the identity provider is specifically configured to do so, and most are not.
+
+Microsoft Entra ID can be configured to invalidate refresh tokens on password change (the RefreshTokensValidFromDateTime policy), but it is not enabled by default and requires explicit administrative action. Google accounts similarly support token revocation, but it requires the user to manually navigate to their security settings and remove the connected application — a step most users do not know exists.
+
+The attacker now has a standing API connection to the victim's Microsoft or Google environment. They can read email, download files, send email as the victim, and access whatever other scopes were granted. They can do this quietly, at any hour, from anywhere in the world, using only API calls that generate no endpoint telemetry if the victim is not using a CASB or API-security monitoring tool.
+
+### Step 4 — Defense Blind Spot
+
+Traditional email security watches for logins from unfamiliar IP addresses, impossible travel, or new device fingerprints. OAuth access does not trigger these alerts because it is API-based. There is no login event to flag. The attacker is accessing data through the same API that every legitimate third-party application uses. A Dropbox integration, a Salesforce sync, a Slack workspace connection — they all look identical to an OAuth token being used to read email and files.
+
+This is why the FBI's advisory specifically calls out that the technique "bypasses both passwords and multi-factor authentication." The authentication is legitimate. The authorization is the attack.
+
+---
+
+## The Dropbox Connection: When Legacy Integrations Become a Breach
+
+The urgency of OAuth token management became concrete in early September 2026 when Dropbox disclosed that approximately 5,000 accounts were compromised in August. The attack vector: a legacy integration between Lenovo ID and Dropbox that allowed authentication through the Lenovo service. The compromised Lenovo ID account did not have two-factor authentication enabled. Dropbox terminated all sessions authenticated through Lenovo ID, but the episode illustrates how OAuth's trust model breaks down when a third-party service in the chain is compromised.
+
+The Lenovo ID integration was not a malicious OAuth app — it was a legitimate legacy SSO relationship. But the result was identical to a consent phishing attack: an authentication path that survived the victim's own security controls because it relied on a token issued to a third party, not to the user's primary credentials.
+
+For security teams, the lesson is not that OAuth is broken. It is that OAuth tokens issued to connected applications are credentials in their own right, and they need the same lifecycle management that passwords do.
+
+---
+
+## Detection: SIGMA Rules
+
+Detecting OAuth consent phishing in traditional endpoint logs is hard because the attack is API-based and leaves no executable malware. The detection focus shifts to identity provider logs and API access telemetry.
+
+### Microsoft Entra ID — Suspicious App Consent
+
+Monitor for consent events to high-privilege applications from unexpected sources:
+
+\`\`\`yaml
+title: OAuth Consent to High-Risk Application
+id: oauth-consent-high-risk-app
+status: experimental
+description: Detects consent to an OAuth application requesting high-privilege scopes from a new or rare application
+author: Hunter Eddington
+date: 2026-09-04
+logsource:
+  product: azure
+  service: entra
+detection:
+  selection:
+    OperationName: Consent to application
+    AppId:*
+    ResourceDisplayName:*
+    Scope|contains:
+      - "Files.ReadWrite.All"
+      - "Mail.Read"
+      - "Mail.Send"
+      - "offline_access"
+  condition: selection
+fields:
+  - AppId
+  - ResourceDisplayName
+  - Scope
+  - IPAddress
+  - Time
+falsepositives:
+  - Legitimate SaaS integrations being onboarded (verify with app owner)
+level: high
+\`\`\`
+
+### Google Cloud — Unusual Connected App Access
+
+\`\`\`yaml
+title: Google OAuth Token Access From New IP Range
+id: google-oauth-unusual-ip
+status: experimental
+description: Detects Google OAuth token usage from an IP address not previously associated with the account
+author: Hunter Eddington
+date: 2026-09-04
+logsource:
+  product: google
+  service: workspace
+detection:
+  selection:
+    event: AUTHORIZATION
+    ip_address:*
+  filter:
+    ip_address|cidrmatch:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+  condition: selection and not filter
+fields:
+  - actor.email
+  - ip_address
+  - client_app
+  - scope
+level: medium
+\`\`\`
+
+### SIEM Correlation — Same Attacker, Multiple Victims
+
+If the same OAuth application ID appears across multiple user consent events in a short window, and the app is not a known and approved enterprise integration, treat it as an active campaign:
+
+\`\`\`python
+# Pseudocode for SIEM correlation rule
+# Look for consent events to the same OAuth AppId across N+ distinct users
+# within a rolling 1-hour window
+
+def detect_oauth_phishing_campaign(events):
+    app_consents = defaultdict(list)
+    for event in events:
+        if event["operation"] == "Consent to application":
+            app_consents[event["app_id"]].append(event["user_id"])
+
+    for app_id, user_ids in app_consents.items():
+        unique_users = set(user_ids)
+        if len(unique_users) >= 3:
+            # Multiple distinct users consented to the same app in a short window
+            alert(f"Potential OAuth phishing campaign: app {app_id} 
+                   consented by {len(unique_users)} users")
+\`\`\`
+
+---
+
+## YARA Rule — Detect Malicious OAuth App Infrastructure
+
+Hunt for the infrastructure patterns associated with consent phishing campaigns:
+
+\`\`\`yara
+/*
+    Rule: OAuth_Consent_Phishing_Infrastructure
+    Author: Hunter Eddington
+    Date: 2026-09-04
+    Reference: FBI IC3 PSA260901
+*/
+
+rule OAuth_Consent_Phishing_App_Naming {
+    meta:
+        description = "Detects OAuth apps with names commonly used in consent phishing campaigns"
+        author = "Hunter Eddington"
+        date = "2026-09-04"
+        severity = high
+    
+    strings:
+        // Common lure app names observed in FBI advisory
+        $doc_share_1 = "DocuSign" nocase
+        $doc_share_2 = "DocuSign Verify" nocase
+        $file_share_1 = "File Sharing" nocase
+        $file_share_2 = "Secure File Transfer" nocase
+        $event_1 = "Event Planning" nocase
+        $event_2 = "Calendar Confirm" nocase
+        $verify_1 = "Identity Verify" nocase
+        $verify_2 = "Identity Confirmation" nocase
+        $storage_1 = "Cloud Storage" nocase
+        $storage_2 = "Personal Storage" nocase
+        
+        // Suspicious indicators in combination
+        $high_priv = "ReadWrite" nocase
+        $persistent = "offline_access" nocase
+        
+    condition:
+        2 of ($doc_share_*) or 2 of ($file_share_*) 
+        or 2 of ($event_*) or 2 of ($verify_*) 
+        or 2 of ($storage_*)
+}
+
+rule OAuth_Phishing_Lure_Keywords {
+    meta:
+        description = "Detects OAuth phishing lure messages"
+        author = "Hunter Eddington"
+        date = "2026-09-04"
+        severity = medium
+        
+    strings:
+        $lure_1 = "review this document" nocase
+        $lure_2 = "confirm your identity" nocase
+        $lure_3 = "event invitation" nocase
+        $lure_4 = "file is waiting" nocase
+        $lure_5 = "click to verify" nocase
+        $url_pattern = /consent|authorize|oauth/i
+        
+    condition:
+        2 of ($lure_*) and $url_pattern
+}
+\`\`\`
+
+---
+
+## IOCs — What to Hunt
+
+Based on the FBI PSA and associated threat intelligence, the following patterns are associated with active campaigns:
+
+| Indicator | Type | Confidence |
+|---|---|---|
+| Malicious OAuth apps registered with legitimate providers | Infrastructure pattern | High |
+| Consent granted to apps requesting Files.ReadWrite.All + Mail.Read + offline_access | Event | High |
+| API access from IP ranges associated with VPN or proxy services | Network | Medium |
+| OAuth tokens used within minutes of consent from a geographic location inconsistent with user history | Behavioral | High |
+| App named "DocuSign Verify," "Cloud Storage," "Identity Confirmation," or similar trust-impersonating labels | App name | High |
+
+For the Dropbox-related aspect of this threat landscape, the compromised Lenovo ID integration generated no specific IOCs beyond the Lenovo ID account itself, but the lesson is clear: any legacy SSO or OAuth integration with a third party is a potential persistence mechanism that bypasses your primary credential controls.
+
+---
+
+## Incident Response Playbook: OAuth Token Compromise
+
+When you discover a user has granted consent to a malicious OAuth application, the standard password-reset response is insufficient. Follow this sequence:
+
+### Phase 1 — Identify (Minutes 0-15)
+
+1. Pull the OAuth consent logs from your identity provider. For Microsoft Entra ID, use the Azure portal or MSGraph:
+  \`\`\`bash
+  # Query recent consent events using MSGraph PowerShell
+  Connect-MgGraph -Scopes "AuditLog.Read.All"
+  Get-MgAuditLogSignIn -Filter "createdDateTime ge 2026-09-01" \
+    -Select AppId,AppDisplayName,Scope,IPAddress
+  \`\`\`
+
+2. Identify which scopes were granted. Files.ReadWrite.All and Mail.Read are the highest risk. offline_access confirms persistent access.
+
+3. Determine the AppId and Resource (Microsoft Graph, Google Drive, etc.) to understand what the attacker can access.
+
+### Phase 2 — Contain (Minutes 15-60)
+
+4. **Revoke the OAuth application directly** — do not rely on password reset alone.
+   - Microsoft Entra ID: Azure Portal → Enterprise Applications → User Settings → Manage consent → Revoke
+   - Or via MSGraph: \`Revoke-MgUserOauth2PermissionGrant\`
+   \`\`\`bash
+   # Revoke all OAuth permissions for a specific user
+   Revoke-MgUserOauth2PermissionGrant -UserId "victim@company.com" 
+     -All
+   \`\`\`
+
+5. **Reset the user's primary credentials** — still necessary to prevent password-based re-authentication.
+
+6. **Terminate all active sessions** for the affected account. In Entra ID:
+   \`\`\`bash
+   # Invalidate all refresh tokens — forces re-auth on all devices
+   Revoke-MgUserSignInSession -UserId "victim@company.com"
+   \`\`\`
+
+7. **Audit the app's activity log** — check for email accessed, files downloaded, data exfiltrated. Look at the timestamps to establish a dwell time window.
+
+### Phase 3 — Eradicate (Hours 1-24)
+
+8. **Review connected applications** for all high-value accounts. Any application the user did not personally install is a candidate for revocation and re-onboarding through a controlled process.
+
+9. **Enable Continuous Access Evaluation (CAE)** in Entra ID — this allows token revocation to take effect immediately rather than waiting for token expiry.
+
+10. **For sensitive roles** (C-suite, finance, legal, IT admins): implement application access reviews on a quarterly cadence. Revoke anything that has not been used in 90 days.
+
+11. **Check for lateral movement** — OAuth tokens to email and file storage can be used to send phishing internally or exfiltrate data. Review email forwarding rules, sharing permissions, and Dropbox/SharePoint external sharing activity during the dwell window.
+
+### Phase 4 — Recover and Harden
+
+12. **Implement App Registration restrictions** in Entra ID. Restrict which users can register applications. Only allow admin-consent workflows for high-privilege scopes.
+
+13. **Enable MFA for all OAuth app consent events** — configure Conditional Access to require MFA before any OAuth consent is granted, not just during login.
+
+14. **Deploy a CASB** if you do not have one. CASB tools monitor OAuth API access and can alert on anomalous patterns that SIEMs cannot see.
+
+15. **Notify affected users** if email data was accessed. Document the scope of access for regulatory notification requirements (GDPR, state breach notification laws).
+
+---
+
+## The Broader Threat Landscape: Phishing-as-a-Service Maturation
+
+The OAuth consent phishing technique is being commoditized. The FBI advisory comes as the phishing-as-a-service ecosystem matures to the point where the technical barrier to running a high-effort social engineering campaign approaches zero.
+
+The ZeroBEC BlueKit offering, tracked in the same September 2026 ThreatDay bulletin that first reported the FBI advisory, exemplifies this trend. BlueKit provides a complete browser-in-the-middle (BitM) infrastructure as a service, charging $250 for seven days of access up to $940 for thirty days. Customers select targets from a dashboard. The infrastructure handles the OAuth consent flow. The customer gets a live session inside the victim's Microsoft or Google environment without having to build or host anything themselves.
+
+This is the direction the threat landscape is moving: attackers do not need to code. They rent the attack infrastructure the way legitimate companies rent cloud infrastructure. The OAuth consent phishing flow is simply the authentication layer that makes this possible.
+
+The defense community's response needs to be the same: identity providers need to treat OAuth tokens as first-class credentials with the same lifecycle controls we apply to passwords. Token inventory, token expiration policies, token revocation hygiene, and anomaly detection on API access are not optional additions to a mature identity program — they are the foundation.
+
+---
+
+## Key Takeaways
+
+1. **OAuth refresh tokens are persistent credentials.** A password change does not revoke them unless your identity provider is specifically configured to do so. Treat refresh tokens the same way you treat API keys.
+
+2. **The permission grant screen is an attack surface.** Train users to recognize it as an authentication event. Any application asking for Files.ReadWrite.All or Mail.Read from an unfamiliar source is a high-risk consent event.
+
+3. **Detection shifts from endpoint to identity telemetry.** There is no malware to sandbox and no executable to reverse engineer. The signals live in Entra ID sign-in logs, CASB telemetry, and API access audit trails.
+
+4. **Application access reviews are not optional.** Any user with access to sensitive data should have their connected applications reviewed quarterly. If you do not know which OAuth apps have access to your executive team's email, you have a visibility gap.
+
+5. **Phishing-as-a-service lowers the bar for attackers.** The infrastructure to run a sophisticated OAuth consent phishing campaign is available for purchase. Defenses that rely solely on user vigilance are insufficient. Technical controls — CAE, MFA on consent events, CASB monitoring, app allowlisting — are the durable answer.
+
+---
+
+## Related Reading
+
+- [GitHub OAuth Token Theft via VS Code Webview](/blog/github-oauth-token-theft-vscode-webview) — How OAuth tokens are stolen through browser extensions and IDEs
+- [Pass-the-Passkey: Windows Hello Business Key Abuse and Entra ID Persistence](/blog/pass-the-passkey-windows-entra-id-replay) — Token-based persistence mechanisms in Windows Hello environments
+- [Developer Workstation Security: A Complete IAM Hardening Playbook](/blog/developer-workstation-security-complete-iam-hardening-playbook) — IAM controls for the developer machines OAuth malware specifically targets
+- [HollowGraph: Malware Using M365 Calendar for C2 Communication](/blog/hollowgraph-malware-m365-calendar-c2) — How attacker infrastructure abuse of legitimate Microsoft APIs enables covert C2
+- [CISA: AWS Credentials Exposed via GitHub Enterprise](/blog/cisa-aws-credentials-exposed-github-enterprise) — Token exposure through OAuth-based CI/CD integrations
+
+---
+
+## Sources
+
+- FBI IC3 PSA260901, September 1, 2026: https://www.ic3.gov/PSA/2026/PSA260901
+- The Hacker News, ThreatsDay September 3, 2026: https://thehackernews.com/2026/09/threatsday-ceo-phishing-kits-5k-dropbox.html
+- Reuters / Dropbox Disclosure, September 2, 2026: https://www.reuters.com/technology/dropbox-says-about-5000-accounts-compromised-august-hack-2026-09-02/
+- Microsoft Security Blog, September 2, 2026: https://www.microsoft.com/en-us/security/blog/2026/09/02/impersonating-it-support-threat-actors-turn-remote-session-into-enterprise-wide-access/
+- ZeroBEC BlueKit Analysis: https://zerobec.com/blog/bluekit-phaas-browser-in-the-middle-screenconnect`,
+  },
+{
     slug: "nexus-idscan-license-breach-153m",
     title: "153 Million Driver Licenses for Sale: Inside the Nexus Identity Theft Service and the idscan.net Supply Chain Breach",
     date: "2026-09-04",
