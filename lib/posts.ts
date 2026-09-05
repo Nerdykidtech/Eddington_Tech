@@ -13,7 +13,7 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
-          {
+            {
             slug: "papercut-cve-2026-81578-82078-auth-bypass-rce-education",
             title: "PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution",
             date: "2026-09-05",
