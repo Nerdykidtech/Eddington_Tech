@@ -13,6 +13,462 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[] = [
+          {
+            slug: "papercut-cve-2026-81578-82078-auth-bypass-rce-education",
+            title: "PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution",
+            date: "2026-09-05",
+            excerpt: "CVE-2026-81578 and CVE-2026-82078 let unauthenticated attackers achieve arbitrary code execution on PaperCut NG and MF servers. Education sector is being actively exploited. Here is the full attack chain, Arctic Wolf IOCs, SIGMA and YARA detection rules, and a step-by-step IR playbook.",
+            category: "Vulnerability Management",
+            readTime: "16 min",
+            author: "Hunter Eddington",
+            image: "https://eddington.tech/og-image.png",
+            source: "The Hacker News|https://thehackernews.com/2026/09/attackers-exploit-papercut-flaws-to.html",
+            content: `PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution
+
+The security world woke up at the end of August 2026 to a familiar pattern: a widely-deployed print and output management platform, a pair of published CVEs, and active exploitation in the wild. What made PaperCut's emergency disclosure different was the specificity of the attack chain and the immediate pivot from proof-of-concept to credential harvesting inside production environments. Within days of the first emergency patch, threat actors were chaining an authentication bypass vulnerability with a unsafe class loading flaw to execute arbitrary code on PaperCut servers across K-12 schools and universities in the United States and Europe. The goal was not ransom. It was reconnaissance and credential theft, the kind that opens doors to everything else.
+
+This post breaks down how the PaperCut attack chain works, why the education sector is uniquely exposed, what the adversarial post-exploitation activity looks like on the wire and in the registry, and exactly how defenders can detect and respond to it before an attacker uses a harvested credential to move laterally into a student information system or a research network.
+
+---
+
+The papercut platform: what it does and why it is everywhere in schools
+
+PaperCut NG and PaperCut MF are output management solutions deployed predominantly in educational institutions, healthcare facilities, and mid-size enterprises. They handle print job routing, authentication against directory services (Active Directory, LDAP), cost recovery, and user quota management. PaperCut MF extends this to multifunction devices. The product sits at the intersection of identity, it authenticates users against the school's directory, and the network, it exposes management interfaces that frequently live on the same VLAN as staff workstations.
+
+The result is a single compromised server that often has a direct line to user credentials for an entire school district. This is not a theoretical risk. This is exactly what Arctic Wolf's adversary research team documented in September 2026: the post-exploitation activity started with registry hive collection tools and ended with domain credential theft that could be replayed across the environment.
+
+The education sector's exposure to PaperCut is structural. Print management requires broad network access. Multifunction devices are distributed across hundreds of classrooms and administrative offices. IT staffing is lean, patching cycles are slow, and the consequence of taking a print server offline for emergency maintenance requires coordination that most school IT teams cannot execute on a Friday afternoon. Attackers know this. ThePaperCut attack surface has been a reliable entry point for ransomware operators, cryptominer campaigns, and now credential theft operations with a targeted espionage flavor.
+
+---
+
+The vulnerability chain: cve-2026-81578 and cve-2026-82078
+
+The August 2026 disclosure involved two distinct vulnerabilities that, when chained together, allow an unauthenticated remote attacker to achieve arbitrary code execution on a PaperCut server.
+
+### CVE-2026-81578: Improper Access Control (CVSS 8.8)
+
+The first vulnerability is an improper access control issue in PaperCut NG and MF's web management interface. Under specific conditions, unauthenticated remote requests targeting administrative functions can trigger backend actions before the completion of access validation checks. The Huntress research team described the flaw precisely: PaperCut's authorization logic trusts the rendered page when checking permissions, but the component behind the rendered page executes with different privileges. An attacker can craft a request that passes the page-rendering check while bypassing the component-level authorization. The result is unauthenticated access to administrative endpoints that should require a logged-in session.
+
+This is not a brute force vulnerability. There is no credential guessing involved. The flaw is architectural, PaperCut's web layer and its backend action layer make different trust assumptions about the same incoming request. An attacker does not need an account, a session token, or any prior foothold. They need to send the right sequence of HTTP requests to the right endpoints.
+
+### CVE-2026-82078: Unsafe Dynamic Class Loading (CVSS 9.4)
+
+The second vulnerability is in PaperCut's database connection utilities. The application instantiates database driver classes based on configurable driver names without validating against an allowlist of approved drivers. An attacker who can influence the database driver name configuration, which is possible once CVE-2026-81578 provides administrative access, can cause PaperCut to load an arbitrary class and instantiate it within the application's process. Since PaperCut runs as a high-privilege user on Windows and as a root-adjacent user on Linux, loading an attacker-controlled class gives the attacker a code execution primitive inside the PaperCut JVM process.
+
+WatchTowr's threat intelligence team confirmed the chain: CVE-2026-81578 bypasses authentication, and from the authenticated context it provides, an attacker can edit a configuration file to weaponize CVE-2026-82078 and achieve RCE. The CVSS 9.4 score reflects the fact that no authentication is required, the impact is complete system compromise, and the attack surface is internet-accessible PaperCut servers.
+
+---
+
+Post-exploitation activity: what arctic wolf observed in the wild
+
+Arctic Wolf's adversary research team published detailed indicators of compromise derived from actual attacks against PaperCut servers in the education sector. The observed post-exploitation activity is notable for its methodical, dual-phase design: initial reconnaissance followed by credential extraction.
+
+### Phase 1: Discovery and Situational Awareness
+
+Once code execution was achieved, the attackers ran discovery commands to understand the compromised environment. Arctic Wolf documented the following commands being executed on compromised hosts:
+
+- \`uname\`, \`whoami\`, \`ver\`, and \`tasklist\`, standard host and user enumeration
+- The creation of a privileged account named \`Administrator17\`, likely a backdoor account intended to survive credential rotation
+
+The attackers also made inbound HTTP GET requests from the external IP address \`45.142.193[.]132\` requesting \`/custom/pcp_*.txt\` and \`/custom/web/pcp_*.txt\` files. These are not standard PaperCut endpoints. They appear to be paths used by the attackers to collect harvested system and user data from the compromised host, a custom exfiltration channel baked into the post-exploitation toolkit.
+
+### Phase 2: Credential Harvesting
+
+The credential theft portion of the attack chain involved three distinct malware binaries delivered via \`certutil.exe\` from the same external IP:
+
+- \`lsa_collect.exe\`, a Windows registry hive collection tool
+- \`lsa_collect_small.exe\`, a lighter variant of the same tool
+- \`save_hives.exe\`, a registry hive extraction utility
+
+These tools target the Windows Security Account Manager (SAM) database and the LSA secrets stored in the registry. By extracting these hives, an attacker can reconstruct authentication credentials cached on the local system, including domain credentials if the machine is domain-joined. Arctic Wolf  noted that in sandbox analysis, \`lsa_collect.exe\` extracted registry keys to reconstruct the system BootKey, the master key used to encrypt the SAM database. With the BootKey and the SAM hive, an attacker can extract NTLM password hashes for every local account and, on domain-joined machines, cached domain credentials.
+
+The attackers also used \`findstr\` to search PaperCut \`*.config\` files for strings matching \`password\`, \`secret\`, \`ldap\`, \`bind\`, and \`token\`, extracting plaintext or weakly-encrypted credentials from PaperCut's own configuration files.
+
+After the credential collection phase, the attackers retrieved Meterpreter Java payloads from \`194.180.48[.]134\` and established C2 sessions to that address. The use of Meterpreter over Java payloads indicates the attackers were comfortable with PaperCut's Java-based environment and were targeting cross-platform persistence, the same Java payload works on both Windows and Linux PaperCut installations.
+
+---
+
+Detection rules: sigma
+
+The following SIGMA rules cover the post-exploitation activity documented by Arctic Wolf. These rules target the specific command patterns, file artifacts, and network indicators associated with this campaign.
+
+\`\`\`yaml
+title: PaperCut Exploit Chain - Suspicious Certutil Download
+id: papercut-exploit-001
+status: experimental
+description: Detects certutil.exe downloading suspicious executables from known malicious IP
+references:
+  - https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation
+tags:
+  - attack.t1105
+  - attack.t1570
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 1
+    ParentImage|endswith: '\\certutil.exe'
+    Image|endswith: '\\certutil.exe'
+    CommandLine|contains:
+      - '45.142.193'
+      - '194.180.48'
+  condition: selection
+level: high
+
+---
+title: PaperCut Exploit Chain - LSA Credential Collection
+id: papercut-exploit-002
+status: experimental
+description: Detects execution of known credential theft tools via certutil download pattern
+references:
+  - https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation
+tags:
+  - attack.t1003
+  - attack.t1570
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 1
+    ParentImage|endswith: '\\pc-app.exe'
+    CommandLine|contains:
+      - 'lsa_collect'
+      - 'save_hives'
+      - 'reg save'
+      - 'reg export'
+  condition: selection
+level: critical
+
+---
+title: PaperCut Exploit Chain - Discovery Commands via pc-app
+id: papercut-exploit-003
+status: experimental
+description: Detects reconnaissance commands launched from PaperCut pc-app.exe process
+references:
+  - https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation
+tags:
+  - attack.t1018
+  - attack.t1033
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 1
+    ParentImage|endswith: '\\pc-app.exe'
+    CommandLine|contains:
+      - 'whoami'
+      - 'tasklist'
+      - 'ver'
+      - 'uname'
+  condition: selection
+level: high
+
+---
+title: PaperCut Exploit Chain - Suspicious Inbound GET to Custom Paths
+id: papercut-exploit-004
+status: experimental
+description: Detects inbound HTTP requests to attacker-controlled paths on PaperCut server
+references:
+  - https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation
+tags:
+  - attack.t1071
+  - attack.t1041
+logsource:
+  product: windows
+  service: iis
+  definition: Web server logging enabled
+detection:
+  selection:
+    cs-uri-stem|contains:
+      - '/custom/pcp_'
+      - '/custom/web/pcp_'
+    c-ip:
+      - '45.142.193.132'
+      - '194.180.48.134'
+  condition: selection
+level: critical
+
+---
+title: PaperCut Exploit Chain - Meterpreter C2 Session
+id: papercut-exploit-005
+status: experimental
+description: Detects outbound connections from PaperCut server to known Meterpreter C2 infrastructure
+references:
+  - https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation
+tags:
+  - attack.t1043
+  - attack.t1571
+logsource:
+  product: windows
+  service: sysmon
+detection:
+  selection:
+    EventID: 3
+    DestIp:
+      - '45.142.193.132'
+      - '194.180.48.134'
+    DestPort: 4444
+  condition: selection
+level: critical
+\`\`\`
+
+---
+
+Detection rules: yara
+
+The following YARA rule detects artifacts associated with this specific campaign, the class file dropped to disk, the command files written to the content directory, and the specific strings that appear in PaperCut's server.log when exploitation is underway.
+
+\`\`\`yara
+rule PaperCut_Exploit_Campaign_Artifacts
+{
+    meta:
+        description = "Detects files and strings associated with CVE-2026-81578/82078 exploitation chain"
+        author = "Arctic Wolf Adversary Research Team"
+        date = "2026-09-05"
+        severity = "critical"
+        hash = "refer to wolf-tools repository for IOCs"
+    strings:
+        // Specific JDBC connection strings used during exploit
+        $jdbc_pwn = "jdbc:derby:memory:pwn;create=true" ascii
+        $jdbc_nox = "jdbc:no:x" ascii
+
+        // Derby database error signature from exploit attempts
+        $derby_error1 = "VALUES CAST(X'cafebabe" ascii
+        $derby_error2 = "VALUES CAST('" ascii
+
+        // 5-char random class filename pattern (derby.log entries)
+        $classfile_pattern = /server\\lib\\[a-z]{5}\\.class/ ascii
+
+        // Command output files written to content directory
+        $cmdfile_pattern = /server\\data\\content\\[a-z]{5}\\.cmd/ ascii
+        $outfile_pattern = /server\\data\\content\\[a-z]{5}\\.out/ ascii
+
+        // Custom exfiltration paths
+        $custom_path1 = "/custom/pcp_" ascii
+        $custom_path2 = "/custom/web/pcp_" ascii
+
+        // Java class file magic bytes + known class behavior
+        $java_class_magic = { CA FE BA BE }
+
+        // Specific filename patterns for Udyden class file
+        $udydn_out = "Udydn.out" ascii
+    condition:
+        3 of them
+}
+
+rule PaperCut_LSA_Collect_Tool
+{
+    meta:
+        description = "Detects LSA credential collection tools observed in PaperCut exploitation"
+        author = "Arctic Wolf"
+        date = "2026-09-05"
+        severity = "critical"
+    strings:
+        // Import patterns for registry BootKey extraction
+        $advapi32_OpenProcess = "advapi32.dll" ascii
+        $regsam_Read = "KEY_READ" ascii
+
+        // SAM database access patterns
+        $sam_hive = "SYSTEM\\CurrentControlSet\\Control\\Lsa" ascii
+        $sam_key = "SAM\\SAM\\Domains\\Account\\Users" ascii
+
+        // BootKey reconstruction
+        $bootkey_ref = "JD" ascii wide
+        $bootkey_ref2 = "Skew1" ascii wide
+        $bootkey_ref3 = "GBL" ascii wide
+
+        // Strings from captured tool samples
+        $lsa_collect = "lsa_collect" ascii
+        $save_hives = "save_hives" ascii
+    condition:
+        uint16(0) == 0x5A4D and 3 of them
+}
+\`\`\`
+
+---
+
+Iocs 
+
+| Indicator | Type | Description |
+|---|---|---|
+| \`45.142.193[.]132\` | IP Address | C2 IP, inbound GET requests for exfil files; certutil download source |
+| \`194.180.48[.]134\` | IP Address | C2 IP, Meterpreter payload delivery and session establishment |
+| \`lsa_collect.exe\` | Filename | Windows registry hive collection tool |
+| \`lsa_collect_small.exe\` | Filename | Lightweight registry hive collection tool |
+| \`save_hives.exe\` | Filename | Registry hive extraction utility |
+| \`Administrator17\` | Account | Suspicious privileged account created during post-exploitation |
+| \`Udydn.out\` | Filename | Command output file written by Linux PaperCut implant |
+| \`jdbc:derby:memory:pwn;create=true\` | JDBC String | Exploit database connection string in server.log |
+| \`/custom/pcp_*.txt\` | URL Path | Custom exfiltration path, attacker data collection |
+| \`/custom/web/pcp_*.txt\` | URL Path | Secondary custom exfiltration path |
+| \`C:\\ProgramData\\JWrapper-Remote Access\\JWAppsSharedConfig
+estricted\\SimpleService.exe\` | Path | Legitimate SimpleHelp remote access tool repurposed by attacker |
+
+---
+
+Incident response playbook: papercut compromise
+
+When a PaperCut server is suspected or confirmed to be compromised, the following steps should be executed in sequence. The priority is credential isolation first, the attacker is here for credentials, and every minute a compromised server remains on the network with domain trust intact is a minute the attacker can use to harvest more.
+
+
+ Isolate the Server Immediately
+
+Do not attempt to investigate while the server remains networked. The attacker is actively running credential theft tools. Isolate the server from the network at the switch or hypervisor level, not by shutting it down, which destroys volatile memory artifacts. If the server is a VM, snapshot it before isolation so memory forensics can be performed.
+
+If network isolation is not immediately possible, revoke the server's ability to communicate with external C2 infrastructure by null-routing \`45.142.193[.]132\` and \`194.180.48[.]134\` at the firewall. This is a temporary containment measure, not a resolution.
+
+
+ Preserve Volatile Evidence
+
+Before any remediation work begins, capture volatile data from the live system:
+
+\`\`\`bash
+# Capture running processes
+tasklist > /tmp/papercut_processes.txt
+
+# Capture network connections
+netstat -anob > /tmp/papercut_netstat.txt
+
+# Capture authentication logs
+wevtutil qe Security /c:1000 > /tmp/papercut_authlogs.txt
+
+# Capture PaperCut server.log if accessible
+# <install_path>/server/logs/server.log
+
+# If Linux PaperCut:
+ps auxwwwf > /tmp/papercut_ps.txt
+netstat -tulpn > /tmp/papercut_netstat_linux.txt
+ss -tulpn > /tmp/papercut_ss_linux.txt
+cat /opt/papercut/server/logs/server.log > /tmp/papercut_server_log.txt
+\`\`\`
+
+
+ Identify Scope of Credential Exposure
+
+PaperCut stores credentials in multiple places. The following locations should be examined:
+
+1. PaperCut config files, \`*.config\` files in the PaperCut installation directory, which the attackers  searched for strings matching \`password\`, \`secret\`, \`ldap\`, \`bind\`, and \`token\`. Use \`findstr\` or \`grep\` to identify plaintext or weakly-encrypted credentials in these files.
+
+2. Windows SAM and LSA, If \`lsa_collect\` tools were deployed, the SAM database and LSA secrets may have been extracted. Domain-joined PaperCut servers store domain cached credentials. These cannot be revoked but the affected accounts should be monitored for anomalous use.
+
+3. Domain account activity, Any accounts that authenticated to the compromised PaperCut server during the compromise window should be considered potentially exposed. This includes service accounts used for directory integration.
+
+\`\`\`powershell
+# Find PaperCut config files with potential credentials
+Get-ChildItem -Path "C:\\Program Files\\PaperCut*" -Recurse -Include "*.config","*.xml","*.properties" |
+    Select-String -Pattern "password|secret|ldap|bind|token" -List
+\`\`\`
+
+
+ Rotate Credentials
+
+Rotate all credentials found in PaperCut configuration files and all domain credentials that authenticated to the compromised server during the attack window. Prioritize:
+
+- PaperCut service account password (used for AD/LDAP integration)
+- Any service accounts with privileges beyond print management
+- Domain credentials for accounts that logged into PaperCut admin interface
+
+
+ Remediate the Vulnerability
+
+Apply the emergency patch immediately. PaperCut released patches for versions v24, v25, and v26. If patching is delayed for any reason, the following compensating controls reduce the attack surface:
+
+Network-level isolation:
+\`\`\`bash
+# Block PaperCut web management interface from untrusted networks
+# iptables example for non-Internet-accessible PaperCut deployments
+iptables -A INPUT -p tcp --dport 9191 -s <trusted_admin_subnet> -j ACCEPT
+iptables -A INPUT -p tcp --dport 9191 -j DROP
+
+# Block known C2 IPs
+iptables -A OUTPUT -d 45.142.193.132 -j DROP
+iptables -A OUTPUT -d 194.180.48.134 -j DROP
+\`\`\`
+
+Application-level hardening:
+- Ensure the PaperCut Application Server is not accessible from the public internet
+- Place PaperCut behind a VPN or restricted IP allowlist
+- Disable external-facing web management if not required for operational use
+- Review PaperCut's built-in role-based access controls and ensure the principle of least privilege applies
+
+
+ Hunt for Persistence
+
+The attackers created a privileged account named \`Administrator17\`. Search for this and any other unexpected accounts created during the compromise window:
+
+\`\`\`powershell
+# Search for suspicious new local accounts
+Get-LocalUser | Where-Object { $_.CreatedAt -gt (Get-Date).AddDays(-30) } |
+    Select-Object Name, Enabled, CreatedAt, LastLogonDate
+
+# Search for unexpected service installations
+Get-Service | Where-Object { $_.DisplayName -like "*AnyDesk*" -or $_.DisplayName -like "*SimpleHelp*" }
+
+# Check for AnyDesk installation artifact (documented persistence mechanism)
+$anydeskPath = "C:\\ProgramData\\AnyDesk.exe"
+if (Test-Path $anydeskPath) {
+    Write-Warning "AnyDesk found at $anydeskPath, possible attacker persistence"
+}
+\`\`\`
+
+
+ Monitor for Lateral Movement
+
+With harvested credentials in hand, the attacker can attempt to use harvested domain credentials to access other systems. Monitor for:
+
+- Logins from \`45.142.193[.]132\` or \`194.180.48[.]134\` to any system in the environment
+- Any new SMB or RDP connections from the compromised PaperCut server to other hosts
+- Service account credentials being used from unexpected source IPs
+- New Scheduled Tasks or Services created under service account contexts
+
+---
+
+The patch bypass problem
+
+WatchTowr's threat intelligence team added a concerning detail in their analysis: the two CVEs were chained together for initial access, but multiple patch bypasses were identified against the first emergency patch. One bypass had been remediated in the second emergency patch, but new bypasses affecting the latest fully patched version had already been identified.
+
+This means organizations that applied the patches the day they were released may not be safe. The vulnerability class, unsafe deserialization and  class loading in a Java application with a configurable database driver, is not easily patched into submission. Each patch likely addresses specific gadget chains, while new gadget chains remain viable until the root cause, the lack of a driver allowlist, is fully remediated by the vendor.
+
+Defenders should treat patching as one layer of a defense-in-depth strategy, not as a complete solution. Network isolation, application-layer access controls, and behavioral detection on endpoints remain essential even on patched servers.
+
+---
+
+Why education sector? three structural reasons
+
+The targeting of the education sector is not random. Three structural properties make K-12 and higher education environments attractive targets for this type of attack:
+
+PaperCut deployment scale and patching latency A school district with 50 schools might have 50 to 200 multifunction devices, each running PaperCut's print driver. Centralized management of PaperCut is possible but requires a coordinated maintenance window. Patching delays of weeks or months are common in districts with limited IT staff.
+
+Domain trust and credential caching PaperCut servers joined to school district Active Directory domains often run with service accounts that have broad read access to directory information. A compromised PaperCut server can yield credentials that work across the entire district's domain.
+
+3. Limited endpoint detection coverage Schools historically underinvest in endpoint detection and response on print servers, treating them as low-risk infrastructure. The result is blind spots in exactly the location where an attacker needs to operate undetected while running credential theft tools.
+
+---
+
+What this means for defenders
+
+- CVE-2026-81578 (auth bypass, CVSS 8.8) and CVE-2026-82078 (unsafe class loading, CVSS 9.4) can be chained by an unauthenticated attacker to achieve arbitrary code execution on PaperCut NG and MF servers.
+- Active exploitation in the education sector has been confirmed by Arctic Wolf, with post-exploitation activity focused on registry credential theft using \`lsa_collect.exe\`, \`lsa_collect_small.exe\`, and \`save_hives.exe\`.
+- The attackers create a privileged account (\`Administrator17\`), exfiltrate data via custom paths on the compromised server, and establish Meterpreter C2 sessions.
+- Compensating controls, network isolation, IP allowlisting, VPN-only admin access, are essential even on patched servers due to documented patch bypasses.
+- Detection is achievable with SIGMA rules targeting pc-app.exe spawning shell processes and certutil downloading from known-bad IPs, combined with YARA rules for the class files and log artifacts.
+
+---
+
+Related reading
+
+- [OAuth Consent Phishing: Why Your Password and MFA Mean Nothing Once a Malicious App Gets Access](https://eddington.tech/blog/oauth-consent-phishing-credential-persistence-fbi-psa-260901), A analysis into another credential persistence technique that, like PaperCut exploitation, enables attackers to maintain access beyond password rotations
+- [Developer Workstation Security: Complete IAM Hardening Playbook](https://eddington.tech/blog/developer-workstation-security-complete-iam-hardening-playbook), Hardening principles and IAM controls that reduce the blast radius when credential theft does occur
+- [Hugging Face Breach: How Attackers Used a Malicious Dataset to Steal Cloud Credentials](https://eddington.tech/blog/hugging-face-breach-malicious-dataset-supply-chain), Supply chain attack patterns and credential theft from developer-facing infrastructure
+
+---
+
+*Source: The Hacker News / Arctic Wolf Adversary Research Team ([IOC repository](https://github.com/rtkwlf/wolf-tools/tree/main/pack_alerts/202609-papercut-cve-exploitation))*
+`
+          },
   {
     slug: "nexus-idscan-license-breach-153m",
     title: "153 Million Driver Licenses for Sale: Inside the Nexus Identity Theft Service and the idscan.net Supply Chain Breach",
