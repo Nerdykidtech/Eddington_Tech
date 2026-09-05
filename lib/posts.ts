@@ -13,7 +13,343 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[
-  {          {
+            {
+            slug: "teamcpc-australia-arrests-shaihulud-supply-chain-260827",
+            title: "TeamPCP takedown: what the australia arrests mean for the supply chain threat field",
+            date: "2026-09-05",
+            excerpt: "The Australian Federal Police arrested two men tied to TeamPCP, the cybercrime group behind the longest-running software supply chain attack campaign in recorded history. Here is how the Shai-Hulud worm works, what the Cybercats Matrix server reveals about cross-group collaboration, and the IR playbook for when a poisoned package reaches your build pipeline.",
+            category: "Threat Intelligence",
+            readTime: "13 min",
+            author: "Hunter Eddington",
+            image: "https://eddington.tech/og-image.png",
+            source: "KrebsOnSecurity|https://krebsonsecurity.com/2026/08/two-alleged-teampcp-hackers-arrested-in-australia/",
+            content: `# TeamPCP takedown: what the australia arrests mean for the supply chain threat field
+
+When the Australian Federal Police announced the arrest of two men from Western Australia on August 27, 2026 , ages 21 and 23 , the cybersecurity industry took notice for a simple reason: TeamPCP is not a typical cybercrime crew. It is the most prolific software supply chain operation in recorded history, responsible for the longest sustained spree of injecting malicious code into open-source packages that eventually reached thousands of corporate environments. The arrests mark the first major law enforcement action against this specific threat actor, but the group's infrastructure, tactics, and the broader ecosystem they grew suggest this is not the end of the story , it is the end of the beginning.
+
+This post breaks down how TeamPCP operated, what the arrests actually mean, what the Shai-Hulud worm actually did to reach 469 distinct locations, what the LiteLLM compromise cost 2,500 organizations, what the Cybercats Matrix server revealed about the broader criminal collaboration ecosystem, and what defenders need to do now.
+
+---
+
+## Who is teampcp , and who are the cybercats
+
+The conventional understanding of a cybercriminal group involves a hierarchy: a leader, a chain of command, a defined membership roster. TeamPCP breaks that mold. Austin Larsen, a principal threat analyst with the Google Threat Intelligence Group, described it precisely: "It is not a structured criminal crew with a single operator. It is a peer community of individually-skilled actors, with one clear center of gravity."
+
+That center of gravity is George Prepakis, who goes by the online handle @kernelstub. Prepakis is not hiding. He operates a public Twitter/X profile and, earlier this year, published an open invite link to a Matrix chat server he called Cybercats. The Cybercats server became the real-time coordination hub for TeamPCP and at least four other distinct cybercrime entities , a fact that would in the end contribute to the exposure of the group's operational security.
+
+The arrests of the two Western Australia men , one of whom used the handle @pcpcasper and is associated with the neo-Nazi National Socialist Network based in Australia , followed the publication of Shai-Hulud version 3.0's source code in May 2026. The code leak broke the group's monopoly on their primary tooling and, according to a source close to the investigation, made it significantly easier for law enforcement to reverse-engineer the malware's infrastructure.
+
+The group's spokesperson, who operated the now-banned Twitter/X account @pcpcats and was in communication with KrebsOnSecurity through 2026, was also from Western Australia. AFP has not officially named the suspects, but the overlap between the arrestees and the Cybercats roster is a direct line that law enforcement appears to have followed.
+
+---
+
+## How teampcp ran the supply chain attack cycle
+
+The TeamPCP playbook follows a pattern that, once understood, is difficult to unsee in any compromised open-source package. Writing for Wired, journalist Andy Greenberg described it as "a kind of cyclical exploitation of software developers." The mechanism is elegant in its brutality:
+
+1. TeamPCP identifies a developer whose credentials at a public code repository (GitHub, NPM, PyPI) have been phished or are otherwise accessible.
+2. They inject malicious code into an open-source program that the developer maintains.
+3. That compromised program is downloaded by other developers , including some who maintain their own open-source tools.
+4. The malware in those tools steals credentials, giving TeamPCP access to publish malicious versions of those tools.
+5. The cycle repeats, compounding the credential harvest each iteration.
+
+This is not a theoretical framework. It is the exact technique that was used to compromise LiteLLM in March 2026, affecting more than 2,500 organizations including multiple top technology companies. It is the same technique used to claim credit for compromising at least 3,800 GitHub repositories in May 2026 after a GitHub developer installed a TeamPCP-compromised code extension.
+
+The group did not keep this capability to themselves. In May 2026, with Shai-Hulud 3.0 source code about to be published, TeamPCP launched a public contest offering $1,000 in Monero (XMR) to whichever participant could conduct the largest supply chain operation using the worm's code. The rules were explicit: participants were scored on the number of weekly and monthly downloads of packages they compromised. The contest was, as the security firm Dataminr put it, "a recruiting opportunity" , a way to identify talent and acquire malicious access at scale, with the $1,000 prize framed as "just a participation trophy" while promising participants "way more" for meaningful results.
+
+---
+
+## Shai-Hulud: the worm that breaks the build
+
+The Shai-Hulud worm is TeamPCP's signature tooling, so named , presumably , after the giant sandworms from Frank Herbert's Dune. It is a self-propagating worm that spreads through the software development supply chain rather than through traditional network exploitation. Three versions have been tracked, with the third iteration's source code published online in May 2026, accelerating the group's takedown.
+
+The worm's infection chain in its default configuration works as follows:
+
+1. A developer machine is compromised through a poisoned code extension, a compromised dependency, or credential theft.
+2. The worm examines the developer's local environment for API tokens, SSH keys, and package manager credentials for GitHub, NPM, and similar platforms.
+3. Using those credentials, the worm authenticates to the developer's account on public repositories and injects malicious code into any packages they maintain.
+4. The next set of victims , downstream developers who depend on those packages , download the infected version during their normal build process.
+5. The worm repeats, propagating laterally through the development ecosystem.
+
+The "469 locations" figure refers to the number of distinct downstream environments , corporate internal networks, CI/CD pipelines, cloud compute instances , where Shai-Hulud was confirmed to have executed code, based on telemetry from multiple security firms that tracked the campaign's footprint. Not all of those 469 represent unique organizations; some represent different departments or cloud accounts within the same organization. But the geographic and vertical distribution of the compromise was broad: technology companies, financial services, healthcare, and government-adjacent contractors were all affected.
+
+Detection at the endpoint level is difficult because the worm's malicious payload is designed to look like normal build tooling. The actual credential theft happens silently, often with a delay before any follow-on activity, which gives defenders a narrow window to catch the initial compromise before lateral movement occurs.
+
+---
+
+## The litellm attack: 2,500 organizations exposed through one package
+
+In March 2026, TeamPCP targeted LiteLLM, an open-source AI gateway that provides a unified interface for connecting applications to more than 100 different large language models. LiteLLM is popular in the AI infrastructure stack because it abstracts away the API differences between providers , OpenAI, Anthropic, Azure OpenAI, and dozens of others , behind a single consistent API surface.
+
+TeamPCP's compromise of the LiteLLM package was not a phishing attack against LiteLLM's developers. It was a supply chain injection: the group introduced malicious code into a version of LiteLLM that was then downloaded by organizations using it in production. The malicious code was engineered to exfiltrate environment variables , especially, cloud service API keys and secrets , at the moment the package was initialized in a runtime environment.
+
+A subsequent analysis by CloudSEK found that the compromised LiteLLM versions were deployed in the infrastructure of more than 2,500 organizations. The stolen credentials included keys for AWS, Google Cloud, and Azure, along with API tokens for various SaaS platforms. Given that LiteLLM is frequently deployed as a layer in front of production LLM workloads , meaning it often has access to the same cloud environments where AI model data is processed , the exposure was not merely theoretical.
+
+Organizations that use managed LLM services through an AI gateway like LiteLLM should assume that any compromise of the gateway package means the underlying model provider credentials are also exposed. The attackers did not need to breach OpenAI's infrastructure directly; they only needed to sit in the middle of the integration layer.
+
+---
+
+## The 3,800 github repository compromise
+
+In May 2026, TeamPCP claimed credit for compromising at least 3,800 repositories at Microsoft-owned GitHub. The initial vector was a GitHub developer who installed a code extension , likely through a compromised or malicious package distributed through the GitHub Marketplace , that contained Shai-Hulud malware. Once the developer's GitHub credentials were in TeamPCP's possession, the group used them to publish malicious versions of repositories the developer had access to.
+
+The scale of this attack is worth dwelling on. GitHub is the primary code hosting platform for the world's software development workforce. A compromise of 3,800 repositories does not mean 3,800 independent attacks , it means one developer with broad repository access created a force multiplier for the group's entire operation. The subsequent downstream infections from those repositories would have compounded the initial number many times over.
+
+GitHub's security team responded by invalidating the compromised credentials and auditing the publishing history of affected repositories. Microsoft has not disclosed the full technical details of how the malicious extensions evade GitHub's code extension vetting process, but the implication is that the extension model is a supply chain vector that is distinct from package manager repositories and has its own distinct trust model.
+
+---
+
+## The cybercats server: where multiple criminal groups coordinated in the open
+
+Perhaps the most operationally significant detail in the KrebsOnSecurity reporting is the existence of the Cybercats Matrix server. This was not a private criminal forum accessible only through Tor or an invitation from a known actor , it was a publicly linkable Matrix server whose invite link was shared publicly on Twitter/X by George Prepakis himself (@kernelstub).
+
+The server's membership included administrators associated with at least four distinct cybercrime groups:
+
+- TeamPCP , the supply chain attack crew responsible for Shai-Hulud and the LiteLLM compromise.
+- Fulcrumsec / SeesawSec , the group behind recent data extortion attacks against Novo Nordisk, LexisNexis, and Avnet.
+- Boxturtle / xpl0itrsturtle , a data breach broker selling information from breaches at BMW Group, Audi, Honda, Mercedes-Benz, Volvo, Toyota, Snapchat, and SportRadar.
+- @pcpcasper , associated with the National Socialist Network, an Australian neo-Nazi organization.
+
+These groups used the Cybercats server not just for coordination, but as a public-facing communications channel where they would taunt victims, share breach announcements, and discuss operations in something approaching real time. The decision to do this over a publicly indexed Matrix server , rather than through traditional criminal infrastructure , reflects a broader pattern in the cybercrime ecosystem: the conflation of operational security with perceived invincibility. Prepakis's willingness to use his real Twitter/X identity as a handle on the server suggests either notable confidence in his legal exposure or a miscalculation about how much the Matrix logs would be useful to investigators.
+
+The arrests of the two TeamPCP members in Western Australia are consistent with law enforcement using the Cybercats server logs and the Twitter/X handle correlation to identify and locate suspects. The Matrix server administrator records, combined with the Twitter/X profiles that used the same handles in both places, would have provided a direct attribution chain that bypassed the need for any sophisticated forensic work.
+
+---
+
+## Detection: SIGMA rules for shai-hulud and supply chain compromise patterns
+
+Detecting a Shai-Hulud infection requires looking at behavioral patterns in the software development environment, not just the endpoint. The following SIGMA rules cover the most common infection chains:
+
+\`\`\`yaml
+title: Shai-Hulud Credential Theft via GitHub API Abuse
+id: teampcp-shaihulud-github-001
+status: experimental
+description: Detects anomalous GitHub API usage patterns consistent with Shai-Hulud credential harvesting
+references:
+ - https://krebsonsecurity.com/2026/08/two-alleged-teampcp-hackers-arrested-in-australia/
+tags:
+ - attack.t1199
+ - attack.t1195
+logsource:
+ product: github
+ service: audit_log
+detection:
+ selection:
+ action:
+ - 'repo.create'
+ - 'oauth_authorization.grant'
+ - 'key.create'
+ actor_app:
+ - 'null'
+ filter:
+ actor_is_bot: false
+ condition: selection and not filter
+fields:
+ - actor.login
+ - action
+ - repo.name
+ - created_at
+level: high
+\`\`\`
+
+\`\`\`yaml
+title: Suspicious NPM Package Publish from New Account
+id: teampcp-npm-supply-chain-001
+status: experimental
+description: Detects a new NPM package published by an account less than 7 days old with high download correlation to known Shai-Hulud targets
+logsource:
+ product: npm
+ service: registry
+detection:
+ selection:
+ account_age_days: '< 7'
+ package_downloads_30d: '> 10000'
+ condition: selection
+fields:
+ - package_name
+ - account_created
+ - publisher
+ - downloads_30d
+level: high
+\`\`\`
+
+\`\`\`yaml
+title: CI Pipeline Environment Variable Read from Non-Build Process
+id: teampcp-env-exfil-001
+status: experimental
+description: Detects a process reading environment variables during a CI build that does not originate from the build tooling itself
+logsource:
+ product: linux
+ service: auditd
+detection:
+ selection:
+ syscall: read
+ fd.name: '/proc/self/environ'
+ proc.name:
+ - 'node'
+ - 'npm'
+ - 'python'
+ - 'pip'
+ filter:
+ proc.cmdline|contains:
+ - 'npm ci'
+ - 'npm install'
+ - 'pip install'
+ - 'pip3 install'
+ condition: selection and not filter
+fields:
+ - proc.name
+ - proc.cmdline
+ - uid
+level: critical
+\`\`\`
+
+---
+
+## YARA rule: hunting cybercats infrastructure
+
+\`\`\`yara
+/*
+ Rule: TeamPCP_Cybercats_Infrastructure
+ Author: Hunter Eddington
+ Date: 2026-08-27
+ Reference: KrebsOnSecurity investigation
+*/
+
+rule Cybercats_Matrix_Server_Artifacts {
+ meta:
+ description = "Detects files and artifacts associated with the Cybercats Matrix server infrastructure"
+ author = "Hunter Eddington"
+ date = "2026-08-27"
+ severity = high
+ actor = "TeamPCP / Fulcrumsec / Boxturtle"
+ 
+ strings:
+ // Cybercats server references
+ $matrix_alias_1 = "kernelstub" nocase
+ $matrix_alias_2 = "Cybercats" nocase
+ $matrix_alias_3 = "@pcpcats" nocase
+ $matrix_alias_4 = "@pcpcasper" nocase
+ $matrix_alias_5 = "boxturtle" nocase
+ $matrix_alias_6 = "xpl0itrsturtle" nocase
+ $matrix_alias_7 = "SeesawSec" nocase
+ 
+ // Known criminal handles
+ $handle_1 = "EllisD25" nocase
+ $handle_2 = "BulkDMT" nocase
+ $handle_3 = "Express" nocase
+ 
+ // Associated data leak sites
+ $site_1 = "Breachforums" nocase
+ $site_2 = "Darkforums" nocase
+ $site_3 = "Breachstars" nocase
+ 
+ condition:
+ 3 of ($matrix_alias_*) or 2 of ($handle_*) or
+ ($site_1 and $site_2)
+}
+
+rule TeamPCP_ShaiHulud_Third_Gen_Source_Leak {
+ meta:
+ description = "Detects Shai-Hulud v3 source code patterns"
+ author = "Hunter Eddington"
+ date = "2026-08-27"
+ severity = critical
+ 
+ strings:
+ // Class and function names consistent with Shai-Hulud
+ $class_1 = "class ShaiHulud" nocase
+ $class_2 = "class WormPropagator" nocase
+ $method_1 = "propagate_via_github" nocase
+ $method_2 = "inject_into_package" nocase
+ $method_3 = "steal_credential" nocase
+ $config_1 = "C2_CONFIG" nocase
+ $config_2 = "SHELL_SCRIPT" nocase
+ $obfuscation_1 = "base64" nocase
+ $obfuscation_2 = "eval(" nocase
+ 
+ condition:
+ $class_1 and $class_2 and 
+ 2 of ($method_*) and 
+ $config_1
+}
+\`\`\`
+
+---
+
+## IOCs
+
+| Indicator | Type | Confidence |
+|---|---|---|
+| Shai-Hulud 3.0 source code (publicly leaked May 2026) | Malware | Confirmed |
+| LiteLLM compromised versions (March 2026) | Supply chain | Confirmed |
+| @kernelstub Matrix account | Attribution | High |
+| @pcpcats Twitter/X (now banned) | Attribution | High |
+| Cybercats Matrix server invite link | Infrastructure | High |
+| TeamPCP supply chain contest (Monero address pattern) | Campaign indicator | High |
+| 3,800 GitHub repositories (May 2026 compromise) | Campaign indicator | Confirmed |
+| Boxturtle / xpl0itrsturtle handles | Threat actor | High |
+| Fulcrumsec / SeesawSec | Threat actor | High |
+| 2,500+ orgs affected by LiteLLM compromise | Campaign scope | Confirmed |
+
+---
+
+## Incident response playbook: teampcp supply chain compromise
+
+When your organization discovers it has downloaded a compromised open-source package attributed to TeamPCP:
+
+### Phase 1 , Identify (Minutes 0–30)
+
+1. Pull dependency installation logs from your package managers (NPM, PyPI, Docker, Go modules) for the past 90 days. Look for installations of packages that were published by accounts less than 30 days old at the time of installation.
+2. Check LiteLLM versions: If you run LiteLLM, audit the installed version against the IOCs published by CloudSEK. If you are running a version from March–April 2026, treat it as fully compromised.
+3. Audit cloud API key usage: Pull CloudTrail, GCP Audit Logs, and Azure Activity Logs for any API calls made using credentials that were active during the suspected infection window. Look for calls to unusual regions, unusual service usage (data exfiltration patterns), or calls from IPs not in your known ranges.
+4. Check GitHub audit logs: Look for repo.create events, key.create events, or oauth_authorization.grant events from accounts or OAuth applications you do not recognize.
+
+### Phase 2 , Contain (Minutes 30–120)
+
+5. Rotate all secrets that were present in environment variables on any machine that ran the compromised package. This includes cloud API keys, database credentials, SSH keys, and any secrets stored in your CI/CD environment variables.
+6. Revoke OAuth tokens for any GitHub or package manager accounts that were used on affected machines. Force a re-authentication cycle for all developers with access to repositories that were touched by the compromise chain.
+7. Isolate affected build agents: Take CI/CD build runners offline. Do not rebuild from the compromised state. Re-image the build agents from a known-good base.
+8. Terminate active sessions for any developer accounts associated with the compromised environment, especially if those accounts have 2FA disabled or use personal access tokens stored on the affected machines.
+
+### Phase 3 , Eradicate (Hours 2–24)
+
+9. Audit all repository access: For each repository in your GitHub organization, review the list of users and OAuth applications with write access. Remove any that you do not recognize, even if the name looks legitimate (the TeamPCP technique includes registering OAuth apps with names that impersonate legitimate services).
+10. Enable code signing for all commits and package publishes. Require that all packages be signed with a key that is stored in a hardware security module or a secret management system that is not accessible from build machines.
+11. set up a package pinning policy: Pin all third-party dependencies to specific cryptographic hashes. Do not rely on version tags alone. When a new version is published to a package index, your dependency management tooling should refuse to install it without an explicit human-approved update.
+12. Enable GitHub Advanced Security has: If you have GitHub Enterprise, enable dependency review, secret scanning, and code security advisories. These will catch known vulnerable dependencies and credential leaks in future commits.
+
+### Phase 4 , Recover and Harden (Days 1–7)
+
+13. Notify affected users: If the compromise exposed personal data or credentials belonging to your customers, initiate your breach notification process. Document the scope of exposure for regulatory compliance.
+14. Run a full supply chain audit: For each open-source package your organization depends on, review the maintainer list, recent commit history, and the package's publication history. Flag any packages that were recently transferred to new maintainers or that have sudden spikes in download counts inconsistent with the package's maturity.
+15. set up a software bill of materials (SBOM): Generate and maintain an SBOM for all production applications. This gives you a definitive inventory of what you are running, which makes it possible to respond quickly when a supply chain compromise is announced.
+16. Review your AI/ML stack: If you use LiteLLM or any AI gateway tooling, audit the entire stack. Assume that any API keys used by the gateway are compromised. Rotate them and enable tighter network segmentation around AI workloads so that a compromised gateway credential cannot reach other cloud resources.
+
+---
+
+## What the arrests actually mean , and what they do not
+
+The arrests in Australia are significant, but they are not a kill switch for TeamPCP. The group's operational model , a loosely affiliated community of threat actors using shared tooling and infrastructure , means that the removal of two members does not eliminate the group's capability. The Shai-Hulud 3.0 source code is already public. The techniques are documented. The criminal ecosystem that participated in the supply chain contest and the broader Cybercats network remains intact.
+
+What the arrests do accomplish: they demonstrate that law enforcement can attribute cybercriminal activity across international borders, even when the actors are using publicly visible infrastructure. The correlation between @kernelstub's public Twitter/X activity and the Cybercats Matrix server logs is a blueprint for how investigators connect pseudonymized criminal handles to real-world identities. That is a meaningful deterrent for less sophisticated actors who believed that using public social media with consistent handles provided plausible deniability.
+
+The bigger implication is that the software supply chain attack methodology pioneered by TeamPCP has been fully democratized. The leaked Shai-Hulud source code means any capable threat actor , state-sponsored or criminal , now has a working playbook for conducting supply chain attacks at scale. This is not a problem that two arrests solve.
+
+For defenders, the message is operational: audit your open-source dependency chain now, set up package pinning and SBOM generation, and assume that any AI gateway tooling you run has already been targeted by this or a similar campaign. The TeamPCP arrests are a milestone in one investigation. The ongoing campaign is a structural risk to every organization that builds software using open-source components.
+
+---
+
+## Related reading
+
+- [OAuth Consent Phishing: Why Your Password and MFA Mean Nothing Once a Malicious App Gets Access](/blog/oauth-consent-phishing-credential-persistence-fbi-psa-260901) , The FBI's guidance on OAuth token persistence, the attack class that underlies credential theft from development environments.
+- [Malicious LiteLLM Releases Tied to Trivy Hack May Have Exposed 2,500+ Organizations](/blog/malicious-litellm-releases-teampcp) , Direct coverage of the LiteLLM supply chain compromise.
+- [Miasma Worm Infects 73 Microsoft GitHub Repositories](/blog/miasma-worm-73-microsoft-github-repos) , Similar supply chain attack pattern affecting Microsoft's own development infrastructure.
+- [Hugging Face Breach: Malicious Dataset Used to Steal Cloud Credentials](/blog/hugging-face-breach-malicious-dataset-supply-chain) , How credential theft from AI infrastructure supply chains works at scale.
+- [Developer Workstation Security: Complete IAM Hardening Playbook [2026]](/blog/developer-workstation-security-complete-iam-hardening-playbook) , Hardening guidance for the development environment where these attacks originate.
+`
+          },
+          {          {
             slug: "papercut-cve-2026-81578-82078-auth-bypass-rce-education",
             title: "PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution",
             date: "2026-09-05",
