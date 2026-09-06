@@ -13,7 +13,382 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[
-            {
+                      {
+            slug: "mikrotik-mikrotrick-preauth-rce-cve-2026-67276-86060",
+            title: "MikroTrick: Chained MikroTik RouterOS Flaws Give Attackers Pre-Auth Root via SSH",
+            date: "2026-09-06",
+            excerpt: "CERT Polska disclosed six RouterOS vulnerabilities on September 5, 2026. Chaining two of them — CVE-2026-67276 and CVE-2026-86060 — produces a pre-authentication root shell on any MikroTik device with SSH exposed to the internet. Attacks began September 2. Here is the full technical breakdown, affected version ranges, detection rules, and recovery playbook.",
+            category: "Vulnerability Management",
+            readTime: "13 min",
+            author: "Hunter Eddington",
+            image: "https://eddington.tech/og-image.png",
+            source: "The Hacker News + CERT Polska|https://thehackernews.com/2026/09/attackers-hijack-mikrotik-routers.html",
+            content: ``# MikroTrick: Chained MikroTik RouterOS Flaws Give Attackers Pre-Auth Root via SSH
+
+On September 5, 2026, CERT Polska published a coordinated disclosure covering six vulnerabilities in MikroTik RouterOS. Two of them, CVE-2026-67276 (SSH authentication bypass) and CVE-2026-86060 (SSH session privilege manipulation), chain together to produce something the team called MikroTrick: a pre-authentication path to full administrative control on any RouterOS device whose SSH interface faces the internet. The attack works against RouterOS 6.x from 6.0.0, all RouterOS 7.x before 7.23.4, and RouterOS 7.24.x before 7.24.2. Mikrotik released patches in versions 6.49.21, 7.23.4, 7.23.5, 7.24.2, and 7.25beta3. Active exploitation began September 2.
+
+This post explains the technical mechanics of both CVEs, the full attack chain, how to identify compromised devices, detection rules for defenders, and the recovery playbook from CERT's guidance.
+
+---
+
+## Background: why mikrotik routeros is a high-value target
+
+MikroTik manufactures network hardware ranging from home Wi-Fi routers to enterprise-grade core routers. RouterOS, their Linux-based operating system, powers millions of devices globally. The combination of a specialized OS, a large installed base, and a management interface exposed to the internet makes RouterOS an attractive target for both financially motivated threat actors and state-sponsored groups.
+
+The scale problem is compounded by how RouterOS devices are typically deployed. A RouterOS device acting as an edge router or firewall often sits between a corporate network and the internet. Compromising it gives an attacker a man-in-the-middle position on all traffic flowing through that device, DNS, VPN tunnels, inter-site links, and NAT'd connections all pass through it. A compromised edge router is architecturally superior to a compromised endpoint from an attacker's perspective.
+
+MikroTik devices are also frequently misconfigured out of the box. While home-user models apply a default firewall that blocks management port access from public internet, enterprise deployments often expose SSH, Winbox, or WebFig to satisfy remote administration requirements. Devices with port 22 reachable from the internet are indexed by Shodan in the hundreds of thousands. When a pre-authentication remote code execution flaw affects this population, the urgency for defenders is immediate and unambiguous.
+
+---
+
+## The six vulnerabilities
+
+CERT Polska's full disclosure covers six separate vulnerabilities across the RouterOS attack surface. The three most critical are the two that form the MikroTrick chain, plus a memory disclosure flaw.
+
+### Cve-2026-67276, ssh authentication bypass (cvss 9.2)
+
+RouterOS uses public-key authentication for SSH. The vulnerability lies in how the RSA public key was verified during the authentication handshake. Specifically, RouterOS did not compare the full RSA public key modulus assigned to a user account. An attacker who knew the target username and the public modulus of that user's key could construct a different key pair and authenticate as that user without possessing the corresponding private key.
+
+This is a subtle but devastating cryptographic flaw. In proper RSA authentication, the server stores the user's public key and the client proves possession of the corresponding private key by signing a challenge. The vulnerability allows a weaker form of authentication bypass: the server apparently accepted a modified key under some circumstances where only a portion of the modulus was validated. The practical implication is that a network-positioned attacker who can observe or infer the target account's public key can authenticate as that account without the private key.
+
+The attacker does need to know the username and the target account's public key modulus. Username enumeration on RouterOS SSH is straightforward, the server responds differently for valid and invalid usernames. Public key information may leak through other means or through an initial scan.
+
+### Cve-2026-86060, ssh session privilege manipulation via crafted username (cvss 9.2)
+
+The second flaw is in how RouterOS handles usernames beginning with certain characters in the SSH login mechanism. By submitting a crafted username string, an attacker can trigger a privilege escalation during the session establishment phase. The resulting session is granted full administrative privileges in RouterOS, the highest privilege level.
+
+Chained with CVE-2026-67276, the attacker first bypasses authentication to establish an SSH session, then exploits CVE-2026-86060 to escalate that unauthenticated or low-privilege session to root. The result is a pre-authentication root shell.
+
+### Cve-2026-67277, bandwidth-test memory disclosure and dos (cvss 8.8)
+
+The bandwidth-test service allowed an unauthenticated connection to reach a state that should require authentication. Combined with an information disclosure flaw that leaks uninitialized data from the packet buffer and an integer underflow in size validation, this enables either kernel memory leakage or a remote denial-of-service crash. This vulnerability is not part of the primary MikroTrick chain but represents a separate exploitation path for devices where SSH is not exposed.
+
+---
+
+## The mikrotrick attack chain
+
+Prerequisites: Attacker needs network access to port 22 (SSH) on a vulnerable RouterOS device. No credentials, no user interaction, no Man-in-the-Middle position required beyond reaching the device's management interface.
+
+Step 1, Username enumeration. The attacker connects to the target's SSH port and probes with malformed usernames to confirm validity. RouterOS SSH behaves differently for valid versus invalid usernames, enabling an attacker to enumerate accounts without authentication.
+
+Step 2, Public key modulus extraction. The attacker obtains the RSA public key modulus associated with the target account. This can be done through various reconnaissance techniques or through information leakage during the SSH handshake.
+
+Step 3, Crafted key authentication bypass. Using the known username and public modulus, the attacker crafts a modified RSA key pair and initiates an SSH authentication attempt. Due to CVE-2026-67276's incomplete modulus validation, the crafted key is accepted.
+
+Step 4, Privilege escalation via crafted username. During the authenticated session, or through a specially crafted session initialization that combines steps 3 and 4, the attacker submits a username prefixed with a character sequence that triggers the CVE-2026-86060 privilege escalation, gaining full administrative access.
+
+Step 5, Persistence. With root access, the attacker creates backdoor accounts, injects scheduled tasks, configures proxy or tunnel services for command-and-control, and exfiltrates configuration data including VPN secrets, RADIUS keys, and certificate material.
+
+### Affected versions
+
+| Version Branch | Affected Range | Fixed In |
+|---|---|---|
+| RouterOS 6 | 6.0.0 to 6.49.20 | 6.49.21 |
+| RouterOS 7 (before long-term) | 7.0.0 to 7.23.3 | 7.23.4 |
+| RouterOS 7 (long-term) | 7.24.0 to 7.24.1 | 7.24.2 |
+| RouterOS 7 (stable) | 7.24.0 to 7.24.1 | 7.24.2 |
+| RouterOS 7 (development) | Any | 7.25beta3 |
+
+RouterOS 7.23.5 is a regression fix for an IPv6 DHCP issue introduced in 7.23.4 while retaining the security patches, install it if you are on the long-term channel.
+
+---
+
+## Attack activity observed in the wild
+
+CERT Polska obtained confirmation that the MikroTrick chain was being actively exploited in the wild before public disclosure. According to their analysis, the observed attacks:
+
+- Began at least September 2, 2026
+- Originated primarily from IP 82.192.72.4
+- Also used IP 103.102.31.18 in exploitation attempts
+- Created a privileged user account named ops on compromised devices
+- Left specific markers in RouterOS logs
+
+Log artifacts confirmed as indicators of compromise:
+
+```
+login failure for user -2 from <ip> via ssh
+user <name> added by ssh:-2@<ip>
+```
+
+presence of a highly privileged account named ops is a reliable indicator, as it does not appear in any legitimate RouterOS configuration or default deployment.
+
+### Network-level iocs
+
+| Indicator | Type | Context |
+|---|---|---|
+| 82.192.72.4 | Source IP | Primary attacker IP in observed exploitation |
+| 103.102.31.18 | Source IP | Secondary IP used in exploitation attempts |
+| Port 22/TCP open to internet | Service exposure | Prerequisite for attack |
+
+---
+
+## Detection rules
+
+### Sigma, routeros log analysis
+
+```yaml
+title: MikroTrick Exploitation Indicator - Login Failure User -2
+id: 9101
+status: experimental
+author: Hunter Eddington
+date: 2026-09-06
+logsource:
+ category: application
+ product: mikrotik-routeros
+ service: ssh
+detection:
+ selection:
+ message|contains:
+ - 'login failure for user -2 from'
+ - 'user .* added by ssh:-2@'
+ condition: selection
+level: critical
+tags:
+ - attack.initial_access
+ - attack.privilege_escalation
+ - mikrotik.mikrotrick
+
+---
+title: MikroTrick Exploitation Indicator - Ops Account Creation
+id: 9102
+status: experimental
+author: Hunter Eddington
+date: 2026-09-06
+logsource:
+ category: application
+ product: mikrotik-routeros
+detection:
+ selection:
+ message|contains: 'ops'
+ filter_admin:
+ message|contains:
+ - 'admin'
+ - 'administrator'
+ condition: selection and not filter_admin
+level: high
+tags:
+ - attack.persistence
+ - mikrotik.mikrotrick
+
+---
+title: MikroTik SSH - Novel Source IP Access After Update Window
+id: 9103
+status: experimental
+author: Hunter Eddington
+date: 2026-09-06
+logsource:
+ category: network_connection
+ product: mikrotik
+detection:
+ selection:
+ dest_port: 22
+ protocol: tcp
+ filter_known_ips:
+ source_ip:
+ - '10.0.0.0/8'
+ - '172.16.0.0/12'
+ - '192.168.0.0/16'
+ condition: selection and not filter_known_ips
+level: medium
+```
+
+### Yara, routeros forensic artifacts
+
+```yara
+rule MikroTik_MikroTrick_Exfil_Artifacts {
+ meta:
+ description = "Artifacts from MikroTrick RouterOS compromise"
+ author = "Hunter Eddington"
+ date = "2026-09-06"
+ severity = 10
+ ioc_type = "behavior"
+ strings:
+ $log1 = "login failure for user -2" ascii nocase
+ $log2 = "added by ssh:-2@" ascii nocase
+ $log3 = "user ops" ascii nocase
+ $config1 = "/user/add" ascii nocase
+ $config2 = "group=full" ascii nocase
+ $config3 = "address=0.0.0.0/0" ascii nocase
+ condition:
+ 2 of ($log1, $log2, $log3) or
+ ($config1 and $config2 and $config3)
+}
+
+rule MikroTik_Unknown_Scheduler_Task {
+ meta:
+ description = "Suspicious RouterOS scheduler tasks added post-compromise"
+ author = "Hunter Eddington"
+ date = "2026-09-06"
+ strings:
+ $scheduler1 = "/system/scheduler/add" ascii nocase
+ $scheduler2 = "interval=00:00:01" ascii nocase
+ $scheduler3 = "on-event=" ascii nocase
+ condition:
+ all of them
+}
+
+rule MikroTik_Suspicious_Proxy_Config {
+ meta:
+ description = "Suspicious proxy configurations from RouterOS compromise"
+ author = "Hunter Eddington"
+ date = "2026-09-06"
+ strings:
+ $proxy1 = "/ip/proxy/add" ascii nocase
+ $proxy2 = "dst-host=" ascii nocase
+ $proxy3 = "action=deny" ascii nocase
+ condition:
+ all of them
+}
+```
+
+---
+
+## Incident response playbook
+
+### Phase 1, immediate assessment (0-15 minutes)
+
+Identify exposed RouterOS devices. Check your asset inventory or network scan data for RouterOS devices with port 22 accessible from public internet. Shodan queries for "mikrotik" port:22 will surface your organization's exposed devices if they are indexed.
+
+Determine installed version on each device.
+
+```bash
+# Connect via ssh or console and run:
+/system/resource/print
+# Look for the "version" field
+```
+
+Patch immediately if a fixed version is available for your branch.
+
+```bash
+# Routeros 6.x - upgrade to 6.49.21
+/system/package/update/install
+
+# Routeros 7.x long-term - upgrade to 7.23.5 (contains fix + regression fix)
+/system/package/update/install
+
+# Verify patch level after reboot
+/system/resource/print
+```
+
+### Phase 2, temporary mitigation (if patch cannot be applied immediately)
+
+Restrict SSH access to trusted management subnets only.
+
+```bash
+# Restrict ssh to a trusted management subnet only
+/ip firewall filter add chain=input protocol=tcp dst-port=22 \
+ src-address=10.0.0.0/8 action=accept comment="MGMT: SSH from internal"
+/ip firewall filter add chain=input protocol=tcp dst-port=22 \
+ action=drop comment="BLOCK: SSH from public"
+```
+
+Disable other exposed management services.
+
+```bash
+# Disable winbox (8291) from public networks
+/ip firewall filter add chain=input protocol=tcp dst-port=8291 \
+ action=drop
+
+# Disable http/https management from public
+/ip firewall filter add chain=input protocol=tcp dst-port=80,443 \
+ action=drop
+
+# Disable bandwidth-test server
+/ip firewall filter add chain=input protocol=tcp dst-port=2000,2001 \
+ action=drop
+```
+
+Do not use unpatched RouterOS devices to initiate outbound SSH connections, especially through untrusted networks. CVE-2026-86060 can be triggered from the built-in SSH clients on an unpatched device.
+
+### Phase 3, compromised device recovery
+
+If indicators of compromise are present, follow this procedure in order:
+
+Step 1, Isolate immediately. Disconnect the device from the network. Do not power it off, doing so loses volatile memory and log data.
+
+Step 2, Preserve evidence.
+
+```bash
+# Export current configuration
+/export file=pre-recovery-config.rsc
+
+# Download logs via ftp or scp before reset
+/log print file=pre-recovery-logs.txt
+```
+
+Step 3, Reset to factory defaults.
+
+```bash
+# Factory reset - do not restore from backup
+/system reset-configuration run-after-reset=no
+```
+
+Step 4, Apply hardened baseline configuration. Build the device configuration from scratch. Do not reuse the old configuration file from the compromised device, even if it appears clean, sophisticated implants may persist in configuration files.
+
+Step 5, Change all secrets. After restoring connectivity, change every password, SSH key, RADIUS shared secret, VPN pre-shared key, and certificate on the device and on any system that authenticates to or through it.
+
+Step 6, Patch. Apply the latest fixed RouterOS version before returning the device to production.
+
+### Phase 4, post-incident hardening
+
+Implement management plane access controls.
+
+```bash
+# Create address list for management subnets
+/ip firewall address-list add list=mgmt-allow address=10.0.0.0/8
+/ip firewall address-list add list=mgmt-allow address=172.16.0.0/12
+/ip firewall address-list add list=mgmt-allow address=192.168.0.0/16
+
+# Allowlist management access
+/ip firewall filter add chain=input protocol=tcp dst-port=22 \
+ src-address-list=mgmt-allow action=accept
+/ip firewall filter add chain=input protocol=tcp dst-port=22 \
+ action=drop
+```
+
+Enable SSH hardened settings and disable unused services.
+
+```bash
+# Enforce ssh v2 only
+/ip ssh-set strong-crypto=yes
+
+# Disable telnet, ftp, and default www service
+/ip service disable telnet,ftp,www
+```
+
+Monitor for Flagged status. RouterOS 7.24.2+ includes a new "Flagged" mechanism that detects known signs of compromise at startup. Run /system/device-mode/print and check for the Flagged status after patching. The presence of the flag indicates RouterOS detected configuration changes consistent with a prior compromise.
+
+---
+
+## The "flagged" detection mechanism
+
+Starting in the fixed releases, MikroTik introduced a startup integrity check that scans configuration for known compromise markers. When detected, RouterOS: (1) disables the suspicious configuration entries, (2) writes a critical message to the system log, and (3) sets the "Flagged" status.
+
+This mechanism detects only selected known artifacts from the observed exploitation. Absence of the Flagged marker does not prove the device was never compromised, it only means the specific patterns the mechanism knows about were not found. Determined attackers with zero-day RouterOS implants would not trigger this mechanism.
+
+If your device shows a Flagged status after patching, treat it as a confirmed compromise and follow the recovery procedure above.
+
+---
+
+## Broader context: ai-assisted vulnerability discovery
+
+CERT Polska's disclosure included an unusual note: the six RouterOS vulnerabilities were discovered with assistance from GPT-5.5-cyber and GPT-5.6-sol models, accessed through the OpenAI GTAC program for government agencies. The CERT team used an agent-based research environment that automated laboratory testing and systematically searched for vulnerabilities across the RouterOS attack surface.
+
+This is notable because RouterOS is a closed-source, specialized OS with a relatively small research community. Traditional RouterOS vulnerability research required physical or virtualized access to hardware, knowledge of the MIPS64/ARM architecture, and reverse engineering of a proprietary OS. AI-assisted fuzzing and symbolic execution lowered the barrier to systematic vulnerability discovery in a way that had not previously been practical for a small national CERT team.
+
+For defenders, this means the population of discoverable RouterOS vulnerabilities has likely expanded . The GTAC program gave CERT Polska capabilities previously available only to well-funded research groups. Other nation-state CERTs and potentially criminal actors may have similar or superior capabilities. The assumption that RouterOS's obscurity provides security should be reconsidered.
+
+---
+
+## Related reading
+
+- [PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution](https://eddington.tech/blog/papercut-cve-2026-81578-82078-auth-bypass-rce-education), Another auth bypass leading to RCE, same class of vulnerability pattern
+- [RustDuck Botnet Rebuilds in Rust: IoT DDoS Hardening Playbook](https://eddington.tech/blog/rustduck-botnet-iot-ddos-hardening), IoT botnets and RouterOS hardening in depth
+- [TeamCity CVE-2026-63077: Unauthenticated RCE via Agent Polling Protocol](https://eddington.tech/blog/teamcity-cve-2026-63077-unauthenticated-rce), Another pre-auth RCE in enterprise infrastructure software
+- [Developer Workstation Security: Complete IAM Hardening Playbook](https://eddington.tech/blog/developer-workstation-security-complete-iam-hardening-playbook), Network segmentation and management plane controls
+`
+`          },
+{
             slug: "nexus-idscan-153m-license-breach-supply-chain",
             title: "153 Million Driver Licenses for Sale: Inside the Nexus Breach and the idscan.net Supply Chain",
             date: "2026-09-05",
