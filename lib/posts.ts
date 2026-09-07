@@ -13,7 +13,326 @@ export interface Post {
 
 // Placeholder — replace with real posts as you write them daily
 export const posts: Post[
-                      {
+          {
+            slug: "telerik-ui-padding-oracle-rce-cve-2026-13181",
+            title: "Telerik UI Padding Oracle to Shell: 16 Years of ASP.NET AJAX, Cracked in an Hour",
+            date: "2026-09-07",
+            excerpt: "Security firm TantoSec published a working exploit chain for three Telerik UI for ASP.NET AJAX vulnerabilities on September 7, 2026. The chain converts a padding oracle in RadAsyncUpload (CVE-2026-13182) into a complete pre-authentication remote code execution path through an unguarded type-resolution flaw (CVE-2026-13181) and a mixed-mode DLL loader. Public tooling and two production-ready payloads are now available. Progress patched the underlying bugs in July; here is what defenders need to know, how to detect exploitation attempts, and the full incident response playbook.",
+            category: "Vulnerability Management",
+            readTime: "15 min",
+            author: "Hunter Eddington",
+            image: "https://eddington.tech/og-image.png",
+            source: "The Hacker News + Progress Software + TantoSec|https://thehackernews.com/2026/09/telerik-ui-padding-oracle-bug-chained.html",
+            content: ``
+# Telerik UI Padding Oracle to Shell: 16 Years of ASP.NET AJAX, Cracked in an Hour
+
+On September 7, 2026, security firm TantoSec dropped something defenders need to know about right now: a working exploit chain for three vulnerabilities in Telerik UI for ASP.NET AJAX. This is not theoretical. A padding oracle in the RadAsyncUpload file-upload control chains to a type-resolution flaw, and from there to arbitrary code execution — no credentials, no user interaction, just a TCP socket to a vulnerable endpoint. CVSS 8.1. Public GitHub repo. Two mixed-mode DLL payloads ready to run. Progress patched the underlying bugs in July; what changed this week is the method and the tooling, which means the window for defenders to act is narrowing by the hour.
+
+---
+
+## The lay of the land: what is this component and where does it sit?
+
+Progress Software's Telerik UI for ASP.NET AJAX is a UI component library that ships as a DLL dropped into ASP.NET web application bin directories. It has been around since at least 2010, which means it is almost living in the dependency tree of applications that nobody has touched in years — sometimes applications nobody remembers writing. The RadAsyncUpload control handles asynchronous file uploads. It is not a glamorous component, but file upload handlers are among the highest-value targets in a web application's attack surface because they process untrusted client input server-side.
+
+The chain hits RadAsyncUpload versions 2010.1.309 through 2026.2.519. Patch is 2026.2.708 (July 8). CVEs published July 22. The September 7 disclosure from TantoSec — Marcio Almeida's write-up, the telerik-rau-exploit command-line tool, and two mixed-mode DLL payloads — is the part that changes the threat threat picture. This is the difference between "a patched vulnerability" and "an exploitable vulnerability with a script kiddie-friendly toolkit."
+
+Enterprise ASP.NET applications running this component often sit behind internal authentication layers, which means the IIS application pool account frequently has direct database, LDAP, or file system access to sensitive infrastructure. Compromising that account opens a direct path to Active Directory credential theft and lateral movement. For MSPs and managed services providers in particular, a compromised RMM tool is a launching pad into hundreds of customer environments.
+
+---
+
+## The chain, broken down
+
+### The padding oracle (CVE-2026-13182): AES-CBC with no integrity check
+
+The RadAsyncUpload control encrypts its client-side state using AES-CBC. The operation is reversible because the key lives server-side, but there is no HMAC or any other integrity mechanism. Send the server a tampered ciphertext and it decrypts it — and because it uses PKCS#7 padding, the decrypted bytes either parse as valid JSON or they do not. The server's response to invalid padding is measurably different from its response to valid padding. That difference is the oracle. That is all a padding oracle attack needs: a way to distinguish "valid padding" from "invalid padding" and a cipher in CBC mode.
+
+Once an attacker can distinguish valid from invalid padding, they can decrypt any ciphertext they can observe. The attacker's telerik-rau-exploit tool does exactly this, sending a stream of modified ciphertexts, measuring server responses, and reconstructing the plaintext upload configuration — including the server-side file path and session keys needed for the next step.
+
+The underlying vulnerability class is not new. Vaudenay documented the attack against CBC modes in 2002. What TantoSec solved specifically for Telerik is the reconstruction of the oracle against this control's fixed encryption seed, and the discovery that the seed lets an attacker not just decrypt the configuration but also forge a new one.
+
+### Unguarded type resolution (CVE-2026-13181): the deserialization bridge
+
+The decrypted-and-forged upload configuration contains a field that names a .NET type for the server to instantiate. In a properly hardened implementation, this field would be restricted to an allowlist of known-safe types. CVE-2026-13181 is the flaw: the control resolves the named type without any allowlist check. The attacker specifies System.Diagnostics.Process or any other available type, and the .NET runtime obliges.
+
+From type resolution to code execution is the deserialization gadget chain problem. The attacker provides a path to a DLL they control. That DLL is a mixed-mode assembly — managed .NET metadata wrapped around native code — and when the .NET runtime loads it, native code executes immediately, running in the context of the IIS worker process. TantoSec released two payload variants: one that writes a web shell to disk, and one that runs entirely in memory. The in-memory variant leaves almost no forensic footprint on the file system.
+
+### The timing oracle (CVE-2026-13183): when error messages go quiet
+
+If the application suppresses detailed error responses, the bit-level padding oracle becomes harder to distinguish from ordinary traffic. CVE-2026-13183 is the tracking number for the response-timing variant: when valid padding produces a slightly faster or differently-sized response than invalid padding, timing becomes the oracle. The attacker does not need readable error messages — they need a measurable latency difference, which is easy to isolate with enough samples. This makes the attack viable against hardened applications that have already cleaned up their error pages.
+
+### The configuration prerequisite: why the CVSS score is what it is
+
+CVSS 8.1 with a "high" attack-complexity rating is accurate. The exploit chain only works when RadAsyncUpload has its UploadChannels property set to Manual — a non-default configuration. Default installations of Telerik UI are not vulnerable to this specific chain. Applications that have been customized for specific upload workflows, particularly document management platforms, HR systems, or any ASP.NET application that touches the upload configuration, are the likely targets.
+
+This is worth dwelling on: the attack is not trivially automated across the internet. You need to identify a target running the vulnerable component, confirm the UploadChannels = Manual condition, then run 127,000 oracle requests over roughly an hour. Against a rate-limited server this extends significantly. But for a targeted attacker who has already identified a vulnerable endpoint — which is easy to do with a Shodan scan for /Telerik.Web.UI/ — this is not a barrier, it is a footnote.
+
+The component's history is relevant here. CVE-2019-18935, a deserialization RCE in the same RadAsyncUpload handler, was chained with Cobalt Strike in multiple real-world intrusions. That history shapes the threat model: opportunistic scanning identifies exposed instances, then targeted exploitation follows.
+
+---
+
+## Exploitation step by step
+
+Here is what the tool actually does when you run telerik-rau-exploit against a vulnerable target:
+
+1. **Oracle enumeration**: The tool bombards the RadAsyncUpload handler with modified ciphertexts, tracking server responses to determine byte-by-byte what the decrypted plaintext is. This recovers the full upload configuration including server paths and session keys.
+
+2. **Configuration forgery**: The tool constructs a new upload configuration that points FileInputs at a DLL path the attacker controls.
+
+3. **Type instantiation**: The forged config, encrypted with the AES key derived from oracle enumeration, is submitted. The server resolves the attacker-specified .NET type with no allowlist check, triggering the gadget chain.
+
+4. **Code execution**: The mixed-mode DLL loads and runs native code. Depending on payload variant, a web shell appears on disk or a reverse connection opens entirely in memory.
+
+End-to-end: approximately 127,000 requests, roughly one hour against an unthrottled target. The in-memory payload variant never touches disk, which complicates forensic recovery.
+
+---
+
+## Detection rules
+
+### SIGMA rules
+
+**Padding oracle traffic to the RadAsyncUpload handler:**
+
+\`\`\`yaml
+title: Telerik RadAsyncUpload Padding Oracle Traffic
+logsource:
+  category: webserver
+  product: iis
+detection:
+  selection:
+    cs-uri-query|contains:
+      - 'Telerik.Web.UI.AsyncUpload'
+      - 'RadAsyncUploadHandler'
+      - 'RadAsyncUpload'
+  condition: selection
+fields:
+  - c-ip
+  - cs-uri
+  - sc-status
+  - time-taken
+level: high
+\`\`\`
+
+**High request volume to the Telerik handler from a single source:**
+
+\`\`\`yaml
+title: High-Volume Requests to Telerik AsyncUpload Handler
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri-query|contains: 'Telerik.Web.UI'
+  timeframe: 5m
+  count:
+    gt: 1000
+  condition: timeframe + count
+level: medium
+\`\`\`
+
+**IIS worker process loading a DLL from an unexpected location:**
+
+\`\`\`yaml
+title: Suspicious DLL Loaded by w3wp From Non-Standard Path
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\\w3wp.exe'
+    CommandLine|contains:
+      - 'Telerik'
+      - 'RadAsyncUpload'
+    ParentImage|contains:
+      - 'msbuild'
+      - 'powershell'
+      - 'cmd.exe'
+  condition: selection
+level: critical
+\`\`\`
+
+### YARA rules
+
+\`\`\`yara
+rule Telerik_RadAsyncUpload_Exploit_Tool
+{
+    meta:
+        description = "Detects telerik-rau-exploit command-line tool patterns"
+        author = "Eddington Tech Threat Intel"
+        date = "2026-09-07"
+        score = 75
+    strings:
+        $a = "telerik-rau-exploit" ascii
+        $b = "padding-oracle" ascii
+        $c = "async-upload" ascii
+        $d = "mixed-mode" ascii
+        $e = "CVE-2026-13181" ascii
+    condition:
+        3 of them
+}
+
+rule Telerik_Malicious_DLL_Indicator
+{
+    meta:
+        description = "Detects indicators of Telerik exploitation DLL payloads"
+        author = "Eddington Tech Threat Intel"
+        date = "2026-09-07"
+        score = 80
+    strings:
+        $mz = "MZ"
+        $str1 = "System.Diagnostics.Process" wide
+        $str2 = "Telerik.Web.UI" wide
+        $str3 = "AsyncUploadConfiguration" wide
+    condition:
+        $mz at 0 and 2 of ($str*)
+}
+\`\`\`
+
+### IOCs
+
+Network indicators:
+
+- POST requests to /Telerik.Web.UI/WebResource.axd with unusual request body lengths
+- POST requests to /Telerik.Web.UI/RadAsyncUploadHandler.ashx from external IPs
+- Sustained high request volume to Telerik handler paths from single source IPs
+- Outbound connections from w3wp.exe to non-whitelisted external IPs
+
+File system indicators:
+
+- New .dll files in App_Data/ subdirectories beneath web roots
+- New .aspx files in web roots with encoded VBScript or PowerShell content
+- DLLs in bin/ subdirectories with recent compile timestamps that do not match deployment records
+- Hashes of TantoSec's two released DLL payloads, available from the tantoseccom/blog GitHub repository
+
+---
+
+## Incident response playbook
+
+### Phase 1: find vulnerable instances now
+
+Run this against every IIS server in your environment. It checks web.config for UploadChannels = Manual and flags any Telerik DLL older than 2026.2.708:
+
+\`\`\`powershell
+Get-ChildItem -Path "C:\\inetpub\\" -Recurse -Filter "web.config" -ErrorAction SilentlyContinue | ForEach-Object {
+    $content = Get-Content $_.FullName -Raw
+    if ($content -match "Telerik\\.Web\\.UI\\.AsyncUpload" -and $content -match "UploadChannels.*Manual") {
+        [PSCustomObject]@{
+            File = $_.FullName
+            Vulnerable = $true
+            Config = $Matches[0]
+        }
+    }
+}
+
+Get-ChildItem -Path "C:\\inetpub\\" -Recurse -Filter "Telerik.Web.UI*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
+    $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion
+    [PSCustomObject]@{
+        Path = $_.FullName
+        Version = $version
+        Vulnerable = $version -lt "2026.2.708"
+    }
+}
+\`\`\`
+
+If you manage a large IIS fleet, run this as a PowerShell remoting job across all servers in parallel. The goal is to have a complete inventory within the first hour of your response.
+
+### Phase 2: contain immediately
+
+Option A — patch: Apply Telerik UI for ASP.NET AJAX 2026.2.708 or later to all affected applications. This is the definitive fix and requires no configuration changes.
+
+Option B — configuration rollback: If you cannot patch immediately, find every RadAsyncUpload instance in your codebase and revert UploadChannels to the default setting (remove the Manual value). This eliminates the attack surface without removing the component. Test your upload workflows after making this change — it will break any custom upload channel logic built on the Manual setting.
+
+Network-level: Block external access to all /Telerik.Web.UI.* handler paths at the WAF or load balancer. This blocks opportunistic scanning but is not a permanent control — a determined attacker who has internal network access will find other ways.
+
+### Phase 3: investigate for signs of compromise
+
+If a vulnerable instance was internet-facing and not yet patched, treat it as compromised until proven otherwise. Do the following in order:
+
+1. Preserve IIS logs for the past 90 days before touching anything. Look for:
+   - Request counts to /Telerik.Web.UI/WebResource.axd or /RadAsyncUploadHandler.ashx that exceed normal baseline from any single source IP
+   - Requests to these endpoints outside business hours
+   - HTTP 500 responses to these endpoints, particularly with response sizes that match a padding oracle test pattern
+
+2. Acquire a memory image if the server is still running if the server is still running and you cannot immediately rebuild. The in-memory DLL payload variant loads without creating files. Memory forensics will show the loaded DLL and any network connections it initiated.
+
+3. **Audit DLLs loaded by w3wp.exe** in the days leading up to the investigation:
+
+\`\`\`powershell
+Get-Process w3wp | ForEach-Object {
+    $proc = $_
+    $proc.Modules | Where-Object {
+        $_.FileName -notmatch "C:\\\\Windows\\\\" -and
+        $_.FileName -notmatch "C:\\\\Program Files\\\\" -and
+        $_.FileName -notmatch "C:\\\\inetpub\\\\wwwroot"
+    } | ForEach-Object {
+        [PSCustomObject]@{
+            ProcessID = $proc.Id
+            ModuleName = $_.ModuleName
+            FileName = $_.FileName
+            FileVersion = $_.FileVersion
+        }
+    }
+}
+\`\`\`
+
+Any DLL in App_Data, %TEMP%, or non-standard bin subdirectories is a high-priority lead.
+
+4. **Scan for web shells**: newly created .aspx files with encoded VBScript or PowerShell are the calling card of the disk-writing payload variant:
+
+\`\`\`bash
+find /var/www/html -name "*.aspx" -mtime -30 -exec grep -l "Eval\\|Request\\|StreamWriter\\|Encoding" {} \\;
+\`\`\`
+
+### Phase 4: eradicate and recover
+
+- Rebuild, do not clean: any server that shows signs of post-exploitation activity should be rebuilt from a known-good image. Do not attempt to clean and retain. The persistence mechanisms available to an IIS application pool account are too varied to guarantee a clean system through remediation alone.
+- Credential reset: reset all credentials that were accessible to the IIS application pool account — database passwords, service account passwords, any API keys that lived in environment variables accessible to the application pool.
+- Kerberos and NTLM audit: review constrained delegation and unconstrained delegation settings on the affected servers. An IIS service account with delegation rights is a privilege escalation risk for the entire domain.
+- Update your SBOM: add Telerik UI component versions to your software bill of materials. This class of vulnerability — a third-party component with a 16-year vulnerability history — is exactly why transitive dependency tracking matters.
+
+---
+
+## Mitigation controls ranked by effectiveness
+
+| Control | How well it works | What to keep in mind |
+|---|---|---|
+| Patch to 2026.2.708 or later | Best | Definitive fix, no side effects |
+| Revert UploadChannels from Manual | Good | Breaks custom upload workflows — test before deploying |
+| WASPs blocking Telerik handler paths | Moderate | Stops opportunistic scanning, not targeted attackers |
+| Network segmentation | Moderate | Limits what happens after code execution |
+| Least privilege for application pool accounts | High | The DLL loads in the app pool context — restrict that account's permissions |
+| Detection rules | Useful | Does not stop exploitation, buys response time |
+
+---
+
+## What this means for your threat model
+
+The padding oracle chain is not a mass-exploitation scenario. The configuration prerequisite, the one-hour oracle enumeration step, and the absence of confirmed in-the-wild exploitation as of this writing all point to a targeted threat rather than something that will show up in automated vulnerability scans tomorrow. That changes fast once the tool is in circulation, but right now the window for defenders to get ahead of this is still open.
+
+What should change immediately is your component inventory process. Telerik UI for ASP.NET AJAX sitting in a bin directory is exactly the kind of thing that does not show up in normal vulnerability scans because it is not running as a standalone service — it is a library loaded by applications. Every ASP.NET application in your portfolio that references this DLL needs to be in your vulnerability management system. Set up a weekly check against your software asset inventory for Telerik.Web.UI.dll versions below 2026.2.708.
+
+The underlying pattern — CBC encryption without integrity, deserialization without type allowlists — shows up repeatedly in enterprise software. It is not a Telerik-specific problem. Any .NET application that uses System.Text.JSON or BinaryFormatter without strict type controls carries some version of this risk. Add deserialization gadget chain review to your secure code audit checklist.
+
+---
+
+## Related Reading
+
+- [MikroTrick: Chained MikroTik RouterOS Flaws Give Attackers Pre-Auth Root via SSH](https://eddington.tech/blog/mikrotik-mikrotrick-preauth-rce-cve-2026-67276-86060)
+- [PaperCut Is the New Face of Print: Education Sector Under Siege from Authentication Bypass and Code Execution](https://eddington.tech/blog/papercut-cve-2026-81578-82078-auth-bypass-rce-education)
+- [OAuth Consent Phishing: Why Your Password and MFA Mean Nothing Once a Malicious App Gets Access](https://eddington.tech/blog/oauth-consent-phishing-credential-persistence-fbi-psa-260901)
+- [Hugging Face Breach: How an Autonomous AI Agent Supply Chain Attack Exposed Credentials](https://eddington.tech/blog/hugging-face-breach-malicious-dataset-supply-chain)
+- [CISA: AWS Credentials Exposed via Public GitHub Enterprise Repositories](https://eddington.tech/blog/cisa-aws-credentials-exposed-github-enterprise)
+
+---
+
+## Sources
+
+- The Hacker News: "Telerik UI Padding-Oracle Bug Chained to Unauthenticated RCE — Public Exploit Released" (September 7, 2026)
+- Progress Software Telerik Security Advisory (July 22, 2026)
+- TantoSec: "From Padding Oracle to Shell — Telerik RadAsyncUpload RCE Chain" (September 7, 2026)
+- NVD: CVE-2026-13181, CVE-2026-13182, CVE-2026-13183
+
+`
+          },
+{
             slug: "mikrotik-mikrotrick-preauth-rce-cve-2026-67276-86060",
             title: "MikroTrick: Chained MikroTik RouterOS Flaws Give Attackers Pre-Auth Root via SSH",
             date: "2026-09-06",
