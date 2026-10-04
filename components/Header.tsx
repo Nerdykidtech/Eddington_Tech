@@ -4,46 +4,49 @@ import Link from "next/link";
 import { useState } from "react";
 import { CommandPalette } from "@/components/CommandPalette";
 
+const NAV = [
+  { href: "/#about", label: "About" },
+  { href: "/blog", label: "Blog" },
+  { href: "/tools", label: "Tools" },
+  { href: "/snippets", label: "Snippets" },
+];
+
 export function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/5 bg-surface-900/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-surface-900/75 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link
           href="/"
-          className="font-display text-xl font-semibold tracking-tight text-white hover:text-brand-300 transition-colors"
+          className="flex items-center gap-2 font-display text-lg font-bold tracking-tight text-white"
           onClick={() => setOpen(false)}
         >
-          Eddington<span className="text-brand-400">.Tech</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 font-mono text-xs font-bold text-white">
+            E
+          </span>
+          <span>
+            Eddington<span className="text-brand-400">.Tech</span>
+          </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden sm:flex items-center gap-6 text-sm text-zinc-400">
-          <Link href="/#about" className="hover:text-white transition-colors">
-            About
+        <nav className="hidden items-center gap-7 text-sm text-zinc-400 md:flex">
+          <Link href="/#autheris" className="flex items-center gap-2 text-white transition-colors hover:text-brand-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-volt-400 animate-live" aria-hidden />
+            Autheris
           </Link>
-          <Link href="/#apps" className="hover:text-white transition-colors">
-            Apps
-          </Link>
-          <Link href="/blog" className="hover:text-white transition-colors">
-            Blog
-          </Link>
-          <Link href="/tools" className="hover:text-white transition-colors">
-            Tools
-          </Link>
-          <Link href="/snippets" className="hover:text-white transition-colors">
-            Snippets
-          </Link>
-          <Link href="/privacy" className="hover:text-white transition-colors">
-            Privacy
-          </Link>
+          {NAV.map((item) => (
+            <Link key={item.href} href={item.href} className="transition-colors hover:text-white">
+              {item.label}
+            </Link>
+          ))}
           <CommandPalette />
           <a
             href="https://github.com/nerdykidtech"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+            className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-surface-900 transition-colors hover:bg-brand-100"
           >
             GitHub
           </a>
@@ -51,9 +54,10 @@ export function Header() {
 
         {/* Mobile hamburger */}
         <button
-          className="sm:hidden p-2 rounded-md text-zinc-400 hover:text-white transition-colors"
+          className="rounded-md p-2 text-zinc-400 transition-colors hover:text-white md:hidden"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
+          aria-expanded={open}
         >
           {open ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,55 +73,31 @@ export function Header() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="sm:hidden border-t border-white/5 bg-surface-900/95 backdrop-blur-xl">
-          <nav className="mx-auto max-w-5xl px-6 py-4 flex flex-col gap-4 text-sm text-zinc-400">
+        <div className="border-t border-white/5 bg-surface-900/95 backdrop-blur-xl md:hidden">
+          <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-4 text-base">
             <Link
-              href="/#about"
-              className="hover:text-white transition-colors"
+              href="/#autheris"
+              className="flex items-center gap-2 py-2 font-medium text-white"
               onClick={() => setOpen(false)}
             >
-              About
+              <span className="h-1.5 w-1.5 rounded-full bg-volt-400" aria-hidden />
+              Autheris
             </Link>
-            <Link
-              href="/#apps"
-              className="hover:text-white transition-colors"
-              onClick={() => setOpen(false)}
-            >
-              Apps
-            </Link>
-            <Link
-              href="/blog"
-              className="hover:text-white transition-colors"
-              onClick={() => setOpen(false)}
-            >
-              Blog
-            </Link>
-            <Link
-              href="/tools"
-              className="hover:text-white transition-colors"
-              onClick={() => setOpen(false)}
-            >
-              Tools
-            </Link>
-            <Link
-              href="/snippets"
-              className="hover:text-white transition-colors"
-              onClick={() => setOpen(false)}
-            >
-              Snippets
-            </Link>
-            <Link
-              href="/privacy"
-              className="hover:text-white transition-colors"
-              onClick={() => setOpen(false)}
-            >
-              Privacy
-            </Link>
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="py-2 text-zinc-400 transition-colors hover:text-white"
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
             <a
               href="https://github.com/nerdykidtech"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10 w-fit"
+              className="mt-2 w-fit rounded-full bg-white px-4 py-2 text-xs font-semibold text-surface-900"
               onClick={() => setOpen(false)}
             >
               GitHub
