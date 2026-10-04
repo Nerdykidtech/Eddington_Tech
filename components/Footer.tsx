@@ -1,34 +1,82 @@
 import Link from "next/link";
+import { autherisLinks } from "@/lib/autheris";
+
+const COLUMNS = [
+  {
+    title: "Site",
+    links: [
+      { href: "/#about", label: "About" },
+      { href: "/blog", label: "Blog" },
+      { href: "/tools", label: "Tools" },
+      { href: "/snippets", label: "Snippets" },
+      { href: "/resume", label: "Résumé" },
+    ],
+  },
+  {
+    title: "Autheris",
+    links: [
+      { href: "/autheris", label: "Overview" },
+      { href: autherisLinks.appStore, label: "App Store", external: true },
+      { href: autherisLinks.site, label: "autheris.app", external: true },
+      { href: autherisLinks.source, label: "Source code", external: true },
+      { href: "/privacy", label: "Privacy" },
+    ],
+  },
+  {
+    title: "Elsewhere",
+    links: [
+      { href: "https://github.com/nerdykidtech", label: "GitHub", external: true },
+      { href: "https://www.linkedin.com/in/huntereddington", label: "LinkedIn", external: true },
+      { href: "/feed.xml", label: "RSS" },
+    ],
+  },
+];
 
 export function Footer() {
   return (
-    <footer className="border-t border-surface-700 bg-surface-800/50">
-      <div className="mx-auto max-w-5xl px-6 py-8">
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="font-display text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
-            >
-              Eddington.Tech
-            </Link>
-            <a
-              href="https://www.linkedin.com/in/huntereddington"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-              aria-label="LinkedIn profile"
-            >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-              </svg>
-            </a>
+    <footer className="relative overflow-hidden border-t border-white/5 bg-surface-900">
+      <div className="mx-auto max-w-6xl px-6 pb-10 pt-16">
+        <div className="grid gap-12 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div>
+            <p className="font-display text-2xl font-bold tracking-tight text-white">
+              Eddington<span className="text-brand-400">.Tech</span>
+            </p>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
+              System Engineer · IAM Engineer · Apple developer. Building secure things, then writing about them.
+            </p>
           </div>
-          <p className="text-xs text-zinc-500">
-            System Engineer · IAM Engineer · iOS Developer
-          </p>
+          {COLUMNS.map((col) => (
+            <div key={col.title}>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">{col.title}</p>
+              <ul className="mt-4 space-y-2.5 text-sm">
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    {"external" in l && l.external ? (
+                      <a href={l.href} target="_blank" rel="noopener noreferrer" className="text-zinc-400 transition-colors hover:text-white">
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link href={l.href} className="text-zinc-400 transition-colors hover:text-white">
+                        {l.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="mt-16 flex flex-col gap-2 border-t border-white/5 pt-6 text-xs text-zinc-600 sm:flex-row sm:justify-between">
+          <p>© {new Date().getFullYear()} Hunter Eddington</p>
+          <p className="font-mono">Built with Next.js · Hosted on Vercel</p>
         </div>
       </div>
+      <p
+        className="pointer-events-none select-none text-center font-display text-[18vw] font-bold leading-[0.8] tracking-[-0.05em] text-white/[0.03]"
+        aria-hidden
+      >
+        EDDINGTON
+      </p>
     </footer>
   );
 }

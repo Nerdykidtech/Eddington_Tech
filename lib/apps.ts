@@ -13,9 +13,9 @@ export const apps: AppItem[] = [
   {
     id: "autheris",
     name: "Autheris",
-    tagline: "Secure 2FA Token Manager",
+    tagline: "Two-factor codes that never leave your device",
     description:
-      "An iOS app that stores your two-factor authentication codes on device with encryption. Add tokens by scanning QR codes, tap to copy codes, and keep everything private with optional blur and app-switcher hiding.",
+      "A free, open-source 2FA authenticator for iPhone, iPad, Mac and Apple Watch. Codes live in your Keychain with no account and no server, with App Lock, privacy blur and optional end-to-end encrypted iCloud Sync.",
     href: "/autheris",
     subdomain: "autheris",
     icon: "🔐",
